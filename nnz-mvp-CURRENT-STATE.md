@@ -1,7 +1,50 @@
 # nnz-mvp 当前状态与交接指南
 
-> 更新：2026-06-03
+> 更新：2026-06-04
 > 覆盖：Step 1（Covenant 状态机）→ Step 4.5（Memory 分层 + Maturity）→ 安全护栏
+
+## 2026-06-04 GitHub / CI 状态
+
+GitHub 仓库已经建立：
+
+```text
+https://github.com/chaoshorizon316/nnz
+```
+
+已推送到远端 `main` 的初始化提交：
+
+```text
+74981e0 chore: initialize nnz mvp workspace
+```
+
+本地新增 CI 提交：
+
+```text
+a1d4fbb ci: verify nnz mvp
+```
+
+该提交新增：
+
+```text
+.github/workflows/nnz-mvp-ci.yml
+```
+
+CI 内容：
+
+```bash
+cd nnz-mvp
+npm ci
+npm run typecheck
+npm test
+npm run build:demo
+npm audit
+```
+
+注意：截至本文更新时，本地可能仍领先远端；如果显示 `ahead 1`，通常说明 CI 提交尚未推送；如果显示 `ahead 2` 或更多，通常还包含本文档沉淀提交。用户需要用 GitHub Desktop 点 `Push origin`。完整记录见：
+
+```text
+nnz-mvp-2026-06-04-GitHub-CI-交接.md
+```
 
 ## 一句话定位
 

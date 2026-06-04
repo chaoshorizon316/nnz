@@ -1,5 +1,47 @@
 # Claude Code Entry: 念念在
 
+## 最新 GitHub / CI 状态（2026-06-04）
+
+GitHub 仓库：
+
+```text
+https://github.com/chaoshorizon316/nnz
+```
+
+远端 `main` 已包含初始化提交：
+
+```text
+74981e0 chore: initialize nnz mvp workspace
+```
+
+本地新增 CI 提交：
+
+```text
+a1d4fbb ci: verify nnz mvp
+```
+
+截至 2026-06-04，该 CI 提交可能仍未推送；如果本文档更新也已提交，本地可能显示 `main...origin/main [ahead 2]` 或更多。需要用户用 GitHub Desktop 执行 `Push origin`。详细交接见：
+
+```text
+nnz-mvp-2026-06-04-GitHub-CI-交接.md
+```
+
+新增 CI 文件：
+
+```text
+.github/workflows/nnz-mvp-ci.yml
+```
+
+CI 会在 `nnz-mvp` 中执行：
+
+```bash
+npm ci
+npm run typecheck
+npm test
+npm run build:demo
+npm audit
+```
+
 如果你是 Claude Code / 其他 AI / 开发者，从这个知识库根目录接手，请先进入当前 MVP 子项目：
 
 ```bash
