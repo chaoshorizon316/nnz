@@ -1,5 +1,14 @@
 # Claude Code Entry: 念念在
 
+
+## Render 云端 Demo（2026-06-04）
+
+```text
+https://nnz-kego.onrender.com
+```
+
+免费版无请求 15 分钟会休眠，首次访问需等 30–60 秒唤醒。部署细节见 `nnz-mvp-2026-06-04-云托管完成交接.md`。
+
 ## 最新 GitHub / CI 状态（2026-06-04）
 
 GitHub 仓库：

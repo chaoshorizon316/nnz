@@ -2,6 +2,20 @@
 
 > 目的：把当前本地 demo 发布成可公开访问的协作验证链接。该部署只用于 MVP 演示，不承载真实用户数据。
 
+
+
+## 已部署
+
+Render URL：
+
+```text
+https://nnz-kego.onrender.com
+```
+
+部署日期：2026-06-04
+
+创建方式：Web Service（手动配置），Root=nnz-mvp，Build=npm ci && npm run build:demo，Start=npm run start
+
 ## 部署目标
 
 生成一个公网 URL，用于验证：

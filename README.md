@@ -21,6 +21,13 @@ Soul scope = userId + personaId
 - `nnz-mvp-*.md`：各阶段实施记录与交接文档。
 - `.agents/skills/`：本项目的 AI 协作规则，约束产品、架构与前端实现。
 
+
+## Cloud Demo
+
+```text
+https://nnz-kego.onrender.com
+```
+
 ## Local Verification
 
 ```bash
