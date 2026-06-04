@@ -14,13 +14,13 @@ https://github.com/chaoshorizon316/nnz
 74981e0 chore: initialize nnz mvp workspace
 ```
 
-本地新增 CI 提交：
+CI 提交：
 
 ```text
 a1d4fbb ci: verify nnz mvp
 ```
 
-截至 2026-06-04，该 CI 提交可能仍未推送；如果本文档更新也已提交，本地可能显示 `main...origin/main [ahead 2]` 或更多。需要用户用 GitHub Desktop 执行 `Push origin`。详细交接见：
+该 CI 提交已推送，GitHub Actions 已成功运行。详细交接见：
 
 ```text
 nnz-mvp-2026-06-04-GitHub-CI-交接.md
@@ -46,10 +46,13 @@ npm audit
 
 已完成 Render 部署准备：
 
+- 当前本地仍领先远端，至少包含 `f92699b deploy: prepare render demo` 和工作记录文档提交；需要用户用 GitHub Desktop 执行 `Push origin`。
 - `render.yaml`：Render Blueprint，服务名 `nnz-mvp-demo`，rootDir 为 `nnz-mvp`。
 - `nnz-mvp/src/demo-server.ts`：支持 `HOST` / `PORT`，默认监听 `0.0.0.0`，并新增 `/healthz`。
 - `nnz-mvp/package.json`：新增 `start` 脚本和 Node engines。
 - `nnz-mvp-2026-06-04-云端Demo部署交接.md`：完整部署步骤、验收清单和安全边界。
+- `nnz-mvp-2026-06-04-云端部署验证与修复.md`：记录 CommonJS 构建产物修复与验证结论。
+- `nnz-mvp-2026-06-04-工作记录与下一步安排.md`：今日工作记录、卡点和明日执行顺序。
 
 部署目标是公开 demo 链接，不是生产上线。不要输入真实用户隐私，不要接真实数据库 / 微信 / 支付 / LLM Key。
 

@@ -40,7 +40,7 @@ npm run build:demo
 npm audit
 ```
 
-注意：截至本文更新时，本地可能仍领先远端；如果显示 `ahead 1`，通常说明 CI 提交尚未推送；如果显示 `ahead 2` 或更多，通常还包含本文档沉淀提交。用户需要用 GitHub Desktop 点 `Push origin`。完整记录见：
+注意：CI 提交已推送并通过。当前如果显示本地领先远端，通常说明 Render 部署准备提交 `f92699b deploy: prepare render demo` 和后续工作记录文档尚未推送。用户需要用 GitHub Desktop 点 `Push origin`。完整记录见：
 
 ```text
 nnz-mvp-2026-06-04-GitHub-CI-交接.md
@@ -60,6 +60,18 @@ nnz-mvp-2026-06-04-GitHub-CI-交接.md
 
 ```text
 nnz-mvp-2026-06-04-云端Demo部署交接.md
+```
+
+云端部署验证与修复记录：
+
+```text
+nnz-mvp-2026-06-04-云端部署验证与修复.md
+```
+
+今日工作记录和下一步安排：
+
+```text
+nnz-mvp-2026-06-04-工作记录与下一步安排.md
 ```
 
 ## 一句话定位
