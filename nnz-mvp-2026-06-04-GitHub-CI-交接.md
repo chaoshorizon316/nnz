@@ -154,14 +154,16 @@ Push origin
 git push -u origin main
 ```
 
-命令行推送目前的问题：
+命令行推送方法（2026-06-04 已验证）：
 
-- 普通 HTTPS push 缺命令行 GitHub 凭据。
-- macOS keychain 没有可用 `github.com` credential。
-- SSH 未配置 GitHub public key。
-- GitHub Desktop 登录态不能直接被 Codex 的命令行 Git 复用。
+```bash
+git remote set-url origin "https://x-access-token:YOUR_GITHUB_PAT@github.com/chaoshorizon316/nnz.git"
+git push origin main
+```
 
-因此当前推荐：用户继续用 GitHub Desktop 推送。
+**必须用 `x-access-token` 格式**——这是 GitHub PAT 的标准用户名写法。写成 `TOKEN@github.com` Git 会尝试交互式密码认证，沙箱里无法交互直接失败。
+
+PAT 过期后去 https://github.com/settings/tokens 重新生成（勾选 `repo` 权限），替换 URL 中的 token 部分。
 
 ## 验证记录
 

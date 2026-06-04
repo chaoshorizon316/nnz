@@ -240,3 +240,27 @@ Soul.md 设计了一套完整的自动化流程：聊天记录 → 特征提取 
 2. 需要编排——不能每条消息调一次 LLM，要处理触发时机、去重、置信度合并、阈值门控
 3. LLM adapter 推荐用薄封装（~60 行），不引入 LangChain
 4. 新代码集中在 `src/llm/` 和 `src/extraction/` 两个目录，不修改现有核心模块
+
+---
+
+## 2026-06-05 更新：LLM 接入 + 提取管线
+
+**DeepSeek V4 Pro** 已接入对话生成和自动化提取管线。45 条测试全绿。
+
+### 新增模块
+
+- `src/llm/` — LLM adapter（OpenAI-compatible + mock）
+- `src/extraction/` — 提取管线（prompts + 置信度 + 编排器）
+- `src/env.ts` — .env 自动加载
+
+### 对话生成
+
+`generateLlmReply()` 替代确定性 `generateSoulReply`：注入 Soul 身份 + Memory + 安全规则 → DeepSeek 生成自然回复。无 adapter 时自动 fallback 到确定性生成。
+
+### UI 改进
+
+加载状态（按钮变灰 + 脉冲动画）+ 连续相同消息去重（不重复调 LLM）。
+
+### 详细记录
+
+见 `nnz-mvp-2026-06-05-工作记录.md`

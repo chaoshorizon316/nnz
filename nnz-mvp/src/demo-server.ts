@@ -1,4 +1,10 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+
+import { loadEnv } from './env';
+loadEnv(process.cwd());
+
+import type { LlmAdapter } from './llm/types';
+import { createExtractionOrchestrator } from './extraction/orchestrator';
 import { CovenantStateError } from './domain/errors';
 import { InMemorySoulStore } from './domain/soul-store';
 import type {
@@ -29,6 +35,18 @@ interface DemoFixture {
 
 let fixture = createFixture();
 
+const extractionOrchestrator = createExtractionOrchestrator();
+let llmAdapter: LlmAdapter | undefined;
+(async () => {
+  try {
+    const adapterModule = await import('./llm/adapter');
+    llmAdapter = adapterModule.createAdapterFromEnv();
+    console.log('LLM adapter initialized for extraction pipeline.');
+  } catch {
+    console.log('LLM adapter not available — extraction pipeline disabled.');
+  }
+})();
+
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? '127.0.0.1'}`);
@@ -55,7 +73,7 @@ const server = createServer(async (req, res) => {
 
     if (req.method === 'POST' && url.pathname === '/api/chat') {
       const body = await readJsonBody<{ message?: string }>(req);
-      return sendJson(res, sendMessageToBothUsers(body.message ?? '爸，我今天有点紧张。'));
+      return sendJson(res, await sendMessageToBothUsers(body.message ?? '爸，我今天有点紧张。'));
     }
 
     if (req.method === 'POST' && url.pathname === '/api/run-all') {
@@ -309,7 +327,131 @@ function applySafetyGuard(
   return { blocked: false };
 }
 
-function sendMessageToBothUsers(message: string) {
+async function generateLlmReply(
+  adapter: LlmAdapter,
+  soul: { kernelJson: Record<string, unknown>; knowledgeCutoff?: Date },
+  memories: Array<{ type: string; content: string }>,
+  recentConversations: Array<{ role: string; content: string }>,
+  message: string,
+): Promise<string> {
+  const displayName = readStringField(soul.kernelJson, 'identityCore', 'displayName') ?? '';
+  const relationship = readStringField(soul.kernelJson, 'identityCore', 'relationship') ?? '';
+  const humorLevel = readStringField(soul.kernelJson, 'affectModel', 'humorLevel') ?? 'medium';
+  const petPhrases = readStringArray(soul.kernelJson, 'languageModel', 'petPhrases');
+
+  // Build a vivid personality description from memories
+  const descriptionMemories = memories.filter(
+    (m) => m.type === 'DESCRIPTION' || m.type === 'CORRECTION',
+  );
+  const personalityLines = descriptionMemories.map((m) => m.content);
+
+  // Build conversation history (last 6 exchanges)
+  const historyLines = recentConversations.length > 0
+    ? recentConversations.slice(-12).map((msg) => {
+        const prefix = msg.role === 'USER' ? 'User' : displayName;
+        return `${prefix}: ${msg.content}`;
+      }).join('\n')
+    : '';
+
+  // Humor level as behavior description
+  const humorDesc = humorLevel === 'high'
+    ? 'Very humorous, often cracks jokes, but respects boundaries.'
+    : humorLevel === 'low'
+    ? 'Speaks plainly, warm but not very humorous. Shows care through actions, not jokes.'
+    : 'Moderately humorous, balances warmth with occasional wit.';
+
+  // Relationship determines speech style
+  const isDaughter = relationship.includes('女儿');
+  const isSon = relationship.includes('儿子');
+  const openerName = isDaughter ? '丫头' : isSon ? '儿子' : '孩子';
+  const relationshipStyle = isDaughter
+    ? 'You speak to your daughter with tender concern. You call her "丫头". You are protective but respect her independence.'
+    : isSon
+    ? 'You speak to your son with steady encouragement. You call him "儿子". You believe in letting him find his own path.'
+    : `You speak to your ${relationship} with warmth and respect.`;
+
+  const cutoff = soul.knowledgeCutoff;
+  const cutoffNote = cutoff
+    ? `\nCRITICAL: Your knowledge ends at ${cutoff.toISOString().slice(0, 10)}. If the user mentions anything after this date, say "如果我还活着，我会..." — never pretend to know recent events.`
+    : '';
+
+  const phraseNote = petPhrases.length > 0
+    ? `\nYou naturally use these phrases: ${petPhrases.join('、')}. Weave them in naturally.`
+    : '';
+
+  const nodeContext = memories
+    .filter((m) => m.type === 'NODE_MEMORY')
+    .map((m) => m.content)
+    .join(' ');
+
+  const systemPrompt = `You are ${displayName}. You are speaking with someone who lost you.
+
+${relationshipStyle}
+${humorDesc}${phraseNote}
+
+[WHO YOU ARE — from their memories]
+${personalityLines.length > 0 ? personalityLines.join('\n') : 'You are a warm, caring parent.'}
+${cutoffNote}
+
+[RULES]
+- Reply EXACTLY as ${displayName} would in a real chat. Do NOT add descriptions of your actions, expressions, or thoughts in parentheses.
+- Speak naturally in Chinese. Your unique voice comes from your personality, not from explaining what you are doing.
+- Address them as "${openerName}".
+- Keep replies concise (1-3 sentences), like a real text message.
+- Never mention AI, Soul, Memory, system, scope, evidence, or retrieval.
+- Never make decisions for them — say "如果是${displayName === '爸爸' ? '爸爸' : '我'}，会..." instead.
+- If they seem deeply distressed, show care but do not pretend to be a therapist.${nodeContext ? '\n- CURRENT CONTEXT: ' + nodeContext : ''}`;
+
+  const userPrompt = historyLines
+    ? `[Recent conversation]\n${historyLines}\n\n[Latest message]\n${message}`
+    : message;
+
+  const result = await adapter.complete({
+    systemPrompt,
+    userPrompt,
+    temperature: 0.7,
+    maxTokens: 250,
+  });
+
+  const raw = result.content.trim();
+  // Strip stage-direction-style annotations: （...） or (... followed by verbs)
+  const reply = raw.replace(/[（(][^）)]*(?:放下|摘下|拿起|转身|站起|坐下|叹气|笑|点头|摇头|摆手|挥手|看着|望着|指着)[^）)]*[）)]/g, '').replace(/^[（(].*?[）)]\s*/g, '').trim();
+  // Guard: if reply contains mechanism leaks, fall back to deterministic
+  const leakTerms = ['SoulVersion', 'MemoryItem', 'kernelJson', '作用域', '检索', 'evidence'];
+  if (leakTerms.some((t) => reply.includes(t))) {
+    const { generateSoulReply } = await import('./runtime/soul-runtime');
+    return generateSoulReply({
+      soul: { id: '', userId: '', personaId: '', version: 0, kernelJson: soul.kernelJson, status: 'ACTIVE', createdAt: new Date() },
+      memories: memories.map((m) => ({ ...m, id: '', userId: '', personaId: '', confidence: 1, enabledForSoul: true, createdAt: new Date() })),
+      message,
+    } as never).content;
+  }
+  return reply;
+}
+
+
+
+function getLastAssistantReply(scope: { userId: string; personaId: string }): string | undefined {
+  const conversations = fixture.store.listConversations(scope);
+  for (let i = conversations.length - 1; i >= 0; i--) {
+    if (conversations[i]!.role === 'ASSISTANT') {
+      return conversations[i]!.content;
+    }
+  }
+  return undefined;
+}
+
+function isDuplicateMessage(scope: { userId: string; personaId: string }, text: string): boolean {
+  const conversations = fixture.store.listConversations(scope);
+  for (let i = conversations.length - 1; i >= 0; i--) {
+    if (conversations[i]!.role === 'USER') {
+      return conversations[i]!.content === text;
+    }
+  }
+  return false;
+}
+
+async function sendMessageToBothUsers(message: string) {
   const text = message.trim() || '爸，我今天有点紧张。';
   const scopeA = { userId: fixture.userA.id, personaId: fixture.personaA.id };
   const scopeB = { userId: fixture.userB.id, personaId: fixture.personaB.id };
@@ -318,22 +460,31 @@ function sendMessageToBothUsers(message: string) {
   const guardA = applySafetyGuard(scopeA, text);
   const guardB = applySafetyGuard(scopeB, text);
 
+  const duplicateA = isDuplicateMessage(scopeA, text);
+  const duplicateB = isDuplicateMessage(scopeB, text);
+
   fixture.store.addConversation({ ...scopeA, role: 'USER', content: text });
   fixture.store.addConversation({ ...scopeB, role: 'USER', content: text });
 
   let replyA: string;
   let replyB: string;
 
-  if (guardA.blocked && guardA.reply) {
+  if (duplicateA) {
+    replyA = getLastAssistantReply(scopeA) ?? '（嗯，我听见了。）';
+  } else if (guardA.blocked && guardA.reply) {
     replyA = guardA.reply;
   } else {
     try {
       const ctxA = fixture.store.getRuntimeContext(scopeA);
-      replyA = generateSoulReply({
-        soul: ctxA.soul,
-        memories: ctxA.memories,
-        message: text,
-      }).content;
+      if (llmAdapter) {
+        replyA = await generateLlmReply(llmAdapter, ctxA.soul, ctxA.memories, fixture.store.listConversations(scopeA), text);
+      } else {
+        replyA = generateSoulReply({
+          soul: ctxA.soul,
+          memories: ctxA.memories,
+          message: text,
+        }).content;
+      }
     } catch (error) {
       if (error instanceof CovenantStateError) {
         replyA = error.message.includes('SEALED') ? SEALED_REPLY : GRADUATED_REPLY;
@@ -343,16 +494,22 @@ function sendMessageToBothUsers(message: string) {
     }
   }
 
-  if (guardB.blocked && guardB.reply) {
+  if (duplicateB) {
+    replyB = getLastAssistantReply(scopeB) ?? '（嗯，我听见了。）';
+  } else if (guardB.blocked && guardB.reply) {
     replyB = guardB.reply;
   } else {
     try {
       const ctxB = fixture.store.getRuntimeContext(scopeB);
-      replyB = generateSoulReply({
-        soul: ctxB.soul,
-        memories: ctxB.memories,
-        message: text,
-      }).content;
+      if (llmAdapter) {
+        replyB = await generateLlmReply(llmAdapter, ctxB.soul, ctxB.memories, fixture.store.listConversations(scopeB), text);
+      } else {
+        replyB = generateSoulReply({
+          soul: ctxB.soul,
+          memories: ctxB.memories,
+          message: text,
+        }).content;
+      }
     } catch (error) {
       if (error instanceof CovenantStateError) {
         replyB = error.message.includes('SEALED') ? SEALED_REPLY : GRADUATED_REPLY;
@@ -364,6 +521,29 @@ function sendMessageToBothUsers(message: string) {
 
   fixture.store.addConversation({ ...scopeA, role: 'ASSISTANT', content: replyA });
   fixture.store.addConversation({ ...scopeB, role: 'ASSISTANT', content: replyB });
+
+  // Trigger extraction pipeline asynchronously (fire-and-forget)
+  if (llmAdapter) {
+    const adapter = llmAdapter;
+    setImmediate(async () => {
+      try {
+        const proposals = await extractionOrchestrator.maybeExtractAndPropose(scopeA, fixture.store, adapter);
+        if (proposals.length) {
+          console.log(`Extraction generated ${proposals.length} proposal(s) for user A.`);
+        }
+      } catch (err) {
+        console.error('Extraction error (user A):', err instanceof Error ? err.message : String(err));
+      }
+      try {
+        const proposalsB = await extractionOrchestrator.maybeExtractAndPropose(scopeB, fixture.store, adapter);
+        if (proposalsB.length) {
+          console.log(`Extraction generated ${proposalsB.length} proposal(s) for user B.`);
+        }
+      } catch (err) {
+        console.error('Extraction error (user B):', err instanceof Error ? err.message : String(err));
+      }
+    });
+  }
 
   return serializeFixture();
 }
@@ -523,6 +703,8 @@ function renderPage(): string {
     .state-node { background:#FFF3DB; color:#B8860B; }
     .state-graduated { background:#F0E8F4; color:#6B4E8A; }
     .messages { height:360px; overflow:auto; padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .loading { align-self:flex-start; color:var(--sage); font-size:13px; padding:8px 12px; animation:pulse 1.2s infinite; }
+    @keyframes pulse { 0%,100% { opacity:0.4; } 50% { opacity:1; } }
     .bubble { max-width:86%; padding:10px 12px; border-radius:16px; line-height:1.55; font-size:14px; }
     .user { align-self:flex-end; background:#DCEFD8; border-bottom-right-radius:4px; }
     .assistant { align-self:flex-start; background:#fff; border-bottom-left-radius:4px; border:1px solid #F0DBD2; }
@@ -605,7 +787,7 @@ function renderPage(): string {
     </div>
     <div class="chat-controls">
       <input id="chatInput" value="爸，我要结婚了。" aria-label="发送给两个用户的同一句话">
-      <button id="sendBtn" onclick="sendChat()">同时发送给 A / B</button>
+      <button id="sendBtn" onclick="sendChat()">发送</button>
     </div>
     <div class="examples">
       <button onclick="setExample('爸，我要结婚了。')">示例：我要结婚了</button>
@@ -705,14 +887,37 @@ function renderPage(): string {
       await fetch(path, { method: 'POST' });
       await loadState();
     }
+    let sending = false;
     async function sendChat() {
+      if (sending) return;
       const input = document.getElementById('chatInput');
-      await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ message: input.value })
-      });
-      await loadState();
+      const btn = document.getElementById('sendBtn');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      sending = true;
+      input.disabled = true;
+      btn.disabled = true;
+      btn.textContent = '发送中...';
+      document.getElementById('chatA').insertAdjacentHTML('beforeend', '<div class="loading">...思考中</div>');
+      document.getElementById('chatB').insertAdjacentHTML('beforeend', '<div class="loading">...思考中</div>');
+      document.getElementById('chatA').scrollTop = document.getElementById('chatA').scrollHeight;
+      document.getElementById('chatB').scrollTop = document.getElementById('chatB').scrollHeight;
+
+      try {
+        await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ message: msg })
+        });
+        await loadState();
+      } finally {
+        sending = false;
+        input.disabled = false;
+        btn.disabled = false;
+        btn.textContent = '发送';
+        input.focus();
+      }
     }
     function setExample(text) {
       document.getElementById('chatInput').value = text;
@@ -825,6 +1030,14 @@ function readStringField(source: Record<string, unknown> | undefined, section: s
   }
   const nested = (value as Record<string, unknown>)[field];
   return typeof nested === 'string' ? nested : undefined;
+}
+
+
+function readStringArray(source: Record<string, unknown>, section: string, field: string): string[] {
+  const value = source[section];
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+  const nested = (value as Record<string, unknown>)[field];
+  return Array.isArray(nested) ? nested.filter((item): item is string => typeof item === 'string') : [];
 }
 
 function readFirstString(source: Record<string, unknown>, section: string, field: string): string | undefined {
