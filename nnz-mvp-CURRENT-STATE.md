@@ -46,6 +46,22 @@ npm audit
 nnz-mvp-2026-06-04-GitHub-CI-交接.md
 ```
 
+## 2026-06-04 云端 Demo 部署准备
+
+已准备 Render 部署：
+
+- 根目录新增 `render.yaml`。
+- `demo-server.ts` 默认监听 `0.0.0.0`，支持 Render 注入的 `PORT`。
+- 新增 `/healthz`，用于 Render 健康检查。
+- `package.json` 新增 `start` 脚本：`node dist-cjs/demo-server.js`。
+- `build:demo` 会生成 `dist-cjs/package.json`，保证 CommonJS 构建产物在根包 `type: module` 下可运行。
+
+完整部署说明：
+
+```text
+nnz-mvp-2026-06-04-云端Demo部署交接.md
+```
+
 ## 一句话定位
 
 这是「念念在」产品的 MVP Core——验证 Soul 作用域隔离、完整流转（封存/节点/毕业）、Memory 分层、Soul 成熟度评估、伦理安全护栏。**不是完整聊天产品，是领域模型的可靠地基。**

@@ -45,6 +45,14 @@ const server = createServer(async (req, res) => {
       return sendJson(res, buildVerification());
     }
 
+    if (req.method === 'GET' && url.pathname === '/healthz') {
+      return sendJson(res, {
+        ok: true,
+        service: 'nnz-mvp-demo',
+        fixture: 'in-memory',
+      });
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/chat') {
       const body = await readJsonBody<{ message?: string }>(req);
       return sendJson(res, sendMessageToBothUsers(body.message ?? '爸，我今天有点紧张。'));
@@ -111,8 +119,10 @@ const server = createServer(async (req, res) => {
 });
 
 const port = Number(process.env.PORT ?? 3007);
-server.listen(port, '127.0.0.1', () => {
-  console.log(`念念在 Soul 作用域演示已启动: http://127.0.0.1:${port}`);
+const host = process.env.HOST ?? '0.0.0.0';
+server.listen(port, host, () => {
+  const displayHost = host === '0.0.0.0' ? '127.0.0.1' : host;
+  console.log(`念念在 Soul 作用域演示已启动: http://${displayHost}:${port}`);
 });
 
 function createFixture(): DemoFixture {

@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: nnz-mvp-demo
+    runtime: node
+    plan: free
+    rootDir: nnz-mvp
+    buildCommand: npm ci && npm run build:demo
+    startCommand: npm run start
+    autoDeployTrigger: checksPass
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production

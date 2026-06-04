@@ -42,6 +42,17 @@ npm run build:demo
 npm audit
 ```
 
+## 云端 Demo 部署状态（2026-06-04）
+
+已完成 Render 部署准备：
+
+- `render.yaml`：Render Blueprint，服务名 `nnz-mvp-demo`，rootDir 为 `nnz-mvp`。
+- `nnz-mvp/src/demo-server.ts`：支持 `HOST` / `PORT`，默认监听 `0.0.0.0`，并新增 `/healthz`。
+- `nnz-mvp/package.json`：新增 `start` 脚本和 Node engines。
+- `nnz-mvp-2026-06-04-云端Demo部署交接.md`：完整部署步骤、验收清单和安全边界。
+
+部署目标是公开 demo 链接，不是生产上线。不要输入真实用户隐私，不要接真实数据库 / 微信 / 支付 / LLM Key。
+
 如果你是 Claude Code / 其他 AI / 开发者，从这个知识库根目录接手，请先进入当前 MVP 子项目：
 
 ```bash
