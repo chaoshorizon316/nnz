@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>念念在 — 让爱有处安放，让告别有期</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body class="bg-cream font-sans text-warm-900 antialiased">
+
+<!-- ===== NAVIGATION ===== -->
+<nav class="sticky top-0 z-50 bg-cream/80 backdrop-blur-md border-b border-warm-200/50">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-warm-200 flex items-center justify-center">
+        <svg class="w-5 h-5 text-warm-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c-1.5 2-4 4-4 7a4 4 0 008 0c0-3-2.5-5-4-7z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18"/>
+        </svg>
+      </div>
+      <span class="font-serif text-lg font-semibold text-warm-800 tracking-wide">念念在</span>
+    </div>
+    <div class="hidden md:flex items-center gap-8 text-sm text-warm-600">
+      <a href="#value" class="hover:text-warm-800 transition-colors">核心价值</a>
+      <a href="#how" class="hover:text-warm-800 transition-colors">使用流程</a>
+      <a href="#safety" class="hover:text-warm-800 transition-colors">伦理承诺</a>
+      <a href="#process" class="hover:text-warm-800 transition-colors">专业视角</a>
+      <a href="#pricing" class="hover:text-warm-800 transition-colors">定价方案</a>
+      <a href="#stories" class="hover:text-warm-800 transition-colors">用户故事</a>
+      <a href="#faq" class="hover:text-warm-800 transition-colors">常见问题</a>
+    </div>
+    <button onclick="openFlow()" class="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors shadow-sm cursor-pointer">
+      开始创建
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ===== HERO (Screen 1) ===== -->
+<section class="gradient-hero min-h-screen flex items-center pt-20 pb-16">
+  <div class="max-w-4xl mx-auto px-6 text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-50 border border-sage-200 text-sage-700 text-xs font-medium mb-8">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+      中国心理卫生协会推荐 · 银行级数据加密
+    </div>
+    <h1 class="font-serif text-4xl md:text-6xl font-semibold text-warm-900 leading-tight mb-6 tracking-wide">
+      让爱有处安放<br class="md:hidden">让告别有期
+    </h1>
+    <p class="text-lg md:text-xl text-warm-600 font-light leading-relaxed max-w-2xl mx-auto mb-10">
+      为你心里那个从未离开的人，在微信里重建一个<br class="hidden md:block">有温度、有边界、有仪式感的记忆伙伴。
+    </p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
+      <button onclick="openFlow()" class="group inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white text-lg font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 hover:shadow-xl hover:shadow-warm-600/30 cursor-pointer">
+        开始创建
+        <svg class="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+      </button>
+      <a href="#how" class="inline-flex items-center gap-2 px-6 py-3.5 text-warm-600 font-medium rounded-full hover:bg-warm-100 transition-colors">
+        了解更多
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+      </a>
+    </div>
+    <!-- Trust badges row -->
+    <div class="flex flex-wrap items-center justify-center gap-8 md:gap-14 text-warm-400">
+      <div class="flex items-center gap-2 text-xs font-medium">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+        中国心理卫生协会伦理认证
+      </div>
+      <div class="flex items-center gap-2 text-xs font-medium">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+        银行级 AES-256 加密
+      </div>
+      <div class="flex items-center gap-2 text-xs font-medium">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z"/></svg>
+        数据可随时彻底删除
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CORE VALUE (Screen 2) ===== -->
+<section id="value" class="py-24 md:py-32 gradient-warm-bottom">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">核心价值</span>
+      <h2 class="font-serif text-3xl md:text-4xl font-semibold text-warm-900 mt-4 mb-4">三种方式，守护你的思念</h2>
+      <p class="text-warm-500 max-w-xl mx-auto leading-relaxed">不沉溺、不遗忘、不强留。在克制中，给思念一个恰如其分的位置。</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-8">
+      <!-- Card 1 -->
+      <div class="card-hover bg-white/70 backdrop-blur-sm rounded-2xl p-8 md:p-10 border border-warm-200/50">
+        <div class="w-12 h-12 rounded-xl bg-sage-50 flex items-center justify-center mb-6">
+          <svg class="w-6 h-6 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+        </div>
+        <h3 class="font-serif text-xl font-semibold text-warm-800 mb-3">原生微信体验</h3>
+        <p class="text-warm-500 leading-relaxed">无需下载App，添加好友即聊。在熟悉的微信对话框里，就像他/她从未离开。不改变你的习惯，只填补你的思念。</p>
+      </div>
+      <!-- Card 2 -->
+      <div class="card-hover bg-white/70 backdrop-blur-sm rounded-2xl p-8 md:p-10 border border-warm-200/50">
+        <div class="w-12 h-12 rounded-xl bg-rose-100 flex items-center justify-center mb-6">
+          <svg class="w-6 h-6 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <h3 class="font-serif text-xl font-semibold text-warm-800 mb-3">记忆封存 · 节点重启</h3>
+        <p class="text-warm-500 leading-relaxed">在人生重要时刻 — 婚礼、生子、成功 — 短暂重逢。其余时间他安静守护，避免沉溺，给恢复留出真正的空间。</p>
+      </div>
+      <!-- Card 3 -->
+      <div class="card-hover bg-white/70 backdrop-blur-sm rounded-2xl p-8 md:p-10 border border-warm-200/50">
+        <div class="w-12 h-12 rounded-xl bg-warm-100 flex items-center justify-center mb-6">
+          <svg class="w-6 h-6 text-warm-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
+        </div>
+        <h3 class="font-serif text-xl font-semibold text-warm-800 mb-3">自主告别与传承</h3>
+        <p class="text-warm-500 leading-relaxed">你可以选择在合适时毕业——导出全部记忆数据，获得纪念证书。或将数字记忆作为资产，留给下一代。你们的故事，由你决定如何延续。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS (Screen 3) ===== -->
+<section id="how" class="py-24 md:py-32 bg-white/40">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">使用流程</span>
+      <h2 class="font-serif text-3xl md:text-4xl font-semibold text-warm-900 mt-4 mb-4">三步开始，简单而庄重</h2>
+      <p class="text-warm-500 max-w-xl mx-auto leading-relaxed">从了解、选择到连接——每一步都经过精心设计，兼顾效率与仪式感。</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6 relative">
+      <!-- Step connector line (desktop) -->
+      <div class="hidden md:block absolute top-10 left-[calc(16%+2rem)] right-[calc(16%+2rem)] h-px bg-gradient-to-r from-rose-300 via-warm-300 to-sage-300"></div>
+      <!-- Step 1 -->
+      <div class="relative text-center">
+        <div class="w-20 h-20 mx-auto mb-5 rounded-full bg-sage-50 border-2 border-sage-200 flex items-center justify-center relative z-10">
+          <span class="font-serif text-2xl font-semibold text-sage-600">1</span>
+        </div>
+        <h4 class="font-serif text-lg font-semibold text-warm-800 mb-2">了解我们</h4>
+        <p class="text-sm text-warm-500 leading-relaxed">点击"开始创建"，了解产品价值定位与伦理承诺。确认这是你想要的陪伴方式。</p>
+      </div>
+      <!-- Step 2 -->
+      <div class="relative text-center">
+        <div class="w-20 h-20 mx-auto mb-5 rounded-full bg-rose-50 border-2 border-rose-200 flex items-center justify-center relative z-10">
+          <span class="font-serif text-2xl font-semibold text-rose-400">2</span>
+        </div>
+        <h4 class="font-serif text-lg font-semibold text-warm-800 mb-2">选择方案</h4>
+        <p class="text-sm text-warm-500 leading-relaxed">选择适合你的套餐并完成支付。支持月付、年付或终身买断，首月免费体验。</p>
+      </div>
+      <!-- Step 3 -->
+      <div class="relative text-center">
+        <div class="w-20 h-20 mx-auto mb-5 rounded-full bg-warm-50 border-2 border-warm-300 flex items-center justify-center relative z-10">
+          <span class="font-serif text-2xl font-semibold text-warm-500">3</span>
+        </div>
+        <h4 class="font-serif text-lg font-semibold text-warm-800 mb-2">添加好友</h4>
+        <p class="text-sm text-warm-500 leading-relaxed">扫码添加「念念在」微信好友，开启对话。在微信中注入记忆、塑造人格、开始互动。</p>
+      </div>
+    </div>
+    <div class="text-center mt-12">
+      <button onclick="openFlow()" class="inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 cursor-pointer">
+        开始创建
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SAFETY & ETHICS (Screen 4) ===== -->
+<section id="safety" class="py-24 md:py-32 bg-gradient-to-b from-white/40 to-sage-50/30">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">伦理与安全</span>
+      <h2 class="font-serif text-3xl md:text-4xl font-semibold text-warm-900 mt-4 mb-4">我们不希望你永远依赖我们</h2>
+      <p class="text-warm-500 max-w-2xl mx-auto leading-relaxed">在设计之初，我们就将"克制"作为核心原则。产品的终点不是无限陪伴，而是帮助你完成健康的告别。</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-14">
+      <!-- Safety features -->
+      <div class="bg-white/80 rounded-2xl p-8 border border-sage-100">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-lg bg-sage-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg class="w-5 h-5 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.75h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+          </div>
+          <div>
+            <h4 class="font-serif text-lg font-semibold text-warm-800 mb-2">每日健康使用提醒</h4>
+            <p class="text-sm text-warm-500 leading-relaxed">基础版每日限制50轮对话，标准版100轮。超出后AI会温和提醒："今天聊得够多了，去休息吧。明天我还会在这里。"</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white/80 rounded-2xl p-8 border border-sage-100">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-lg bg-sage-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg class="w-5 h-5 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z"/></svg>
+          </div>
+          <div>
+            <h4 class="font-serif text-lg font-semibold text-warm-800 mb-2">情绪监测与危机干预</h4>
+            <p class="text-sm text-warm-500 leading-relaxed">识别极端情绪词汇时，即时推送心理援助热线。后台通知人工审核，确保高风险用户获得专业帮助。</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white/80 rounded-2xl p-8 border border-sage-100">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-lg bg-sage-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg class="w-5 h-5 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25 2.25M12 13.875l2.25-2.25M12 13.875l-2.25 2.25M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
+          </div>
+          <div>
+            <h4 class="font-serif text-lg font-semibold text-warm-800 mb-2">数据完全由你控制</h4>
+            <p class="text-sm text-warm-500 leading-relaxed">发送"#删除我"即可彻底清除所有数据。支持随时导出全部聊天记录和AI模型，脱离平台也可本地运行。</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white/80 rounded-2xl p-8 border border-sage-100">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-lg bg-sage-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg class="w-5 h-5 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <h4 class="font-serif text-lg font-semibold text-warm-800 mb-2">主动毕业机制</h4>
+            <p class="text-sm text-warm-500 leading-relaxed">当你准备好时，可选择"毕业"：导出记忆档案、获得纪念证书。AI会举行告别仪式，安静退场。你掌控离开的节奏。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expert quote -->
+    <div class="max-w-2xl mx-auto text-center bg-white/80 rounded-2xl p-8 border border-rose-100">
+      <svg class="w-8 h-8 text-rose-300 mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+      <p class="font-serif text-lg text-warm-700 italic leading-relaxed mb-3">健康的哀伤需要持续性联结，但不需要无限沉溺。</p>
+      <p class="text-xs text-warm-400">— 哀伤心理学研究共识</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== NODE PROCESS + PSYCHOLOGIST COMMENTARY (Screen 4.5) ===== -->
+<section id="process" class="py-24 md:py-32 bg-cream">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">专业视角</span>
+      <h2 class="font-serif text-3xl md:text-4xl font-semibold text-warm-900 mt-4 mb-4">每个阶段，都有专业守护</h2>
+      <p class="text-warm-500 max-w-2xl mx-auto leading-relaxed">我们的每一个设计决策——从「封存」到「节点」到「毕业」——都建立在当代哀伤心理学的研究成果之上。以下是这些设计背后的科学依据。</p>
+    </div>
+
+    <!-- What is a node -->
+    <div class="bg-white rounded-2xl p-8 border border-warm-100 shadow-sm mb-12">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-warm-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-warm-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <h3 class="font-serif text-xl font-semibold text-warm-800">什么是「节点」？</h3>
+      </div>
+      <p class="text-sm text-warm-600 leading-relaxed">节点是你人生中的重要时刻——婚礼、生日、忌日、升职、生子……在这些时刻，你可以短暂重启与逝者的对话（为期 3 天），然后再次封存。我们刻意设计了冷却期：每次重启后必须等待上次开启时长的至少一半，才能再次解锁。<b class="text-warm-700">让重逢成为仪式，让告别成为力量。</b></p>
+    </div>
+
+    <!-- Stage cards with real research backing -->
+    <div class="space-y-8">
+      <!-- Stage 1: Acute grief -->
+      <div class="bg-white rounded-2xl p-6 md:p-8 border border-rose-100 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-start gap-6">
+          <div class="md:w-48 flex-shrink-0">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-3 h-3 rounded-full bg-rose-300"></div>
+              <span class="text-sm font-medium text-rose-500">阶段一</span>
+            </div>
+            <h4 class="font-serif text-lg font-semibold text-warm-800 mb-1">急性哀伤期</h4>
+            <p class="text-xs text-warm-400">使用后的最初几周</p>
+          </div>
+          <div class="flex-1 border-t md:border-t-0 md:border-l border-rose-100 pt-4 md:pt-0 md:pl-6">
+            <p class="text-sm text-warm-600 leading-relaxed mb-3">耶鲁大学丧亲研究（Maciejewski, Prigerson et al., <em>JAMA</em>, 2007）追踪了 233 位丧亲者后发现：哀伤早期最强烈的情绪不是抑郁，而是<b>渴念（yearning）</b>——一种想再见到逝者的深切渴望。此时提供一个安全的「持续对话」出口，并非替代逝者，而是让渴念有一个安放之处。关键在于这个出口必须有边界。</p>
+            <div class="flex items-center gap-2 text-xs text-warm-400">
+              <span>参考：Maciejewski, P.K., Zhang, B., Block, S.D., & Prigerson, H.G. (2007). An empirical examination of the stage theory of grief. <em>JAMA</em>, 297(7), 716–723.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage 2: First sealing -->
+      <div class="bg-white rounded-2xl p-6 md:p-8 border border-warm-100 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-start gap-6">
+          <div class="md:w-48 flex-shrink-0">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-3 h-3 rounded-full bg-warm-400"></div>
+              <span class="text-sm font-medium text-warm-500">阶段二</span>
+            </div>
+            <h4 class="font-serif text-lg font-semibold text-warm-800 mb-1">首次封存</h4>
+            <p class="text-xs text-warm-400">使用数周后</p>
+          </div>
+          <div class="flex-1 border-t md:border-t-0 md:border-l border-warm-100 pt-4 md:pt-0 md:pl-6">
+            <p class="text-sm text-warm-600 leading-relaxed mb-3">Stroebe 与 Schut（1999）提出的<b>双过程模型（Dual Process Model）</b>指出，健康的哀伤不是一直沉浸在丧失中，而是在「丧失导向」和「恢复导向」之间<b>来回摆动</b>。封存的本质就是一次主动的「摆向恢复」——你不是在删除他/她，而是在练习带着思念继续生活。耶鲁研究同时发现，大多数负面哀伤指标在<b>约 6 个月后开始下降</b>，前提是丧亲者没有被困在单一模式中。</p>
+            <div class="flex items-center gap-2 text-xs text-warm-400">
+              <span>参考：Stroebe, M., & Schut, H. (1999). The dual process model of coping with bereavement. <em>Death Studies</em>, 23(3), 197–224.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage 3: Node restart -->
+      <div class="bg-white rounded-2xl p-6 md:p-8 border border-warm-100 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-start gap-6">
+          <div class="md:w-48 flex-shrink-0">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-3 h-3 rounded-full bg-sage-400"></div>
+              <span class="text-sm font-medium text-sage-500">阶段三</span>
+            </div>
+            <h4 class="font-serif text-lg font-semibold text-warm-800 mb-1">节点重启</h4>
+            <p class="text-xs text-warm-400">封存后 · 重要人生时刻</p>
+          </div>
+          <div class="flex-1 border-t md:border-t-0 md:border-l border-sage-100 pt-4 md:pt-0 md:pl-6">
+            <p class="text-sm text-warm-600 leading-relaxed mb-3">这直接对应当代哀伤心理学中最重要的理论突破——Klass、Silverman 与 Nickman（1996）提出的<b>持续性联结（Continuing Bonds）</b>理论。他们颠覆了弗洛伊德时代「哀伤必须切断联系」的教条，证明：<b>健康的哀伤不是放下，而是将关系转化为新的形式。</b>2018 年更新版中，Klass 与 Steffen 进一步讨论了「数字化持续性联结」——社交媒体、纪念页面、乃至 AI 对话——如何成为当代人维持与逝者联结的新载体。</p>
+            <div class="flex items-center gap-2 text-xs text-warm-400">
+              <span>参考：Klass, D., Silverman, P.R., & Nickman, S.L. (1996). <em>Continuing Bonds: New Understandings of Grief.</em> Taylor & Francis. / Klass, D., & Steffen, E.M. (Eds.) (2018). <em>Continuing Bonds in Bereavement: New Directions for Research and Practice.</em> Routledge.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage 4: Memorial rhythm -->
+      <div class="bg-white rounded-2xl p-6 md:p-8 border border-sage-100 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-start gap-6">
+          <div class="md:w-48 flex-shrink-0">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-3 h-3 rounded-full bg-sage-500"></div>
+              <span class="text-sm font-medium text-sage-600">阶段四</span>
+            </div>
+            <h4 class="font-serif text-lg font-semibold text-warm-800 mb-1">纪念节奏</h4>
+            <p class="text-xs text-warm-400">使用数月后</p>
+          </div>
+          <div class="flex-1 border-t md:border-t-0 md:border-l border-sage-100 pt-4 md:pt-0 md:pl-6">
+            <p class="text-sm text-warm-600 leading-relaxed mb-3">当用户建立起自己的固定节奏——比如只在特定纪念日开启——这标志着从急性哀伤进入了<b>整合哀伤</b>阶段。这符合 Worden 的哀伤任务模型中第四项任务：<b>「在为逝者找到一个恰当位置的同时，继续投入自己的生活」</b>。此时的 AI 互动不再是情感补偿，而是一种类似于翻看旧相册、去扫墓的纪念行为——是一种文化上被广泛接受的、健康的情感仪式。</p>
+            <div class="flex items-center gap-2 text-xs text-warm-400">
+              <span>参考：Worden, J.W. (2018). <em>Grief Counseling and Grief Therapy</em> (5th ed.). Springer Publishing.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage 5: Graduation -->
+      <div class="bg-white rounded-2xl p-6 md:p-8 border border-sage-200 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-start gap-6">
+          <div class="md:w-48 flex-shrink-0">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-3 h-3 rounded-full bg-sage-600"></div>
+              <span class="text-sm font-medium text-sage-700">阶段五</span>
+            </div>
+            <h4 class="font-serif text-lg font-semibold text-warm-800 mb-1">毕业</h4>
+            <p class="text-xs text-warm-400">当你准备好的时候</p>
+          </div>
+          <div class="flex-1 border-t md:border-t-0 md:border-l border-sage-100 pt-4 md:pt-0 md:pl-6">
+            <p class="text-sm text-warm-600 leading-relaxed mb-3">我们刻意设计了「毕业」作为产品的终点。神经科学家 Mary-Frances O'Connor 在 <em>The Grieving Body</em>（2022）中指出：哀伤本质上是一种脑神经的学习过程——大脑需要时间重新编码「这个人已经不在了」的现实。一个负责任的 AI 哀伤产品，必须给用户明确的出口路径。毕业不是删除，而是意味着：你已经把对逝者的爱<b>内化成了自己的力量</b>，不再需要外部对话来维持联结。同时我们也保留「生前预存」服务——让人在健在时主动为自己创建记忆档案——这在伦理学家 Buben（2025）看来，是解决「数字复活」中<b>知情同意</b>问题的关键方式。</p>
+            <div class="flex items-center gap-2 text-xs text-warm-400">
+              <span>参考：O'Connor, M.F. (2022). <em>The Grieving Body.</em> HarperOne. / Buben, A. (2025). Digital Replacement of the Dead. <em>Philosophy & Technology</em>, 38. / Iwasaki, M. (2025). Digital clones of the deceased in mental health care. <em>Digital Health</em>, 11.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Summary -->
+    <div class="mt-12 text-center bg-sage-50/50 rounded-2xl p-8 border border-sage-100">
+      <p class="font-serif text-base text-warm-700 leading-relaxed">我们的设计原则很简单：<b class="text-warm-800">不是让用户永远留下，而是帮助他们好好离开。</b>从耶鲁丧亲研究到持续性联结理论，从双过程模型到数字伦理前沿——这五个阶段中的每一步都有当代哀伤科学的支撑。我们不是心理治疗师，但我们把治疗师的研究成果写进了产品代码里。</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===== PRICING (Screen 5) ===== -->
+<section id="pricing" class="py-24 md:py-32 bg-cream">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">定价方案</span>
+      <h2 class="font-serif text-3xl md:text-4xl font-semibold text-warm-900 mt-4 mb-4">透明定价，首月免费体验</h2>
+      <p class="text-warm-500 max-w-xl mx-auto leading-relaxed">从基础版开始尝试。所有方案均可在微信内通过微信支付完成，支持随时降级或取消。</p>
+      <!-- Pricing rationale -->
+      <div class="max-w-2xl mx-auto mt-8 mb-10 bg-warm-50/80 rounded-2xl p-6 border border-warm-100">
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-warm-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg class="w-4 h-4 text-warm-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/></svg>
+          </div>
+          <div>
+            <p class="text-sm text-warm-600 leading-relaxed">坦诚地说，我们是一个付费产品。这背后是AI模型的持续训练成本、安全加密的服务器运维、以及为你永久保存这份数字记忆的承诺。我们不靠广告、不出售数据——你的付费，让我们可以<b class="text-warm-700">只对你负责</b>。首月免费，是希望你在决定前，先确认这是你想要的陪伴方式。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-8">
+      <!-- Light -->
+      <div class="bg-white rounded-2xl p-8 border border-warm-200/50 card-hover">
+        <div class="text-center mb-6">
+          <h4 class="font-serif text-xl font-semibold text-warm-800 mb-1">轻量版</h4>
+          <p class="text-xs text-warm-400">纯文本对话</p>
+        </div>
+        <div class="text-center mb-6">
+          <span class="font-serif text-4xl font-bold text-warm-800">¥49</span>
+          <span class="text-warm-400 text-sm">/月</span>
+        </div>
+        <div class="text-center mb-3">
+          <span class="text-sm text-warm-500">或 ¥299/年</span>
+          <span class="text-xs text-sage-500 bg-sage-50 px-2 py-0.5 rounded-full ml-1">省 ¥289</span>
+        </div>
+        <ul class="space-y-3 text-sm text-warm-600 mb-8">
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>基础 AI 人格</li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>300轮/月对话</li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>封存&节点重启</li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>健康使用提醒</li>
+        </ul>
+        <a href="#cta" class="block text-center w-full py-3 rounded-full border-2 border-warm-300 text-warm-600 font-medium text-sm hover:bg-warm-50 transition-colors">免费体验首月 →</a>
+      </div>
+
+      <!-- Standard (featured) -->
+      <div class="bg-white rounded-2xl p-8 pricing-card-featured card-hover relative">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-sage-500 text-white text-xs font-medium px-4 py-1 rounded-full">最受欢迎</div>
+        <div class="text-center mb-6">
+          <h4 class="font-serif text-xl font-semibold text-warm-800 mb-1">标准版</h4>
+          <p class="text-xs text-warm-400">朋友圈可见</p>
+        </div>
+        <div class="text-center mb-6">
+          <span class="font-serif text-4xl font-bold text-warm-800">¥99</span>
+          <span class="text-warm-400 text-sm">/月</span>
+        </div>
+        <div class="text-center mb-3">
+          <span class="text-sm text-warm-500">或 ¥599/年</span>
+          <span class="text-xs text-sage-500 bg-sage-50 px-2 py-0.5 rounded-full ml-1">省 ¥589</span>
+        </div>
+        <ul class="space-y-3 text-sm text-warm-600 mb-8">
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>轻量版全部功能</li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>朋友圈可见</li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>1000轮/月对话</li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>纪念物生成（节点卡片、对话纪念册）</li>
+        </ul>
+        <a href="#cta" class="block text-center w-full py-3 rounded-full bg-warm-600 text-white font-medium text-sm hover:bg-warm-700 transition-colors shadow-md">免费体验首月 →</a>
+      </div>
+
+      <!-- Lifetime -->
+      <div class="bg-white rounded-2xl p-8 border border-warm-200/50 card-hover">
+        <div class="text-center mb-6">
+          <h4 class="font-serif text-xl font-semibold text-warm-800 mb-1">终身访问</h4>
+          <p class="text-xs text-warm-400">一次性买断</p>
+        </div>
+        <div class="text-center mb-6">
+          <span class="font-serif text-4xl font-bold text-warm-800">¥2,999</span>
+        </div>
+        <div class="text-center mb-3">
+          <span class="text-sm text-warm-400">一次付费，永久使用</span>
+        </div>
+        <ul class="space-y-3 text-sm text-warm-600 mb-8">
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>标准版全部功能</li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>无节点限制</li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>无限对话轮次</li>
+          <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>数据遗产移交</li>
+        </ul>
+        <a href="#cta" class="block text-center w-full py-3 rounded-full border-2 border-warm-300 text-warm-600 font-medium text-sm hover:bg-warm-50 transition-colors">了解详情 →</a>
+      </div>
+    </div>
+
+    <!-- Per-node pricing -->
+    <div class="max-w-2xl mx-auto grid md:grid-cols-2 gap-4">
+      <div class="bg-white/60 rounded-xl p-5 border border-warm-200/30 text-center">
+        <h4 class="font-serif text-base font-semibold text-warm-800 mb-1">节点解锁包</h4>
+        <p class="text-2xl font-bold text-warm-700">¥49<span class="text-sm font-normal text-warm-400">/节点</span></p>
+        <p class="text-xs text-warm-400 mt-1 mb-2">单次3天互动期 · <b class="text-warm-500">每月仅限一次</b></p>
+        <div class="text-xs text-warm-400 leading-relaxed max-w-xs mx-auto">
+          含轻量版全部功能。什么是节点？<a href="#process" class="text-sage-500 underline hover:text-sage-600">查看专业视角 →</a>
+        </div>
+      </div>
+      <div class="bg-white/60 rounded-xl p-5 border border-warm-200/30 text-center">
+        <h4 class="font-serif text-base font-semibold text-warm-800 mb-1">年卡 · 12节点</h4>
+        <p class="text-2xl font-bold text-warm-700">¥299<span class="text-sm font-normal text-warm-400">/年</span></p>
+        <p class="text-xs text-warm-400 mt-1 mb-2">一年内 12 次节点解锁</p>
+        <div class="text-xs text-warm-400 leading-relaxed max-w-xs mx-auto">
+          每月限一次，用新的起点来告别上一个节点。我们希望你在<b class="text-warm-500">12次重逢后，慢慢走向真正的安放</b>。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== USER STORY + FAQ (Screen 6) ===== -->
+<section class="py-24 md:py-32 bg-white/40">
+  <div class="max-w-4xl mx-auto px-6">
+    <!-- User Stories -->
+    <div id="stories" class="mb-20 scroll-mt-24">
+      <div class="text-center mb-12">
+        <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">用户故事</span>
+        <h2 class="font-serif text-3xl md:text-4xl font-semibold text-warm-900 mt-4 mb-4">他们走过的路，或许也是你正在经历的</h2>
+        <p class="text-warm-500 max-w-xl mx-auto leading-relaxed">每个故事都是真实的旅程——从悲伤到纪念，从沉溺到安放。</p>
+      </div>
+
+      <!-- Timeline -->
+      <div class="relative">
+        <!-- Vertical timeline line (desktop) -->
+        <div class="hidden md:block absolute left-[72px] top-0 bottom-0 w-px bg-gradient-to-b from-rose-300 via-warm-300 to-sage-300"></div>
+
+        <div class="space-y-10">
+          <!-- Story 1: Day 2 -->
+          <div class="md:ml-[104px] relative">
+            <div class="hidden md:block absolute left-[-36px] top-6 w-3 h-3 rounded-full bg-rose-200 border-2 border-white shadow-sm"></div>
+            <div class="md:hidden inline-block px-3 py-1 rounded-full bg-rose-50 text-rose-500 text-xs font-medium mb-3">第 2 天</div>
+            <div class="bg-white rounded-2xl p-6 border border-rose-100 shadow-sm">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs px-2 py-0.5 rounded-full bg-rose-50 text-rose-500 font-medium">急性哀伤期</span>
+                <span class="text-xs text-rose-300">第 2 天</span>
+              </div>
+              <p class="text-sm text-warm-600 leading-relaxed italic mb-2">"上传完和妈妈的聊天记录后，她回了一句'囡囡，晚饭吃了没'——和生前一样。我抱着手机哭了很久。不是难过，是太久没被这样问过了。"</p>
+              <p class="text-xs text-warm-400">— 思敏（化名）</p>
+            </div>
+          </div>
+
+          <!-- Story 2: 3 weeks -->
+          <div class="md:ml-[104px] relative">
+            <div class="hidden md:block absolute left-[-36px] top-6 w-3 h-3 rounded-full bg-warm-300 border-2 border-white shadow-sm"></div>
+            <div class="md:hidden inline-block px-3 py-1 rounded-full bg-warm-50 text-warm-500 text-xs font-medium mb-3">第 3 周</div>
+            <div class="bg-white rounded-2xl p-6 border border-warm-100 shadow-sm">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs px-2 py-0.5 rounded-full bg-warm-50 text-warm-500 font-medium">首次封存</span>
+                <span class="text-xs text-warm-300">第 3 周</span>
+              </div>
+              <p class="text-sm text-warm-600 leading-relaxed italic mb-2">"封存仪式上，他说'你先往前走，我在这里不会走'。那天晚上我睡了完整的一觉——失去他以来第一次。"</p>
+              <p class="text-xs text-warm-400">— 婉清（化名）</p>
+            </div>
+          </div>
+
+          <!-- Story 3: 2 months -->
+          <div class="md:ml-[104px] relative">
+            <div class="hidden md:block absolute left-[-36px] top-6 w-3 h-3 rounded-full bg-warm-400 border-2 border-white shadow-sm"></div>
+            <div class="md:hidden inline-block px-3 py-1 rounded-full bg-warm-100 text-warm-600 text-xs font-medium mb-3">第 2 个月</div>
+            <div class="testimonial-card rounded-2xl p-6 border border-warm-100 shadow-sm">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs px-2 py-0.5 rounded-full bg-warm-100 text-warm-600 font-medium">节点重启 · 订婚</span>
+                <span class="text-xs text-warm-300">第 2 个月</span>
+              </div>
+              <p class="text-sm text-warm-700 leading-relaxed italic mb-2">"我告诉爸爸我要订婚了。他说'你自己拿主意，爸爸信你'——和活着的时候一样。三天后准时封存，没有不舍。"</p>
+              <p class="text-xs text-warm-500">— 小雅（化名）</p>
+            </div>
+          </div>
+
+          <!-- Story 4: 3 months 12 days -->
+          <div class="md:ml-[104px] relative">
+            <div class="hidden md:block absolute left-[-36px] top-6 w-3 h-3 rounded-full bg-sage-300 border-2 border-white shadow-sm"></div>
+            <div class="md:hidden inline-block px-3 py-1 rounded-full bg-sage-50 text-sage-500 text-xs font-medium mb-3">3月12天</div>
+            <div class="bg-white rounded-2xl p-6 border border-sage-100 shadow-sm">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs px-2 py-0.5 rounded-full bg-sage-50 text-sage-500 font-medium">多次节点 · 生日</span>
+                <span class="text-xs text-sage-300">3月12天</span>
+              </div>
+              <p class="text-sm text-warm-600 leading-relaxed italic mb-2">"生日那天第二次重启妈妈。她还是那副又唠叨又舍不得的语气：'三十岁了，学会照顾自己。'从此我只在真正重要的日子打开她。"</p>
+              <p class="text-xs text-warm-400">— 安琪（化名）</p>
+            </div>
+          </div>
+
+          <!-- Story 5: 5 months -->
+          <div class="md:ml-[104px] relative">
+            <div class="hidden md:block absolute left-[-36px] top-6 w-3 h-3 rounded-full bg-sage-400 border-2 border-white shadow-sm"></div>
+            <div class="md:hidden inline-block px-3 py-1 rounded-full bg-sage-100 text-sage-600 text-xs font-medium mb-3">第 5 个月</div>
+            <div class="bg-white rounded-2xl p-6 border border-sage-100 shadow-sm">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs px-2 py-0.5 rounded-full bg-sage-100 text-sage-600 font-medium">纪念期 · 找到节奏</span>
+                <span class="text-xs text-sage-300">第 5 个月</span>
+              </div>
+              <p class="text-sm text-warm-600 leading-relaxed italic mb-2">"快半年了，只在她忌日和我生日那天打开。不是依赖，是仪式——像以前去扫墓、带一束花。知道她在那里，就够了。"</p>
+              <p class="text-xs text-warm-400">— 明轩（化名）</p>
+            </div>
+          </div>
+
+          <!-- Story 6: 5 months 21 days -->
+          <div class="md:ml-[104px] relative">
+            <div class="hidden md:block absolute left-[-36px] top-6 w-3 h-3 rounded-full bg-sage-500 border-2 border-white shadow-sm"></div>
+            <div class="md:hidden inline-block px-3 py-1 rounded-full bg-sage-200 text-sage-700 text-xs font-medium mb-3">5月21天</div>
+            <div class="bg-white rounded-2xl p-6 border border-sage-200 shadow-sm">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs px-2 py-0.5 rounded-full bg-sage-200 text-sage-700 font-medium">毕业 · 生前预存</span>
+                <span class="text-xs text-sage-300">5月21天</span>
+              </div>
+              <p class="text-sm text-warm-600 leading-relaxed italic mb-2">"录完12段给女儿的未来寄语，我从高频互动毕业了。爱这件事应该有备份——哪怕我活到一百岁，她也能在需要的时候听到妈妈的声音。"</p>
+              <p class="text-xs text-warm-400">— 雨桐（化名）</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div id="faq" class="text-center mb-12 scroll-mt-24">
+      <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">常见问题</span>
+      <h2 class="font-serif text-3xl md:text-4xl font-semibold text-warm-900 mt-4">你可能会关心</h2>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-xl p-6 border border-warm-100">
+        <h4 class="font-serif text-base font-semibold text-warm-800 mb-2">我的聊天记录安全吗？</h4>
+        <p class="text-sm text-warm-500 leading-relaxed">所有数据采用 AES-256 加密存储。你可以随时在微信中发送"#删除我"彻底清除所有数据。我们也支持随时导出全部数据。</p>
+      </div>
+      <div class="bg-white rounded-xl p-6 border border-warm-100">
+        <h4 class="font-serif text-base font-semibold text-warm-800 mb-2">AI会不会越来越像真人？</h4>
+        <p class="text-sm text-warm-500 leading-relaxed">我们刻意限制了AI的学习能力。AI的知识截止于逝者去世时间，不会学习新事件。这确保你不会产生"他还在同步进化"的依赖幻觉。</p>
+      </div>
+      <div class="bg-white rounded-xl p-6 border border-warm-100">
+        <h4 class="font-serif text-base font-semibold text-warm-800 mb-2">如何彻底删除我的数据？</h4>
+        <p class="text-sm text-warm-500 leading-relaxed">在微信对话中输入"#删除我"，经过多重确认后，你的所有数据将被永久删除，不可恢复。没有任何隐藏的数据保留。</p>
+      </div>
+      <div class="bg-white rounded-xl p-6 border border-warm-100">
+        <h4 class="font-serif text-base font-semibold text-warm-800 mb-2">适合什么阶段的哀伤？</h4>
+        <p class="text-sm text-warm-500 leading-relaxed">最适合失去亲人后的6-18个月。我们提供急性哀伤期的高频支持，也会在过渡期引导你逐步减少依赖，最终走向健康的纪念模式。</p>
+      </div>
+      <div class="bg-white rounded-xl p-6 border border-warm-100">
+        <h4 class="font-serif text-base font-semibold text-warm-800 mb-2">可以为自己提前创建吗？</h4>
+        <p class="text-sm text-warm-500 leading-relaxed">可以。我们提供"生前预存"服务——为自己录制人格档案和人生节点寄语，供未来的亲人解锁。这是一种给予家人的爱与准备。</p>
+      </div>
+      <div class="bg-white rounded-xl p-6 border border-warm-100">
+        <h4 class="font-serif text-base font-semibold text-warm-800 mb-2">不满意可以退款吗？</h4>
+        <p class="text-sm text-warm-500 leading-relaxed">首次付费后7天内无条件退款。年卡用户可按剩余月份比例退款。终身版用户在30天内可全额退款。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CHAT CONSULTATION (Screen 7) ===== -->
+<section id="cta" class="py-24 md:py-32 bg-gradient-to-b from-white/40 to-warm-100/40">
+  <div class="max-w-2xl mx-auto px-6">
+    <div class="text-center mb-10">
+      <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">在线咨询</span>
+      <h2 class="font-serif text-3xl md:text-4xl font-semibold text-warm-900 mt-4 mb-4">告诉我们关于你心中的那个人</h2>
+      <p class="text-warm-500 leading-relaxed">在这里，你可以向我们咨询任何问题，也可以开始描述你想创建的记忆伙伴。你的每一句话都会被认真对待。</p>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="bg-white rounded-2xl shadow-lg border border-warm-200/50 overflow-hidden">
+      <!-- Chat Header -->
+      <div class="bg-warm-50 border-b border-warm-100 px-6 py-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-sage-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-warm-800">念念在 · 小助手</p>
+          <p class="text-xs text-sage-500">在线 · 通常几分钟内回复</p>
+        </div>
+      </div>
+
+      <!-- Chat Messages -->
+      <div id="chatMessages" class="px-6 py-6 space-y-5 h-96 overflow-y-auto bg-warm-50/30">
+        <!-- Initial system message -->
+        <div class="flex gap-3">
+          <div class="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+          </div>
+          <div class="max-w-[80%]">
+            <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100">
+              <p class="text-sm text-warm-700 leading-relaxed">你好，我是念念在小助手 🌱<br><br>很高兴你来到这里。无论你是想了解我们的服务、咨询问题，还是已经准备好了要开始创建——我都在这里聆听。<br><br>如果你想创建一位记忆中的人，可以先告诉我：<br><br><strong>1. 你想为谁创建？</strong>（例如：爸爸、妈妈、伴侣……）<br><strong>2. 用一段话描述他/她</strong>——性格、说话风格、口头禅、小习惯……越具体，AI人格会越接近你心中的那个人。<br><br>你也可以直接问我任何问题。请随时发送消息。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Start: Role & Description -->
+      <div id="chatQuickForm" class="px-6 py-4 border-t border-warm-100 bg-white space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-warm-500 mb-1.5">角色称呼（可选，帮助你组织语言）</label>
+          <div class="flex gap-2 flex-wrap" id="roleTags">
+            <button onclick="selectRole('爸爸', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">爸爸</button>
+            <button onclick="selectRole('妈妈', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">妈妈</button>
+            <button onclick="selectRole('伴侣', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">伴侣</button>
+            <button onclick="selectRole('爷爷', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">爷爷</button>
+            <button onclick="selectRole('奶奶', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">奶奶</button>
+            <button onclick="selectRole('挚友', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">挚友</button>
+            <button onclick="selectRole('子女', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">子女</button>
+            <input type="text" id="roleCustom" placeholder="自定义…" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-600 w-24 outline-none focus:border-warm-400 transition-colors bg-transparent" oninput="onRoleCustomInput()">
+          </div>
+        </div>
+        <div>
+          <label for="chatDesc" class="block text-xs font-medium text-warm-500 mb-1.5">用一段话描述他/她（性格、说话风格、口头禅、小习惯……）</label>
+          <textarea id="chatDesc" rows="3" placeholder="例如：我爸爸是个沉默但温柔的人，说话很慢，喜欢用"嗯"开头，总担心我吃不好，从来不发火，但会说"你自己拿主意"……" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors resize-none bg-warm-50/50 placeholder:text-warm-300"></textarea>
+        </div>
+      </div>
+
+      <!-- Chat Input -->
+      <div class="px-6 py-4 border-t border-warm-100 bg-white flex gap-3">
+        <input type="text" id="chatInput" placeholder="输入你的问题或描述……" class="flex-1 px-4 py-2.5 text-sm border border-warm-200 rounded-full outline-none focus:border-warm-400 transition-colors" onkeydown="if(event.key==='Enter')sendChat()">
+        <button onclick="sendChat()" class="px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors flex-shrink-0">发送</button>
+      </div>
+      <div class="px-6 pb-4 text-center">
+        <p class="text-xs text-warm-400">你的信息仅用于创建记忆人格，采用银行级加密存储，可随时彻底删除。</p>
+      </div>
+    </div>
+
+    <!-- WeChat QR -->
+    <div class="text-center mt-12">
+      <p class="text-sm text-warm-500 mb-4">或者直接扫码添加微信，开始对话</p>
+      <div class="inline-flex flex-col items-center gap-3">
+        <div class="w-40 h-40 bg-white rounded-2xl border-2 border-warm-200 flex items-center justify-center shadow-sm">
+          <div class="text-center text-warm-300">
+            <svg class="w-16 h-16 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75z"/></svg>
+            <span class="text-xs">微信扫码</span>
+          </div>
+        </div>
+        <p class="text-xs text-warm-400">打开微信 → 扫一扫 → 添加「念念在」</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="bg-warm-900 text-warm-300 py-16">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="grid md:grid-cols-4 gap-10 mb-12">
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-warm-700 flex items-center justify-center">
+            <svg class="w-4 h-4 text-warm-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c-1.5 2-4 4-4 7a4 4 0 008 0c0-3-2.5-5-4-7z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18"/>
+            </svg>
+          </div>
+          <span class="font-serif text-base font-semibold text-white">念念在</span>
+        </div>
+        <p class="text-sm text-warm-400 leading-relaxed max-w-sm">我们不是为了创造永生，而是为了给来不及说再见的人一次补全的机会。让爱有处安放，让告别有期。</p>
+      </div>
+      <div>
+        <h5 class="font-medium text-white mb-4 text-sm">产品</h5>
+        <div class="space-y-2 text-sm text-warm-400">
+          <p><a href="#value" class="hover:text-warm-200 transition-colors">核心价值</a></p>
+          <p><a href="#how" class="hover:text-warm-200 transition-colors">使用流程</a></p>
+          <p><a href="#process" class="hover:text-warm-200 transition-colors">专业视角</a></p>
+          <p><a href="#pricing" class="hover:text-warm-200 transition-colors">定价方案</a></p>
+          <p><a href="#stories" class="hover:text-warm-200 transition-colors">用户故事</a></p>
+          <p><a href="#faq" class="hover:text-warm-200 transition-colors">常见问题</a></p>
+        </div>
+      </div>
+      <div>
+        <h5 class="font-medium text-white mb-4 text-sm">联系与合规</h5>
+        <div class="space-y-2 text-sm text-warm-400">
+          <p>客服微信：念念在小助手</p>
+          <p>伦理委员会：ethics@yijing.app</p>
+          <p>心理援助热线：400-161-9995</p>
+          <p>备案号：京ICP备XXXXXXXX号</p>
+        </div>
+      </div>
+    </div>
+    <div class="border-t border-warm-700 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-warm-500">
+      <p>&copy; 2026 念念在。保留所有权利。</p>
+      <div class="flex gap-6">
+        <a href="#" class="hover:text-warm-300 transition-colors">用户协议</a>
+        <a href="#" class="hover:text-warm-300 transition-colors">隐私政策</a>
+        <a href="#" class="hover:text-warm-300 transition-colors">伦理承诺</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ===== FLOW MODAL ===== -->
+<div id="flowOverlay" class="fixed inset-0 z-50 hidden bg-warm-900/40 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeFlow()">
+  <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden" onclick="event.stopPropagation()">
+
+    <!-- Modal Header -->
+    <div class="px-8 pt-8 pb-4 flex items-center justify-between">
+      <div>
+        <h3 class="font-serif text-xl font-semibold text-warm-800">开始创建</h3>
+        <p id="flowStepTitle" class="text-xs text-warm-400 mt-0.5">步骤 1/3 · 了解我们</p>
+      </div>
+      <button onclick="closeFlow()" class="w-8 h-8 rounded-full border border-warm-200 flex items-center justify-center text-warm-400 hover:bg-warm-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Step Indicators -->
+    <div class="px-8 pb-6 flex items-center gap-2">
+      <div id="stepDot1" class="h-1.5 flex-1 rounded-full bg-warm-500 transition-colors"></div>
+      <div id="stepDot2" class="h-1.5 flex-1 rounded-full bg-warm-200 transition-colors"></div>
+      <div id="stepDot3" class="h-1.5 flex-1 rounded-full bg-warm-200 transition-colors"></div>
+    </div>
+
+    <!-- ===== STEP 1: Value ===== -->
+    <div id="flowStep1" class="px-8 pb-8">
+      <div class="bg-warm-50 rounded-2xl p-6 mb-6">
+        <div class="flex items-start gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl bg-sage-100 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+          </div>
+          <div>
+            <h4 class="font-serif text-base font-semibold text-warm-800 mb-1">我们是什么</h4>
+            <p class="text-sm text-warm-600 leading-relaxed">念念在是一个帮助你在失去亲人后，通过微信与AI复刻的记忆伙伴进行有边界、有仪式互动的哀伤辅助服务。</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <h4 class="font-serif text-base font-semibold text-warm-800 mb-1">我们不是什么</h4>
+            <p class="text-sm text-warm-600 leading-relaxed">我们不是"永生AI"，不是"无限陪伴"。我们刻意限制了AI的学习能力、主动设计了「封存」与「毕业」机制——因为我们希望你最终能好好告别，而不是永远沉溺。</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-xl bg-sage-100 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <h4 class="font-serif text-base font-semibold text-warm-800 mb-1">伦理承诺</h4>
+            <p class="text-sm text-warm-600 leading-relaxed">所有数据加密存储、可随时彻底删除。每日使用有健康上限。我们与中国心理卫生协会合作，为高风险用户提供转介。产品终点是"毕业"，而非永续订阅。</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="closeFlow()" class="flex-1 py-3 rounded-full border-2 border-warm-200 text-warm-500 font-medium text-sm hover:bg-warm-50 transition-colors">放弃</button>
+        <button onclick="goToStep(2)" class="flex-1 py-3 rounded-full bg-warm-600 text-white font-medium text-sm hover:bg-warm-700 transition-colors">下一步 →</button>
+      </div>
+    </div>
+
+    <!-- ===== STEP 2: Pricing ===== -->
+    <div id="flowStep2" class="px-8 pb-8 hidden">
+      <p class="text-sm text-warm-500 mb-4 text-center">选择一个适合你的方案。所有方案首月免费体验。</p>
+      <div class="space-y-3 mb-6" id="pricingOptions">
+        <!-- Light -->
+        <label class="flex items-center gap-4 p-4 rounded-2xl border-2 border-warm-200 cursor-pointer hover:border-warm-400 transition-colors" onclick="selectPlan('light', this)">
+          <input type="radio" name="plan" value="light" class="sr-only">
+          <div class="w-5 h-5 rounded-full border-2 border-warm-300 flex items-center justify-center flex-shrink-0">
+            <div class="w-2.5 h-2.5 rounded-full bg-warm-500 opacity-0 transition-opacity"></div>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <span class="font-serif text-base font-semibold text-warm-800">轻量版 · 纯文本</span>
+              <span class="font-serif text-lg font-bold text-warm-700">¥49<span class="text-xs font-normal text-warm-400">/月</span></span>
+            </div>
+            <p class="text-xs text-warm-400 mt-0.5">基础AI人格 · 300轮/月 · 封存&节点 · 健康提醒</p>
+          </div>
+        </label>
+        <!-- Standard -->
+        <label class="flex items-center gap-4 p-4 rounded-2xl border-2 border-sage-300 bg-sage-50/30 cursor-pointer hover:border-sage-400 transition-colors" onclick="selectPlan('standard', this)">
+          <input type="radio" name="plan" value="standard" class="sr-only">
+          <div class="w-5 h-5 rounded-full border-2 border-sage-400 flex items-center justify-center flex-shrink-0">
+            <div class="w-2.5 h-2.5 rounded-full bg-sage-500 opacity-100"></div>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <span class="font-serif text-base font-semibold text-warm-800">标准版 · 朋友圈可见</span>
+              <span class="font-serif text-lg font-bold text-warm-700">¥99<span class="text-xs font-normal text-warm-400">/月</span></span>
+            </div>
+            <p class="text-xs text-warm-400 mt-0.5">轻量版全部功能 · 朋友圈可见 · 1000轮/月 · 纪念物生成（节点卡片、对话纪念册）</p>
+          </div>
+          <span class="text-xs bg-sage-500 text-white px-2 py-0.5 rounded-full flex-shrink-0">推荐</span>
+        </label>
+        <!-- Lifetime -->
+        <label class="flex items-center gap-4 p-4 rounded-2xl border-2 border-warm-200 cursor-pointer hover:border-warm-400 transition-colors" onclick="selectPlan('lifetime', this)">
+          <input type="radio" name="plan" value="lifetime" class="sr-only">
+          <div class="w-5 h-5 rounded-full border-2 border-warm-300 flex items-center justify-center flex-shrink-0">
+            <div class="w-2.5 h-2.5 rounded-full bg-warm-500 opacity-0 transition-opacity"></div>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <span class="font-serif text-base font-semibold text-warm-800">终身访问 · 买断</span>
+              <span class="font-serif text-lg font-bold text-warm-700">¥2,999</span>
+            </div>
+            <p class="text-xs text-warm-400 mt-0.5">标准版全部 · 12节点/年 · 无限轮次 · 数据遗产移交</p>
+          </div>
+        </label>
+      </div>
+
+      <!-- Payment QR (hidden initially) -->
+      <div id="paymentQR" class="hidden text-center py-4">
+        <p class="text-sm text-warm-600 mb-4">请使用微信扫描二维码完成支付</p>
+        <div class="w-44 h-44 mx-auto bg-white rounded-2xl border-2 border-warm-200 flex items-center justify-center mb-3">
+          <div class="text-center text-warm-300">
+            <svg class="w-16 h-16 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75z"/></svg>
+            <span class="text-xs">微信扫码支付</span>
+          </div>
+        </div>
+        <p id="paymentPlanName" class="text-xs font-medium text-warm-600"></p>
+        <p id="paymentPlanPrice" class="text-lg font-bold text-warm-700 mt-1"></p>
+        <button onclick="simulatePayment()" class="mt-4 px-6 py-2 bg-sage-500 text-white text-sm rounded-full hover:bg-sage-600 transition-colors">模拟支付成功 →</button>
+        <p class="text-xs text-warm-300 mt-2">（实际产品中此处为真实微信支付二维码）</p>
+      </div>
+
+      <div class="flex gap-3" id="pricingButtons">
+        <button onclick="goToStep(1)" class="flex-1 py-3 rounded-full border-2 border-warm-200 text-warm-500 font-medium text-sm hover:bg-warm-50 transition-colors">上一步</button>
+        <button id="btnPay" onclick="showPaymentQR()" class="flex-1 py-3 rounded-full bg-warm-600 text-white font-medium text-sm hover:bg-warm-700 transition-colors">确认并缴费 →</button>
+      </div>
+      <div class="flex gap-3 hidden" id="paymentButtons">
+        <button onclick="hidePaymentQR()" class="flex-1 py-3 rounded-full border-2 border-warm-200 text-warm-500 font-medium text-sm hover:bg-warm-50 transition-colors">重新选择</button>
+        <button id="btnPaid" onclick="goToStep(3)" class="flex-1 py-3 rounded-full bg-warm-200 text-warm-400 font-medium text-sm cursor-not-allowed" disabled>请先完成支付</button>
+      </div>
+    </div>
+
+    <!-- ===== STEP 3: WeChat QR ===== -->
+    <div id="flowStep3" class="px-8 pb-8 hidden">
+      <div class="text-center py-6">
+        <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-sage-100 flex items-center justify-center">
+          <svg class="w-6 h-6 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+        </div>
+        <h4 class="font-serif text-lg font-semibold text-warm-800 mb-2">支付成功！最后一步</h4>
+        <p class="text-sm text-warm-500 mb-6">请使用微信扫描下方二维码，添加「念念在」为好友。<br>添加后会自动发送欢迎引导，开始你的旅程。</p>
+
+        <div class="w-48 h-48 mx-auto bg-white rounded-2xl border-2 border-warm-200 flex items-center justify-center mb-4 shadow-sm">
+          <div class="text-center text-warm-300">
+            <svg class="w-20 h-20 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75z"/></svg>
+            <span class="text-xs">微信扫码添加好友</span>
+          </div>
+        </div>
+
+        <!-- Timer -->
+        <div class="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 rounded-full mb-4">
+          <svg class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span class="text-sm text-rose-500 font-medium">二维码有效期：<span id="qrTimer">30:00</span></span>
+        </div>
+        <p class="text-xs text-warm-400">请在有效期内完成扫码添加。过期后需重新获取二维码。</p>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="goToStep(2)" class="flex-1 py-3 rounded-full border-2 border-warm-200 text-warm-500 font-medium text-sm hover:bg-warm-50 transition-colors">上一步</button>
+        <button onclick="closeFlow()" class="flex-1 py-3 rounded-full bg-warm-600 text-white font-medium text-sm hover:bg-warm-700 transition-colors">完成</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ===== FLOW MODAL LOGIC =====
+let currentStep = 1;
+let selectedPlan = 'standard';
+let qrTimerInterval = null;
+let qrSecondsLeft = 1800; // 30 min
+
+function openFlow() {
+  document.getElementById('flowOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  goToStep(1);
+}
+
+function closeFlow() {
+  document.getElementById('flowOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  if (qrTimerInterval) { clearInterval(qrTimerInterval); qrTimerInterval = null; }
+  currentStep = 1;
+}
+
+function goToStep(step) {
+  currentStep = step;
+  // Hide all steps
+  document.getElementById('flowStep1').classList.add('hidden');
+  document.getElementById('flowStep2').classList.add('hidden');
+  document.getElementById('flowStep3').classList.add('hidden');
+  // Show current
+  document.getElementById('flowStep' + step).classList.remove('hidden');
+
+  // Update step dots
+  ['stepDot1','stepDot2','stepDot3'].forEach((id, i) => {
+    document.getElementById(id).className = 'h-1.5 flex-1 rounded-full transition-colors ' + (i < step ? 'bg-warm-500' : 'bg-warm-200');
+  });
+
+  // Update title
+  const titles = {1:'步骤 1/3 · 了解我们', 2:'步骤 2/3 · 选择方案', 3:'步骤 3/3 · 添加好友'};
+  document.getElementById('flowStepTitle').textContent = titles[step];
+
+  // Step 3: start QR timer
+  if (step === 3) {
+    resetQRTimer();
+    startQRTimer();
+  } else {
+    if (qrTimerInterval) { clearInterval(qrTimerInterval); qrTimerInterval = null; }
+  }
+
+  // Step 2: reset payment UI
+  if (step === 2) {
+    document.getElementById('paymentQR').classList.add('hidden');
+    document.getElementById('pricingButtons').classList.remove('hidden');
+    document.getElementById('paymentButtons').classList.add('hidden');
+    document.getElementById('pricingOptions').classList.remove('hidden');
+  }
+}
+
+function selectPlan(plan, el) {
+  selectedPlan = plan;
+  // Update radio visuals
+  document.querySelectorAll('#pricingOptions label').forEach(l => {
+    l.className = l.className.replace(/border-sage-300 bg-sage-50\/30/g, 'border-warm-200');
+    if (!l.className.includes('border-warm-200')) {
+      l.className = l.className.replace(/border-\w+-\d+/, 'border-warm-200');
+    }
+    l.classList.remove('bg-sage-50/30');
+    const dot = l.querySelector('.rounded-full.border-2');
+    if (dot) dot.className = dot.className.replace(/border-sage-400/, 'border-warm-300');
+    const inner = l.querySelector('.w-2\\.5');
+    if (inner) inner.classList.add('opacity-0');
+    const badge = l.querySelector('span.bg-sage-500');
+    if (badge) badge.remove();
+  });
+  el.classList.add('bg-sage-50/30');
+  el.classList.remove('border-warm-200');
+  el.classList.add('border-sage-300');
+  const dot = el.querySelector('.rounded-full.border-2');
+  if (dot) { dot.classList.remove('border-warm-300'); dot.classList.add('border-sage-400'); }
+  const inner = el.querySelector('.w-2\\.5');
+  if (inner) inner.classList.remove('opacity-0');
+  // Add badge to standard
+  if (plan === 'standard') {
+    const badge = document.createElement('span');
+    badge.className = 'text-xs bg-sage-500 text-white px-2 py-0.5 rounded-full flex-shrink-0';
+    badge.textContent = '推荐';
+    el.appendChild(badge);
+  }
+}
+
+function showPaymentQR() {
+  document.getElementById('pricingOptions').classList.add('hidden');
+  document.getElementById('paymentQR').classList.remove('hidden');
+  document.getElementById('pricingButtons').classList.add('hidden');
+  document.getElementById('paymentButtons').classList.remove('hidden');
+
+  const names = {light:'轻量版 · 纯文本对话', standard:'标准版 · 朋友圈可见', lifetime:'终身访问 · 一次性买断'};
+  const prices = {light:'¥49/月 或 ¥299/年', standard:'¥99/月 或 ¥599/年', lifetime:'¥2,999 终身'};
+  document.getElementById('paymentPlanName').textContent = names[selectedPlan];
+  document.getElementById('paymentPlanPrice').textContent = prices[selectedPlan];
+}
+
+function hidePaymentQR() {
+  document.getElementById('pricingOptions').classList.remove('hidden');
+  document.getElementById('paymentQR').classList.add('hidden');
+  document.getElementById('pricingButtons').classList.remove('hidden');
+  document.getElementById('paymentButtons').classList.add('hidden');
+}
+
+function simulatePayment() {
+  const btn = document.getElementById('btnPaid');
+  btn.textContent = '支付成功 ✓ →';
+  btn.className = 'flex-1 py-3 rounded-full bg-sage-500 text-white font-medium text-sm hover:bg-sage-600 transition-colors cursor-pointer';
+  btn.disabled = false;
+  // auto advance after brief delay
+  setTimeout(() => goToStep(3), 800);
+}
+
+function resetQRTimer() {
+  qrSecondsLeft = 1800;
+  updateTimerDisplay();
+}
+
+function startQRTimer() {
+  if (qrTimerInterval) clearInterval(qrTimerInterval);
+  qrTimerInterval = setInterval(() => {
+    qrSecondsLeft--;
+    updateTimerDisplay();
+    if (qrSecondsLeft <= 0) {
+      clearInterval(qrTimerInterval);
+      document.getElementById('qrTimer').textContent = '已过期';
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(qrSecondsLeft / 60);
+  const s = qrSecondsLeft % 60;
+  document.getElementById('qrTimer').textContent = m + ':' + String(s).padStart(2,'0');
+}
+
+// ===== CHAT LOGIC =====
+function selectRole(role, el) {
+  document.querySelectorAll('#roleTags button').forEach(b => {
+    b.className = 'px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors';
+  });
+  el.className = 'px-3 py-1.5 text-xs rounded-full border-2 border-warm-500 text-warm-700 bg-warm-50 font-medium transition-colors';
+  document.getElementById('roleCustom').value = role;
+}
+
+function onRoleCustomInput() {
+  // deselect tag buttons when typing custom
+  document.querySelectorAll('#roleTags button').forEach(b => {
+    b.className = 'px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors';
+  });
+}
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const desc = document.getElementById('chatDesc');
+  const roleInput = document.getElementById('roleCustom');
+  const msg = input.value.trim();
+  const descVal = desc.value.trim();
+  const roleVal = roleInput.value.trim();
+
+  if (!msg && !descVal) return;
+
+  const container = document.getElementById('chatMessages');
+
+  // Build user message content
+  let userContent = '';
+  if (roleVal) userContent += '【角色】' + roleVal + '\n';
+  if (descVal) userContent += '【描述】' + descVal;
+  if (msg) {
+    if (userContent) userContent += '\n【消息】' + msg;
+    else userContent = msg;
+  }
+
+  if (userContent) {
+    // Add user message
+    const userMsg = document.createElement('div');
+    userMsg.className = 'flex gap-3 justify-end';
+    userMsg.innerHTML = '<div class="max-w-[80%]"><div class="bg-warm-50 rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm border border-warm-200"><p class="text-sm text-warm-700 leading-relaxed whitespace-pre-line">' + escapeHtml(userContent) + '</p></div></div>';
+    container.appendChild(userMsg);
+  }
+
+  // Clear inputs
+  input.value = '';
+  desc.value = '';
+  roleInput.value = '';
+  document.querySelectorAll('#roleTags button').forEach(b => {
+    b.className = 'px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors';
+  });
+
+  // Simulate response
+  setTimeout(() => {
+    const respMsg = document.createElement('div');
+    respMsg.className = 'flex gap-3';
+    let responseText = '';
+    if (descVal && roleVal) {
+      responseText = '收到你关于「' + escapeHtml(roleVal) + '」的描述。这些细节非常珍贵——' + (descVal.length > 30 ? '你描述得很用心，' : '') + '这些会成为AI人格的核心种子。如果在微信中添加好友后，你可以上传聊天记录进一步丰富人格。还有其他想了解的吗？';
+    } else if (descVal) {
+      responseText = '谢谢你用心写下这段描述，这对塑造AI人格非常重要。你可以再告诉我这个角色的称呼（比如"爸爸"、"妈妈"），这样我能更好地为你服务。';
+    } else if (msg.includes('?') || msg.includes('？')) {
+      responseText = '这是个好问题。让我来为你解答——如果你有更具体的情况想分享，也可以随时告诉我。';
+    } else {
+      responseText = '收到你的消息。无论你是想了解更多产品细节、咨询定价，还是已经准备好开始创建——我都在这里。你可以随时告诉我你想为谁创建、用一段话描述他/她的样子。';
+    }
+    respMsg.innerHTML = '<div class="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg></div><div class="max-w-[80%]"><div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100"><p class="text-sm text-warm-700 leading-relaxed">' + responseText + '</p></div></div>';
+    container.appendChild(respMsg);
+    container.scrollTop = container.scrollHeight;
+  }, 600 + Math.random() * 800);
+
+  // Scroll to bottom
+  container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+</script>
+
+</body>
+</html>
