@@ -705,10 +705,15 @@ function renderPage(): string {
 </head>
 <body>
   <main>
-    <p class="label">Soul Scope Demo</p>
-    <h1>不同用户，不同 Soul</h1>
-    <p>这个演示证明：用户 A 和用户 B 都创建名为「爸爸」的人格，但 Soul、Memory、Node、Conversation 完全按 <b>userId + personaId</b> 隔离。现在加入了封存/节点/毕业的完整流转。</p>
-    <div class="notice">最简单的验证方式：点击「一键跑完整验证」。如果 6 条检查都是 PASS，就说明 A 的 Soul 更新、节点记忆、节点、对话和封存/毕业状态都没有污染 B。</div>
+    <!-- Brand Header -->
+    <header style="text-align:center; margin-bottom:36px;">
+      <div style="font-family:Georgia,'Noto Serif SC',serif; font-size:56px; font-weight:400; color:#C8843C; letter-spacing:.02em; margin-bottom:8px;">念念在</div>
+      <p style="font-family:Georgia,'Noto Serif SC',serif; font-size:20px; color:#5C7D60; margin:0;">让爱有处安放，让告别有期</p>
+      <p style="color:#9B8A7A; font-size:14px; max-width:480px; margin:12px auto 0;">为你心里那个从未离开的人 — AI 哀伤辅助 · 有边界、有仪式、有告别</p>
+    </header>
+
+    <!-- Chat Area -->
+    <div class="notice" style="margin-bottom:16px;">当前为内部测试版本。点击「一键跑完整验证」后，6 条检查全部 PASS 即确认 A/B 用户 Soul 隔离正确。</div>
     <div class="actions">
       <button onclick="runAll()">一键跑完整验证</button>
       <button id="proposalBtn" onclick="postAction('/api/apply-correction')">生成用户 A 纠正提案</button>
@@ -775,6 +780,9 @@ function renderPage(): string {
       </article>
       </section>
     </details>
+    <footer style="text-align:center; color:#9B8A7A; font-size:12px; margin-top:48px; padding:24px 0; border-top:1px solid #F0DBD2;">
+      念念在 · AI 哀伤辅助服务 · 内测版本 · 不替代真实人际关系 · 不存储真实用户数据
+    </footer>
   </main>
   <script>
     let currentState = null;
