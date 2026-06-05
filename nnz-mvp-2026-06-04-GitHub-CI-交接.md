@@ -154,16 +154,16 @@ Push origin
 git push -u origin main
 ```
 
-命令行推送方法（2026-06-04 已验证）：
+命令行推送方法：
 
 ```bash
-git remote set-url origin "https://x-access-token:YOUR_GITHUB_PAT@github.com/chaoshorizon316/nnz.git"
+git remote set-url origin "https://github.com/chaoshorizon316/nnz.git"
 git push origin main
 ```
 
-**必须用 `x-access-token` 格式**——这是 GitHub PAT 的标准用户名写法。写成 `TOKEN@github.com` Git 会尝试交互式密码认证，沙箱里无法交互直接失败。
+优先使用 GitHub Desktop、系统 credential helper、或已经认证过的终端环境。不要把 PAT 写进 remote URL、提交文件或工作记录。
 
-PAT 过期后去 https://github.com/settings/tokens 重新生成（勾选 `repo` 权限），替换 URL 中的 token 部分。
+历史踩坑：2026-06-04 曾用 PAT remote URL 方式排查推送问题，后来 GitHub 会拦截明文 token，且 token 可能残留在日志中。若 token 曾暴露，应去 https://github.com/settings/tokens 撤销旧 token。
 
 ## 验证记录
 

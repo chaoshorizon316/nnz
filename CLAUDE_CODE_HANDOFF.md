@@ -9,7 +9,7 @@ https://nnz-kego.onrender.com
 
 免费版无请求 15 分钟会休眠，首次访问需等 30–60 秒唤醒。部署细节见 `nnz-mvp-2026-06-04-云托管完成交接.md`。
 
-## 最新 GitHub / CI 状态（2026-06-04）
+## 最新 GitHub / CI 状态（2026-06-05）
 
 GitHub 仓库：
 
@@ -17,28 +17,16 @@ GitHub 仓库：
 https://github.com/chaoshorizon316/nnz
 ```
 
-远端 `main` 已包含初始化提交：
+当前远端 `main`：
 
 ```text
-74981e0 chore: initialize nnz mvp workspace
+504e360 feat: LLM chat + extraction pipeline + A/B prompt differentiation + docs
 ```
 
-CI 提交：
+GitHub Actions 当前状态：
 
 ```text
-a1d4fbb ci: verify nnz mvp
-```
-
-该 CI 提交已推送，GitHub Actions 已成功运行。详细交接见：
-
-```text
-nnz-mvp-2026-06-04-GitHub-CI-交接.md
-```
-
-新增 CI 文件：
-
-```text
-.github/workflows/nnz-mvp-ci.yml
+NNZ MVP CI: success
 ```
 
 CI 会在 `nnz-mvp` 中执行：
@@ -51,11 +39,33 @@ npm run build:demo
 npm audit
 ```
 
+最新通过记录见 GitHub Actions：
+
+```text
+https://github.com/chaoshorizon316/nnz/actions
+```
+
+## 2026-06-05 接手校验
+
+当前本地与远端同步：`main...origin/main`。
+
+已完成：
+
+- DeepSeek / OpenAI-compatible LLM adapter。
+- LLM 对话生成 `generateLlmReply()`。
+- 自动化提取管线 `src/extraction/`。
+- A/B prompt 分化：不同关系、口头禅、对话历史进入 prompt。
+- 45 条测试在 GitHub CI 与 `/tmp` 干净副本中通过。
+- Render demo 可访问：`https://nnz-kego.onrender.com`。
+
+2026-06-05 实测云端 `/api/chat`：A/B 回复已不完全相同。A 使用“丫头 / 你自己拿主意”，B 使用“儿子 / 慢慢来”。后续仍可增强差异度，但不是从零修复。
+
+注意：本地 iCloud 目录下的 `node_modules` 偶发缺可选依赖包，直接 `npm test` 可能误报失败。可靠验证方式是复制到 `/tmp` 后 `npm ci`，或重新安装依赖。
+
 ## 云端 Demo 部署状态（2026-06-04）
 
 已完成 Render 部署准备：
 
-- 当前本地仍领先远端，至少包含 `f92699b deploy: prepare render demo` 和工作记录文档提交；需要用户用 GitHub Desktop 执行 `Push origin`。
 - `render.yaml`：Render Blueprint，服务名 `nnz-mvp-demo`，rootDir 为 `nnz-mvp`。
 - `nnz-mvp/src/demo-server.ts`：支持 `HOST` / `PORT`，默认监听 `0.0.0.0`，并新增 `/healthz`。
 - `nnz-mvp/package.json`：新增 `start` 脚本和 Node engines。
@@ -63,7 +73,7 @@ npm audit
 - `nnz-mvp-2026-06-04-云端部署验证与修复.md`：记录 CommonJS 构建产物修复与验证结论。
 - `nnz-mvp-2026-06-04-工作记录与下一步安排.md`：今日工作记录、卡点和明日执行顺序。
 
-部署目标是公开 demo 链接，不是生产上线。不要输入真实用户隐私，不要接真实数据库 / 微信 / 支付 / LLM Key。
+部署目标是公开 demo 链接，不是生产上线。不要输入真实用户隐私，不要接真实数据库 / 微信 / 支付。LLM Key 只允许走环境变量，不得写入仓库。
 
 如果你是 Claude Code / 其他 AI / 开发者，从这个知识库根目录接手，请先进入当前 MVP 子项目：
 
@@ -97,17 +107,17 @@ nnz-mvp-Step4.5-SoulOps后台治理实施记录.md
 
 ## 当前最重要目标
 
-当前 MVP 验证的是：
+当前 MVP 核心仍是：
 
 > 不同用户拥有不同 Soul。
 
-当前 `nnz-mvp` 还已完成阶段一 Covenant 生命周期收口：
+当前 `nnz-mvp` 已完成 Covenant 生命周期收口：
 
 ```text
 ACTIVE -> SEALED -> NODE -> SEALED -> GRADUATED
 ```
 
-最新状态、验证方式和注意事项以 `nnz-mvp/CLAUDE_CODE_HANDOFF.md` 为准。
+最新工程状态、验证方式和注意事项以 `nnz-mvp/CLAUDE_CODE_HANDOFF.md` 与 `nnz-mvp-2026-06-05-工作记录.md` 为准。
 
 截至当前，步骤二 Memory Vault 分层的基础字段与筛选规则也已落地：Runtime 记忆和 Soul Update 证据分开处理，`RISK` / `RESTRICTED` / `NODE_MEMORY` 不会误用于 Soul 更新。
 

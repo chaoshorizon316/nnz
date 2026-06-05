@@ -1,6 +1,14 @@
 # 念念在 MVP Core
 
-This package currently implements the domain boundary for user-scoped Soul data and the first Covenant lifecycle demo.
+This package implements the current MVP core for user-scoped Soul data, Covenant lifecycle, Memory layering, Soul Ops maturity review, LLM chat, and the first extraction pipeline.
+
+Public demo:
+
+```text
+https://nnz-kego.onrender.com
+```
+
+The demo may sleep on the free Render tier. The first request after inactivity can take 30-60 seconds.
 
 ## Soul Scope Rule
 
@@ -81,6 +89,26 @@ The report is still scoped by `userId + personaId` and summarizes:
 
 This console is intentionally admin-facing. The user-facing app or WeChat flow should not expose Soul internals such as `SoulVersion`, `SoulSnapshot`, `SoulUpdateProposal`, evidence chains, or scope ids.
 
+## LLM Chat And Extraction
+
+The demo supports OpenAI-compatible LLM providers through environment variables:
+
+```text
+NNZ_LLM_API_KEY
+NNZ_LLM_BASE_URL
+NNZ_LLM_MODEL
+```
+
+When configured, `/api/chat` calls the LLM separately for user A and user B. The prompt uses only that user's own Soul, allowed runtime memories, recent conversations, relationship, pet phrases, and node context. If the adapter is unavailable or a reply leaks backend mechanism terms, the demo falls back to deterministic runtime output.
+
+The extraction pipeline is also scope-private:
+
+- Every `userId + personaId` tracks its own extraction cursor.
+- Every 5 new conversation messages can trigger extraction over the last 10 messages.
+- Extracted facts become `CHAT_EXCERPT` memories.
+- High-confidence whitelisted fields can create `SoulUpdateProposal`.
+- Proposals still require review; they do not silently mutate Soul.
+
 ## Future Shared Memorial Boundary
 
 Family co-creation is not part of the MVP. If it is added later, it must be implemented as a separate `Shared Memorial Space` with explicit invite, authorization, revocation, and a distinct shared Soul. It must never overwrite a user's private Soul.
@@ -94,4 +122,15 @@ npm run build:demo
 npm run demo
 ```
 
-If CLI verification hangs in the iCloud/Obsidian path, check and clear stale `tsc` / `vitest` worker processes before retrying.
+Current test suite: 45 tests across domain scope, runtime, safety guard, LLM adapter, and extraction orchestrator.
+
+If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume the source is broken immediately. This directory has shown flaky `node_modules` behavior. A reliable check is to copy a clean git archive to `/tmp`, run `npm ci`, then run the verification commands there.
+
+## Current Next Step
+
+LLM integration is already present at demo level. The next engineering task is to make it easier to verify:
+
+- Extract prompt building from `src/demo-server.ts` into a pure function.
+- Add A/B prompt contract tests.
+- Add a `/api/chat` smoke test that asserts A/B replies differ and contain no mechanism leaks.
+- Keep all tests scoped by `userId + personaId`.

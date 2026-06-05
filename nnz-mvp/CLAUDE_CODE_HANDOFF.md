@@ -58,11 +58,13 @@ Shared Memorial Space
 
 ## 4. 当前已实现内容
 
-当前包实现了三层：
+当前包实现了五层：
 
 1. Domain Store：用户私有 Soul / Memory / Node / Conversation 的内存存储和作用域保护。
-2. Soul Runtime：把当前用户自己的 Soul + Memory + 输入消息转成自然回复。
-3. Demo Server：一个本地网页，展示“两个用户并排聊天”的可感知演示。
+2. Soul Runtime：确定性 fallback，把当前用户自己的 Soul + Memory + 输入消息转成自然回复。
+3. LLM Adapter：OpenAI-compatible 对话生成，支持 DeepSeek 等兼容服务。
+4. Extraction Pipeline：从用户私有对话中提取候选记忆，并生成可审核 proposal。
+5. Demo Server：一个本地网页，展示“两个用户并排聊天”的可感知演示和 Soul Ops Console。
 
 ### 4.1 Domain Store
 
@@ -119,7 +121,7 @@ src/runtime/soul-runtime.ts
 src/runtime/soul-runtime.test.ts
 ```
 
-入口函数：
+确定性 fallback 入口函数：
 
 ```ts
 generateSoulReply(input: {
@@ -138,6 +140,15 @@ generateSoulReply(input: {
   - `distress`
   - `open`
 - 用关系视角、幽默程度、口头禅、节点记忆生成一条自然聊天回复。
+
+当前 demo 优先使用 `src/demo-server.ts` 中的 `generateLlmReply()` 调用 LLM；当 `NNZ_LLM_API_KEY` 不存在、LLM 调用失败进入 fallback、或输出触发机制泄漏 guard 时，再使用 `generateSoulReply()`。
+
+LLM prompt 当前注入：
+
+- 当前 `userId + personaId` 下的 Soul kernel。
+- 当前 `userId + personaId` 下允许进入 runtime 的 Memory。
+- 最近 12 条本 scope conversation。
+- relationship、petPhrases、humorLevel、knowledgeCutoff、node context。
 
 非常重要：Runtime 的前台回复不能自曝后台机制。
 
@@ -201,6 +212,53 @@ http://127.0.0.1:3007
   - A 创建“婚礼”节点和 NODE_MEMORY。
   - B 不发生变化。
 
+### 4.4 LLM Adapter
+
+主要文件：
+
+```text
+src/llm/types.ts
+src/llm/adapter.ts
+src/llm/adapter.test.ts
+src/env.ts
+```
+
+当前支持：
+
+- OpenAI-compatible `/chat/completions` API。
+- `NNZ_LLM_API_KEY`。
+- `NNZ_LLM_BASE_URL`。
+- `NNZ_LLM_MODEL`。
+- `jsonMode`，用于结构化提取。
+- Mock adapter，用于测试。
+- 本地 `.env` 自动加载；生产环境使用平台环境变量。
+
+注意：不要把真实 LLM key 写入仓库。`nnz-mvp/.env` 只能留在本地或部署平台环境变量中。
+
+### 4.5 Extraction Pipeline
+
+主要文件：
+
+```text
+src/extraction/types.ts
+src/extraction/prompts.ts
+src/extraction/confidence.ts
+src/extraction/orchestrator.ts
+src/extraction/orchestrator.test.ts
+```
+
+当前行为：
+
+- 每个 `userId + personaId` scope 单独记录 extraction 进度。
+- 每 5 条新增 conversation 触发一次提取。
+- 最近 10 条 conversation 进入提取窗口。
+- LLM 以 JSON mode 返回候选字段。
+- 提取结果先落为 `CHAT_EXCERPT` memory，`source=CONVERSATION`。
+- 只有置信度足够且字段在白名单内，才生成 `SoulUpdateProposal`。
+- Proposal 仍需后台接受后才会更新 Soul。
+
+这条管线不会把 A 的对话提取给 B，也不会跨用户合并同名“爸爸”。
+
 ## 5. 环境和依赖
 
 当前本机环境：
@@ -233,7 +291,7 @@ npm install
   "@types/node": "^25.9.1",
   "tsx": "^4.22.4",
   "typescript": "^5.8.3",
-  "vitest": "^3.2.4"
+  "vitest": "^4.1.8"
 }
 ```
 
@@ -312,7 +370,7 @@ node dist-cjs/demo-server.js
 }
 ```
 
-如果新增 demo 依赖的源码目录，要把它加入这里。
+注意：`demo-server.ts` 当前已经直接 import `src/llm/**/*.ts` 与 `src/extraction/**/*.ts`，TypeScript 会跟随 import 编译这些文件。如果未来新增不被 `demo-server.ts` import 的 demo 独立入口，再把对应目录补进 `tsconfig.demo.json`。
 
 ## 8. 如何手动验证演示
 
@@ -507,9 +565,12 @@ POST /api/reset
 ```text
 src/domain/soul-scope.test.ts
 src/runtime/soul-runtime.test.ts
+src/runtime/soul-guard.test.ts
+src/llm/adapter.test.ts
+src/extraction/orchestrator.test.ts
 ```
 
-当前共 9 条测试。
+当前共 45 条测试。
 
 Domain tests 覆盖：
 
@@ -528,6 +589,12 @@ Runtime tests 覆盖：
 - 普通 DESCRIPTION 里提到婚礼，也不会被当成 NODE context。
 - 回复不包含后台机制词。
 
+Guard / LLM / Extraction tests 覆盖：
+
+- 极端情绪、占卜、亲密边界、每日限额、依赖提醒等安全护栏。
+- OpenAI-compatible adapter 的请求格式、JSON mode、错误处理、env factory。
+- Extraction trigger window、JSON parse fallback、confidence merge、proposal 生成。
+
 ## 12. 当前设计边界
 
 这只是 MVP Core，不是最终产品服务。
@@ -536,7 +603,6 @@ Runtime tests 覆盖：
 
 - 数据库。
 - 登录鉴权。
-- 真实 LLM 调用。
 - Embedding 检索。
 - 长期记忆压缩。
 - Snapshot 恢复运行态。
@@ -545,6 +611,14 @@ Runtime tests 覆盖：
 - 生产级 UI 框架。
 
 当前使用内存 store，进程重启数据会丢失。这是有意为之，方便快速验证作用域规则。
+
+当前已有：
+
+- OpenAI-compatible LLM 对话调用。
+- DeepSeek 等兼容服务的 env 配置路径。
+- 对话到 `CHAT_EXCERPT` memory / proposal 的自动化提取管线。
+
+但这仍是 demo 级接入，不是生产级观测、限流、成本控制和持久化方案。
 
 ## 13. 不要轻易破坏的点
 
@@ -659,7 +733,7 @@ Memory 已按使用路径分层，不再只依赖单一 `enabledForSoul`。
 - 上传资料和对话摘录的 evidence 链。
 - Memory 禁用/归档 UI。
 - 风险/禁区策略进入单独 guard 层，而不是角色温情回复。
-- Memory 检索摘要器，为真实 LLM prompt 做准备。
+- Memory 检索摘要器，为 LLM prompt 做更稳定的压缩与排序。
 
 ### Step 3: SoulUpdateProposal 审核流程（基础已完成）
 
@@ -753,9 +827,26 @@ Soul 更新现在是可见、可接受、可拒绝、有证据、有字段白名
 nnz-mvp-Step4.5-SoulOps后台治理实施记录.md
 ```
 
-### Step 5: 真实 LLM 接入
+### Step 5: Prompt Contract 与云端 Smoke（下一步）
 
-真实 LLM 接入时，建议让 `src/runtime/soul-runtime.ts` 演化为：
+真实 LLM 接入已经完成到 demo 级别。下一步不要重做 adapter，而是把当前 prompt 和云端行为变得可测试、可回归：
+
+1. 从 `src/demo-server.ts` 中抽出 `buildLlmReplyPrompt()` 纯函数。
+2. 为 A/B prompt 增加 contract test：
+   - A 注入“女儿 / 丫头 / 你自己拿主意”。
+   - B 注入“儿子 / 慢慢来”。
+   - A 的 NODE_MEMORY 不进入 B。
+   - recentConversations 只来自当前 `userId + personaId`。
+3. 增加 `/api/chat` smoke test：
+   - 同一句消息发给 A/B。
+   - A/B assistant reply 不相等。
+   - reply 不含机制词。
+4. 确认 Render 环境变量：
+   - `NNZ_LLM_API_KEY`
+   - `NNZ_LLM_BASE_URL`
+   - `NNZ_LLM_MODEL`
+
+长期仍建议把 runtime 演化为：
 
 ```text
 Runtime input builder -> prompt contract -> model call -> response guard -> memory update proposal
@@ -865,27 +956,25 @@ npm run demo
 最近一次验证内容：
 
 ```bash
-node dist-cjs/demo-server.js
-API: reset -> run-all -> seal -> chat -> activate-node -> chat -> complete-node
-API: reset -> apply-correction -> accept-correction
-API: reset -> apply-correction -> reject-correction
+git status --short --branch
+git ls-remote --heads origin main
+curl https://nnz-kego.onrender.com/healthz
+POST https://nnz-kego.onrender.com/api/chat
+/tmp clean copy: npm ci -> typecheck -> test -> build:demo -> audit
 ```
 
 结果：
 
-- 本地 demo 已在 `http://127.0.0.1:3007` 启动。
-- 旧流程 `run-all` 的 6 个 PASS 全部通过。
-- A 封存后 `latestSoul` 为 `null`，不会回退显示旧 ACTIVE Soul。
-- SEALED 回复为：`（已封存。请使用「以节点重启」进入一次明确的节点互动。）`
-- A 节点重启后复用同名“婚礼”节点，节点数量保持 1。
-- 节点激活记忆 `节点「婚礼」已激活。` 不重复写入。
-- 完成节点后该节点状态为 `COMPLETED`。
-- B 用户始终保持 `ACTIVE`。
-- 生成用户 A 纠正提案后，A Soul 仍为 low，proposal 为 `PENDING`，证据数量为 1，B proposal 数为 0。
-- 接受 A 提案后，A Soul 变为 high，版本变为 2，proposal 为 `ACCEPTED`。
-- 拒绝 A 提案后，A Soul 保持 low，版本保持 1，proposal 为 `REJECTED`。
+- 本地与远端同步：`main...origin/main`。
+- 远端 `main` 指向 `504e360 feat: LLM chat + extraction pipeline + A/B prompt differentiation + docs`。
+- GitHub Actions 最新 run 为 success。
+- Render demo `/healthz` 返回 `ok=true`。
+- 云端 `/api/chat` 实测 A/B 回复不相同：A 使用“丫头 / 你自己拿主意”，B 使用“儿子 / 慢慢来”。
+- `/tmp` 干净副本验证通过：45 tests passed，build 通过，audit 0。
 
-注意：当前 iCloud/Obsidian 路径下，`npm run typecheck` / `npm test` 偶发卡住并产生 orphan worker。若遇到这种情况，先清理 `tsc` / `vitest` 残留进程，再重试。关键源码已通过 `transpileModule` 语法层验证，当前 demo 行为已通过 API 验证。
+注意：当前 iCloud/Obsidian 路径下，`node_modules` 偶发缺可选依赖或包文件，直接 `npm test` 可能误报失败。可靠验证方式是复制到 `/tmp` 后重新 `npm ci`，或清理本地 `node_modules` 后重装。
+
+安全补充：本地 `origin` 曾包含 GitHub PAT，已改回普通 HTTPS URL。建议用户在 GitHub 后台 revoke 旧 token。仓库正文复查未发现真实 `ghp_` / `github_pat_` / `sk-` 密钥。
 
 ## 17. 给下一位 AI 的工作原则
 

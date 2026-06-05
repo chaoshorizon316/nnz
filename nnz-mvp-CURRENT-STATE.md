@@ -1,9 +1,9 @@
 # nnz-mvp 当前状态与交接指南
 
-> 更新：2026-06-04
-> 覆盖：Step 1（Covenant 状态机）→ Step 4.5（Memory 分层 + Maturity）→ 安全护栏
+> 更新：2026-06-05
+> 覆盖：Soul 作用域、Covenant 状态机、Memory 分层、Soul Ops、安全护栏、Render demo、LLM 对话、自动化提取管线
 
-## 2026-06-04 GitHub / CI 状态
+## 2026-06-05 GitHub / CI 状态
 
 GitHub 仓库已经建立：
 
@@ -11,22 +11,22 @@ GitHub 仓库已经建立：
 https://github.com/chaoshorizon316/nnz
 ```
 
-已推送到远端 `main` 的初始化提交：
+当前远端 `main`：
 
 ```text
-74981e0 chore: initialize nnz mvp workspace
+504e360 feat: LLM chat + extraction pipeline + A/B prompt differentiation + docs
 ```
 
-本地新增 CI 提交：
+本地状态：
 
 ```text
-a1d4fbb ci: verify nnz mvp
+main...origin/main
 ```
 
-该提交新增：
+GitHub Actions：
 
 ```text
-.github/workflows/nnz-mvp-ci.yml
+NNZ MVP CI: success
 ```
 
 CI 内容：
@@ -38,12 +38,6 @@ npm run typecheck
 npm test
 npm run build:demo
 npm audit
-```
-
-注意：CI 提交已推送并通过。当前如果显示本地领先远端，通常说明 Render 部署准备提交 `f92699b deploy: prepare render demo` 和后续工作记录文档尚未推送。用户需要用 GitHub Desktop 点 `Push origin`。完整记录见：
-
-```text
-nnz-mvp-2026-06-04-GitHub-CI-交接.md
 ```
 
 ## 2026-06-04 云端 Demo 部署准备
@@ -81,6 +75,12 @@ nnz-mvp-2026-06-04-工作记录与下一步安排.md
 ```text
 https://nnz-kego.onrender.com
 ```
+
+2026-06-05 校验：
+
+- `/healthz` 返回 `ok=true`。
+- GitHub CI 对最新提交通过。
+- 云端 `/api/chat` 实测 A/B 回复不完全相同。
 
 ## 一句话定位
 
@@ -191,27 +191,35 @@ POST /api/reset               — 重置演示
 
 ## 测试覆盖
 
-**37 条测试全部通过**（typecheck + build 也通过）：
+**45 条测试通过**（CI 与 `/tmp` 干净副本验证）：
 
-- `soul-scope.test.ts` — 19 条：作用域隔离（6）、covenant 流转（5）、memory 分层（3）、proposal 审核（3）、maturity（1）、单 ACTIVE Soul（1）
-- `soul-runtime.test.ts` — 4 条：回复差异、机制词防漏、node context 区分
-- `soul-guard.test.ts` — 14 条：极端情绪（4）、占卜（1）、亲密边界（1）、正常通过（2）、每日限额（4）、依赖提醒（1）、常量无泄漏（1）
+- `soul-scope.test.ts` — 19 条
+- `soul-runtime.test.ts` — 4 条
+- `soul-guard.test.ts` — 14 条
+- `llm/adapter.test.ts` — 4 条
+- `extraction/orchestrator.test.ts` — 4 条
 
 ## 下一步：推荐推进顺序
 
-### 优先：真实 LLM 接入（Step 5）
+### 优先：稳定 A/B 差异与 prompt 可测性
 
-当前 `generateSoulReply` 是确定性的——基于 intent 检测返回硬编码文案。接入真实 LLM 时：
+当前云端 A/B 已有差异，但仍需让差异更可控：
 
-1. 保留 `generateSoulReply` 的接口签名 `(soul, memories, message)`
-2. 内部改为构建 system prompt（从 soul.kernelJson + memories）+ 调用 LLM API
-3. 保留 `containsMechanismLeak` 检查作为输出 guard
-4. 新增 `knowledgeCutoff` 检查——如果消息提及 cutoff 后事件，提示 LLM 用「如果我还活着」句式
-5. `soul-guard` 继续在调用方（demo server）执行，不进入 LLM prompt
+1. 给 `generateLlmReply` 的 prompt 组装抽可测试函数。
+2. 增加 A/B prompt snapshot / contract test，断言 relationship、petPhrases、recentConversations 分别注入。
+3. 增加云端 smoke test：POST `/api/chat` 后检查 A/B 回复不相等且不含机制词。
 
-### 其次：自动化 Memory 提取管线（Soul.md §3）
+### 其次：确认 Render LLM 环境变量
 
-Soul.md 设计了一套完整的自动化流程：聊天记录 → 特征提取 → 置信度计算 → Proposal 生成。当前 Memory 体系和 Proposal 审核流已经就位，缺的是从对话到提取的管线。核心是在 `addConversation` 之后触发一次 LLM 调用做结构化提取。
+Render 需要配置：
+
+```text
+NNZ_LLM_API_KEY
+NNZ_LLM_BASE_URL
+NNZ_LLM_MODEL
+```
+
+如果未配置，LLM adapter 不可用，提取管线会禁用或 fallback。
 
 ### 再次：持久化
 
@@ -260,6 +268,15 @@ Soul.md 设计了一套完整的自动化流程：聊天记录 → 特征提取 
 ### UI 改进
 
 加载状态（按钮变灰 + 脉冲动画）+ 连续相同消息去重（不重复调 LLM）。
+
+### 2026-06-05 接手校验
+
+- 本地与远端同步：`main...origin/main`。
+- `origin` 已清理为普通 HTTPS URL，不再包含 PAT。
+- 仓库正文未发现真实 `ghp_` / `github_pat_` / `sk-` 密钥。
+- `/tmp` 干净副本验证通过：45 tests passed，build/audit 通过。
+- 云端 `/api/chat` A/B 输出不相等。
+- 本地 iCloud `node_modules` 偶发缺依赖文件，不能把这个误判为源码失败。
 
 ### 详细记录
 
