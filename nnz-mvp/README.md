@@ -134,4 +134,4 @@ LLM integration is already present at demo level. Prompt contract tests and fall
 - `src/runtime/llm-reply.test.ts` verifies A/B prompt differences, node context isolation, recent conversation scope, knowledge cutoff, and fallback behavior.
 - Keep all tests scoped by `userId + personaId`.
 
-The next step after pushing is a cloud smoke test against Render: `/healthz`, `/api/chat` A/B non-empty and different replies, no mechanism leaks, and extraction remains scoped.
+Cloud smoke after pushing `ef2b364` passed on Render: `/healthz`, `/api/chat` A/B non-empty and different replies, no mechanism leaks, and extraction remains scoped. The next engineering step is persistence: extract a `SoulStore` interface and design SQLite/Postgres storage without weakening the `userId + personaId` boundary.

@@ -832,7 +832,7 @@ Soul 更新现在是可见、可接受、可拒绝、有证据、有字段白名
 nnz-mvp-Step4.5-SoulOps后台治理实施记录.md
 ```
 
-### Step 5: Prompt Contract 与云端 Smoke（本地已完成，待推送后云端复测）
+### Step 5: Prompt Contract 与云端 Smoke（已完成）
 
 真实 LLM 接入已经完成到 demo 级别。Step 5.1 已把当前 prompt 和 LLM 输出兜底变得可测试、可回归：
 
@@ -846,16 +846,18 @@ nnz-mvp-Step4.5-SoulOps后台治理实施记录.md
    - 空字符串 fallback。
    - 机制泄漏 fallback。
    - 舞台描写清洗。
-4. 推送后仍需做云端 `/api/chat` smoke：
+4. 推送 `ef2b364` 后已完成云端 `/api/chat` smoke：
    - 同一句消息发给 A/B。
-   - A/B assistant reply 不相等。
+   - A/B assistant reply 非空且不相等。
    - reply 不含机制词。
+   - reply 不是确定性 fallback 固定句式。
 5. Render 环境变量已由用户配置并通过云端行为确认生效：
    - `NNZ_LLM_API_KEY`
    - `NNZ_LLM_BASE_URL`
    - `NNZ_LLM_MODEL`
+6. 连续多轮云端对话已触发 extraction：A 生成 9 条 `CHAT_EXCERPT` 与 2 条 proposal；B 无 `CHAT_EXCERPT`、无 proposal、无 A 的婚礼节点记忆。
 
-长期仍建议把 runtime 演化为：
+下一步进入持久化设计。长期仍建议把 runtime 演化为：
 
 ```text
 Runtime input builder -> prompt contract -> model call -> response guard -> memory update proposal
@@ -975,11 +977,12 @@ POST https://nnz-kego.onrender.com/api/chat
 结果：
 
 - 本地与远端同步：`main...origin/main`。
-- 远端 `main` 指向 `35349d8 docs: refresh llm deployment handoff`。
+- 远端 `main` 指向 `ef2b364 feat: add llm prompt contract guards`。
 - GitHub Actions 最新 run 为 success。
 - Render demo `/healthz` 返回 `ok=true`。
 - 云端 `/api/chat` 实测 A/B 回复不相同：A 使用“丫头 / 你自己拿主意”，B 使用“儿子 / 慢慢来”。
 - Render LLM 环境变量配置后，云端短会话确认走 LLM；连续多轮触发 extraction，A 生成 `CHAT_EXCERPT` 与 proposal，B 未被污染。
+- 推送 `ef2b364` 后云端 smoke 通过：A/B 非空、不相等、无机制词；A extraction 有 9 条 `CHAT_EXCERPT` 与 2 条 proposal，B 仍无污染。
 - `/tmp` 干净副本验证通过：45 tests passed，build 通过，audit 0。
 - 当前本地 Step 5.1 验证通过：52 tests passed，`build:demo` 通过。
 

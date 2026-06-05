@@ -20,7 +20,7 @@ https://github.com/chaoshorizon316/nnz
 当前远端 `main`：
 
 ```text
-35349d8 docs: refresh llm deployment handoff
+ef2b364 feat: add llm prompt contract guards
 ```
 
 GitHub Actions 当前状态：
@@ -62,7 +62,7 @@ https://github.com/chaoshorizon316/nnz/actions
 
 2026-06-05 用户配置 Render LLM 环境变量后复测：云端短会话确认走 LLM 路径，连续多轮对话触发 extraction，A 生成 `CHAT_EXCERPT` 与 proposal，B 未被污染。
 
-注意：`35349d8` 之后本地已有 Step 5.1 新改动，需提交/推送后再做 Render 云端 smoke。
+2026-06-05 推送 `ef2b364` 后复测：GitHub CI success，Render `/healthz` 正常；云端 `/api/chat` A/B 回复非空、不相等、无机制词、不是确定性 fallback 固定句式；连续多轮对话触发 extraction，A 生成 9 条 `CHAT_EXCERPT` 与 2 条 proposal，B 无 `CHAT_EXCERPT`、无 proposal、无 A 的婚礼节点记忆。
 
 注意：本地 iCloud 目录下的 `node_modules` 偶发缺可选依赖包，直接 `npm test` 可能误报失败。可靠验证方式是复制到 `/tmp` 后 `npm ci`，或重新安装依赖。
 

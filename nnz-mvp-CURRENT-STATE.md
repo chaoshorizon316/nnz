@@ -14,7 +14,7 @@ https://github.com/chaoshorizon316/nnz
 当前远端 `main`：
 
 ```text
-35349d8 docs: refresh llm deployment handoff
+ef2b364 feat: add llm prompt contract guards
 ```
 
 本地状态：
@@ -82,6 +82,7 @@ https://nnz-kego.onrender.com
 - GitHub CI 对最新已推送提交通过。
 - 云端 `/api/chat` 实测 A/B 回复不完全相同。
 - 用户已在 Render 配置 LLM 环境变量后，云端短会话确认走 LLM 路径；连续多轮对话触发 extraction，A 生成 `CHAT_EXCERPT` 与 proposal，B 未被污染。
+- 推送 `ef2b364` 后云端 smoke 通过：A/B 回复非空、不相等、无机制词、不是确定性 fallback；连续多轮触发 extraction 后，A 有 9 条 `CHAT_EXCERPT` 和 2 条 proposal，B 无 `CHAT_EXCERPT`、无 proposal、无 A 的婚礼节点记忆。
 
 ## 一句话定位
 
@@ -205,25 +206,24 @@ POST /api/reset               — 重置演示
 
 ## 下一步：推荐推进顺序
 
-### 优先：推送后云端 smoke
+### 优先：持久化
 
-本地 Step 5.1 已完成：`generateLlmReply` prompt 已抽为 `src/runtime/llm-reply.ts`，A/B prompt contract、节点隔离、history scope、空回复 fallback 和机制泄漏 fallback 已被 7 条测试覆盖。
+Step 5.1 已完成并通过云端 smoke。当前全内存 store，进程重启数据丢失。下一步建议抽取 `SoulStore` interface，再做 SQLite 或 Postgres 持久化。
 
-下一步需要推送当前本地提交后验证云端：
+建议顺序：
 
-1. `GET /healthz`。
-2. `POST /api/reset`。
-3. `POST /api/chat` 同一句话给 A/B。
-4. 检查 A/B reply 非空、不相等、不含机制词。
-5. 连续多轮对话触发 extraction，确认 scope 隔离仍成立。
+1. 定义 `SoulStore` interface，先由 `InMemorySoulStore` 实现。
+2. 增加 SQLite schema 草案。
+3. 为 scope isolation / proposal / extraction cursor 设计持久化测试。
+4. 再实现 `SqliteSoulStore`。
 
-### 其次：持久化
-
-当前全内存 store，进程重启数据丢失。下一步建议抽取 `SoulStore` interface，再做 SQLite 或 Postgres 持久化。
-
-### 再次：后台拆分
+### 其次：后台拆分
 
 将 Soul Ops Console 从 demo 页面拆成独立后台模块，增加 RBAC、audit log、数据删除流水。
+
+### 再次：微信 / H5 用户端雏形
+
+用户端只暴露自然聊天、记忆收集、节点、封存/毕业体验，不暴露 LLM、SoulVersion、Proposal、scope 等机制。
 
 
 ## 不要破坏的点
