@@ -17,6 +17,7 @@ import type {
   User,
   UserPersonaScope,
 } from './domain/types';
+import { generateLlmReply } from './runtime/llm-reply';
 import { GRADUATED_REPLY, SEALED_REPLY, generateSoulReply } from './runtime/soul-runtime';
 import { checkDailyLimit, checkMessageSafety, incrementDailyCount } from './runtime/soul-guard';
 
@@ -327,110 +328,6 @@ function applySafetyGuard(
   return { blocked: false };
 }
 
-async function generateLlmReply(
-  adapter: LlmAdapter,
-  soul: { kernelJson: Record<string, unknown>; knowledgeCutoff?: Date },
-  memories: Array<{ type: string; content: string }>,
-  recentConversations: Array<{ role: string; content: string }>,
-  message: string,
-): Promise<string> {
-  const displayName = readStringField(soul.kernelJson, 'identityCore', 'displayName') ?? '';
-  const relationship = readStringField(soul.kernelJson, 'identityCore', 'relationship') ?? '';
-  const humorLevel = readStringField(soul.kernelJson, 'affectModel', 'humorLevel') ?? 'medium';
-  const petPhrases = readStringArray(soul.kernelJson, 'languageModel', 'petPhrases');
-
-  // Build a vivid personality description from memories
-  const descriptionMemories = memories.filter(
-    (m) => m.type === 'DESCRIPTION' || m.type === 'CORRECTION',
-  );
-  const personalityLines = descriptionMemories.map((m) => m.content);
-
-  // Build conversation history (last 6 exchanges)
-  const historyLines = recentConversations.length > 0
-    ? recentConversations.slice(-12).map((msg) => {
-        const prefix = msg.role === 'USER' ? 'User' : displayName;
-        return `${prefix}: ${msg.content}`;
-      }).join('\n')
-    : '';
-
-  // Humor level as behavior description
-  const humorDesc = humorLevel === 'high'
-    ? 'Very humorous, often cracks jokes, but respects boundaries.'
-    : humorLevel === 'low'
-    ? 'Speaks plainly, warm but not very humorous. Shows care through actions, not jokes.'
-    : 'Moderately humorous, balances warmth with occasional wit.';
-
-  // Relationship determines speech style
-  const isDaughter = relationship.includes('女儿');
-  const isSon = relationship.includes('儿子');
-  const openerName = isDaughter ? '丫头' : isSon ? '儿子' : '孩子';
-  const relationshipStyle = isDaughter
-    ? 'You speak to your daughter with tender concern. You call her "丫头". You are protective but respect her independence.'
-    : isSon
-    ? 'You speak to your son with steady encouragement. You call him "儿子". You believe in letting him find his own path.'
-    : `You speak to your ${relationship} with warmth and respect.`;
-
-  const cutoff = soul.knowledgeCutoff;
-  const cutoffNote = cutoff
-    ? `\nCRITICAL: Your knowledge ends at ${cutoff.toISOString().slice(0, 10)}. If the user mentions anything after this date, say "如果我还活着，我会..." — never pretend to know recent events.`
-    : '';
-
-  const phraseNote = petPhrases.length > 0
-    ? `\nYou naturally use these phrases: ${petPhrases.join('、')}. Weave them in naturally.`
-    : '';
-
-  const nodeContext = memories
-    .filter((m) => m.type === 'NODE_MEMORY')
-    .map((m) => m.content)
-    .join(' ');
-
-  const systemPrompt = `You are ${displayName}. You are speaking with someone who lost you.
-
-${relationshipStyle}
-${humorDesc}${phraseNote}
-
-[WHO YOU ARE — from their memories]
-${personalityLines.length > 0 ? personalityLines.join('\n') : 'You are a warm, caring parent.'}
-${cutoffNote}
-
-[RULES]
-- Reply EXACTLY as ${displayName} would in a real chat. Do NOT add descriptions of your actions, expressions, or thoughts in parentheses.
-- Speak naturally in Chinese. Your unique voice comes from your personality, not from explaining what you are doing.
-- Address them as "${openerName}".
-- Keep replies concise (1-3 sentences), like a real text message.
-- Never mention AI, Soul, Memory, system, scope, evidence, or retrieval.
-- Never make decisions for them — say "如果是${displayName === '爸爸' ? '爸爸' : '我'}，会..." instead.
-- If they seem deeply distressed, show care but do not pretend to be a therapist.${nodeContext ? '\n- CURRENT CONTEXT: ' + nodeContext : ''}`;
-
-  const userPrompt = historyLines
-    ? `[Recent conversation]\n${historyLines}\n\n[Latest message]\n${message}`
-    : message;
-
-  const result = await adapter.complete({
-    systemPrompt,
-    userPrompt,
-    temperature: 0.7,
-    maxTokens: 250,
-  });
-
-  const raw = result.content.trim();
-  // Strip stage-direction-style annotations: （...） or (... followed by verbs)
-  const reply = raw.replace(/[（(][^）)]*(?:放下|摘下|拿起|转身|站起|坐下|叹气|笑|点头|摇头|摆手|挥手|看着|望着|指着)[^）)]*[）)]/g, '').replace(/^[（(].*?[）)]\s*/g, '').trim();
-  // Guard: if reply contains mechanism leaks, fall back to deterministic
-  const leakTerms = ['SoulVersion', 'MemoryItem', 'kernelJson', '作用域', '检索', 'evidence'];
-  if (leakTerms.some((t) => reply.includes(t))) {
-    const { generateSoulReply } = await import('./runtime/soul-runtime');
-    return generateSoulReply({
-      soul: { id: '', userId: '', personaId: '', version: 0, kernelJson: soul.kernelJson, status: 'ACTIVE', createdAt: new Date() },
-      memories: memories.map((m) => ({ ...m, id: '', userId: '', personaId: '', confidence: 1, enabledForSoul: true, createdAt: new Date() })),
-      message,
-    } as never).content;
-  }
-  return reply;
-}
-
-
-
 function getLastAssistantReply(scope: { userId: string; personaId: string }): string | undefined {
   const conversations = fixture.store.listConversations(scope);
   for (let i = conversations.length - 1; i >= 0; i--) {
@@ -477,7 +374,12 @@ async function sendMessageToBothUsers(message: string) {
     try {
       const ctxA = fixture.store.getRuntimeContext(scopeA);
       if (llmAdapter) {
-        replyA = await generateLlmReply(llmAdapter, ctxA.soul, ctxA.memories, fixture.store.listConversations(scopeA), text);
+        replyA = await generateLlmReply(llmAdapter, {
+          soul: ctxA.soul,
+          memories: ctxA.memories,
+          recentConversations: fixture.store.listConversations(scopeA),
+          message: text,
+        });
       } else {
         replyA = generateSoulReply({
           soul: ctxA.soul,
@@ -502,7 +404,12 @@ async function sendMessageToBothUsers(message: string) {
     try {
       const ctxB = fixture.store.getRuntimeContext(scopeB);
       if (llmAdapter) {
-        replyB = await generateLlmReply(llmAdapter, ctxB.soul, ctxB.memories, fixture.store.listConversations(scopeB), text);
+        replyB = await generateLlmReply(llmAdapter, {
+          soul: ctxB.soul,
+          memories: ctxB.memories,
+          recentConversations: fixture.store.listConversations(scopeB),
+          message: text,
+        });
       } else {
         replyB = generateSoulReply({
           soul: ctxB.soul,
@@ -1033,12 +940,6 @@ function readStringField(source: Record<string, unknown> | undefined, section: s
 }
 
 
-function readStringArray(source: Record<string, unknown>, section: string, field: string): string[] {
-  const value = source[section];
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
-  const nested = (value as Record<string, unknown>)[field];
-  return Array.isArray(nested) ? nested.filter((item): item is string => typeof item === 'string') : [];
-}
 
 function readFirstString(source: Record<string, unknown>, section: string, field: string): string | undefined {
   const value = source[section];

@@ -99,7 +99,7 @@ NNZ_LLM_BASE_URL
 NNZ_LLM_MODEL
 ```
 
-When configured, `/api/chat` calls the LLM separately for user A and user B. The prompt uses only that user's own Soul, allowed runtime memories, recent conversations, relationship, pet phrases, and node context. If the adapter is unavailable or a reply leaks backend mechanism terms, the demo falls back to deterministic runtime output.
+When configured, `/api/chat` calls the LLM separately for user A and user B. The prompt uses only that user's own Soul, allowed runtime memories, recent conversations, relationship, pet phrases, and node context. If the adapter is unavailable, a reply is empty, or a reply leaks backend mechanism terms, the demo falls back to deterministic runtime output.
 
 The extraction pipeline is also scope-private:
 
@@ -122,15 +122,16 @@ npm run build:demo
 npm run demo
 ```
 
-Current test suite: 45 tests across domain scope, runtime, safety guard, LLM adapter, and extraction orchestrator.
+Current test suite: 52 tests across domain scope, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
 If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume the source is broken immediately. This directory has shown flaky `node_modules` behavior. A reliable check is to copy a clean git archive to `/tmp`, run `npm ci`, then run the verification commands there.
 
 ## Current Next Step
 
-LLM integration is already present at demo level. The next engineering task is to make it easier to verify:
+LLM integration is already present at demo level. Prompt contract tests and fallback guards are now in place:
 
-- Extract prompt building from `src/demo-server.ts` into a pure function.
-- Add A/B prompt contract tests.
-- Add a `/api/chat` smoke test that asserts A/B replies differ and contain no mechanism leaks.
+- `src/runtime/llm-reply.ts` owns prompt building, model call, sanitization, empty-reply fallback, and mechanism-leak fallback.
+- `src/runtime/llm-reply.test.ts` verifies A/B prompt differences, node context isolation, recent conversation scope, knowledge cutoff, and fallback behavior.
 - Keep all tests scoped by `userId + personaId`.
+
+The next step after pushing is a cloud smoke test against Render: `/healthz`, `/api/chat` A/B non-empty and different replies, no mechanism leaks, and extraction remains scoped.

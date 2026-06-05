@@ -14,7 +14,7 @@ https://github.com/chaoshorizon316/nnz
 当前远端 `main`：
 
 ```text
-504e360 feat: LLM chat + extraction pipeline + A/B prompt differentiation + docs
+35349d8 docs: refresh llm deployment handoff
 ```
 
 本地状态：
@@ -79,8 +79,9 @@ https://nnz-kego.onrender.com
 2026-06-05 校验：
 
 - `/healthz` 返回 `ok=true`。
-- GitHub CI 对最新提交通过。
+- GitHub CI 对最新已推送提交通过。
 - 云端 `/api/chat` 实测 A/B 回复不完全相同。
+- 用户已在 Render 配置 LLM 环境变量后，云端短会话确认走 LLM 路径；连续多轮对话触发 extraction，A 生成 `CHAT_EXCERPT` 与 proposal，B 未被污染。
 
 ## 一句话定位
 
@@ -98,8 +99,10 @@ src/
 │   └── index.ts          — re-export barrel
 ├── runtime/
 │   ├── soul-runtime.ts   — generateSoulReply() 纯函数（intent 识别 + 回复生成 + 机制词防漏）
+│   ├── llm-reply.ts      — LLM reply prompt contract + sanitize + fallback
 │   ├── soul-guard.ts     — 安全护栏（极端情绪检测 / 占卜拒绝 / 每日限额 / 依赖提醒）
 │   ├── soul-runtime.test.ts — 4 条 runtime 测试
+│   ├── llm-reply.test.ts    — 7 条 LLM prompt/fallback 测试
 │   └── soul-guard.test.ts   — 14 条 guard 测试
 └── demo-server.ts        — 本地 HTTP 服务（A/B 双用户演示 + API + UI）
 ```
@@ -191,39 +194,37 @@ POST /api/reset               — 重置演示
 
 ## 测试覆盖
 
-**45 条测试通过**（CI 与 `/tmp` 干净副本验证）：
+**52 条测试通过**（本地 typecheck/test/build 验证）：
 
 - `soul-scope.test.ts` — 19 条
 - `soul-runtime.test.ts` — 4 条
+- `llm-reply.test.ts` — 7 条
 - `soul-guard.test.ts` — 14 条
 - `llm/adapter.test.ts` — 4 条
 - `extraction/orchestrator.test.ts` — 4 条
 
 ## 下一步：推荐推进顺序
 
-### 优先：稳定 A/B 差异与 prompt 可测性
+### 优先：推送后云端 smoke
 
-当前云端 A/B 已有差异，但仍需让差异更可控：
+本地 Step 5.1 已完成：`generateLlmReply` prompt 已抽为 `src/runtime/llm-reply.ts`，A/B prompt contract、节点隔离、history scope、空回复 fallback 和机制泄漏 fallback 已被 7 条测试覆盖。
 
-1. 给 `generateLlmReply` 的 prompt 组装抽可测试函数。
-2. 增加 A/B prompt snapshot / contract test，断言 relationship、petPhrases、recentConversations 分别注入。
-3. 增加云端 smoke test：POST `/api/chat` 后检查 A/B 回复不相等且不含机制词。
+下一步需要推送当前本地提交后验证云端：
 
-### 其次：确认 Render LLM 环境变量
+1. `GET /healthz`。
+2. `POST /api/reset`。
+3. `POST /api/chat` 同一句话给 A/B。
+4. 检查 A/B reply 非空、不相等、不含机制词。
+5. 连续多轮对话触发 extraction，确认 scope 隔离仍成立。
 
-Render 需要配置：
+### 其次：持久化
 
-```text
-NNZ_LLM_API_KEY
-NNZ_LLM_BASE_URL
-NNZ_LLM_MODEL
-```
+当前全内存 store，进程重启数据丢失。下一步建议抽取 `SoulStore` interface，再做 SQLite 或 Postgres 持久化。
 
-如果未配置，LLM adapter 不可用，提取管线会禁用或 fallback。
+### 再次：后台拆分
 
-### 再次：持久化
+将 Soul Ops Console 从 demo 页面拆成独立后台模块，增加 RBAC、audit log、数据删除流水。
 
-当前全内存 store，进程重启数据丢失。在 LLM 接入前或同时，考虑 SQLite 持久化。`InMemorySoulStore` 的接口已足够清晰，可提取 interface 后做 `SqliteSoulStore` 实现。
 
 ## 不要破坏的点
 
@@ -253,12 +254,13 @@ NNZ_LLM_MODEL
 
 ## 2026-06-05 更新：LLM 接入 + 提取管线
 
-**DeepSeek V4 Pro** 已接入对话生成和自动化提取管线。45 条测试全绿。
+**DeepSeek V4 Pro** 已接入对话生成和自动化提取管线。Step 5.1 后测试增至 52 条全绿。
 
 ### 新增模块
 
 - `src/llm/` — LLM adapter（OpenAI-compatible + mock）
 - `src/extraction/` — 提取管线（prompts + 置信度 + 编排器）
+- `src/runtime/llm-reply.ts` — LLM reply prompt contract + fallback
 - `src/env.ts` — .env 自动加载
 
 ### 对话生成
@@ -275,6 +277,7 @@ NNZ_LLM_MODEL
 - `origin` 已清理为普通 HTTPS URL，不再包含 PAT。
 - 仓库正文未发现真实 `ghp_` / `github_pat_` / `sk-` 密钥。
 - `/tmp` 干净副本验证通过：45 tests passed，build/audit 通过。
+- 当前本地 Step 5.1 验证通过：52 tests passed，`build:demo` 通过。
 - 云端 `/api/chat` A/B 输出不相等。
 - 本地 iCloud `node_modules` 偶发缺依赖文件，不能把这个误判为源码失败。
 

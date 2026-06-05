@@ -20,7 +20,7 @@ https://github.com/chaoshorizon316/nnz
 当前远端 `main`：
 
 ```text
-504e360 feat: LLM chat + extraction pipeline + A/B prompt differentiation + docs
+35349d8 docs: refresh llm deployment handoff
 ```
 
 GitHub Actions 当前状态：
@@ -55,10 +55,14 @@ https://github.com/chaoshorizon316/nnz/actions
 - LLM 对话生成 `generateLlmReply()`。
 - 自动化提取管线 `src/extraction/`。
 - A/B prompt 分化：不同关系、口头禅、对话历史进入 prompt。
-- 45 条测试在 GitHub CI 与 `/tmp` 干净副本中通过。
+- Step 5.1 本地已抽出 `src/runtime/llm-reply.ts`，新增 prompt contract / fallback 测试，测试数增至 52。
 - Render demo 可访问：`https://nnz-kego.onrender.com`。
 
 2026-06-05 实测云端 `/api/chat`：A/B 回复已不完全相同。A 使用“丫头 / 你自己拿主意”，B 使用“儿子 / 慢慢来”。后续仍可增强差异度，但不是从零修复。
+
+2026-06-05 用户配置 Render LLM 环境变量后复测：云端短会话确认走 LLM 路径，连续多轮对话触发 extraction，A 生成 `CHAT_EXCERPT` 与 proposal，B 未被污染。
+
+注意：`35349d8` 之后本地已有 Step 5.1 新改动，需提交/推送后再做 Render 云端 smoke。
 
 注意：本地 iCloud 目录下的 `node_modules` 偶发缺可选依赖包，直接 `npm test` 可能误报失败。可靠验证方式是复制到 `/tmp` 后 `npm ci`，或重新安装依赖。
 

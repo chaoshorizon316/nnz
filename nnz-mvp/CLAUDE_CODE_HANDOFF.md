@@ -118,7 +118,9 @@ InMemorySoulStore
 
 ```text
 src/runtime/soul-runtime.ts
+src/runtime/llm-reply.ts
 src/runtime/soul-runtime.test.ts
+src/runtime/llm-reply.test.ts
 ```
 
 确定性 fallback 入口函数：
@@ -141,7 +143,7 @@ generateSoulReply(input: {
   - `open`
 - 用关系视角、幽默程度、口头禅、节点记忆生成一条自然聊天回复。
 
-当前 demo 优先使用 `src/demo-server.ts` 中的 `generateLlmReply()` 调用 LLM；当 `NNZ_LLM_API_KEY` 不存在、LLM 调用失败进入 fallback、或输出触发机制泄漏 guard 时，再使用 `generateSoulReply()`。
+当前 demo 优先使用 `src/runtime/llm-reply.ts` 中的 `generateLlmReply()` 调用 LLM；当 `NNZ_LLM_API_KEY` 不存在、LLM 调用失败进入 fallback、模型返回空字符串、或输出触发机制泄漏 guard 时，再使用 `generateSoulReply()`。
 
 LLM prompt 当前注入：
 
@@ -565,12 +567,13 @@ POST /api/reset
 ```text
 src/domain/soul-scope.test.ts
 src/runtime/soul-runtime.test.ts
+src/runtime/llm-reply.test.ts
 src/runtime/soul-guard.test.ts
 src/llm/adapter.test.ts
 src/extraction/orchestrator.test.ts
 ```
 
-当前共 45 条测试。
+当前共 52 条测试。
 
 Domain tests 覆盖：
 
@@ -592,6 +595,8 @@ Runtime tests 覆盖：
 Guard / LLM / Extraction tests 覆盖：
 
 - 极端情绪、占卜、亲密边界、每日限额、依赖提醒等安全护栏。
+- A/B prompt contract：relationship、petPhrases、memory、recentConversations、node context 均按当前 scope 注入。
+- LLM 空回复 fallback、机制泄漏 fallback、舞台描写清洗。
 - OpenAI-compatible adapter 的请求格式、JSON mode、错误处理、env factory。
 - Extraction trigger window、JSON parse fallback、confidence merge、proposal 生成。
 
@@ -827,21 +832,25 @@ Soul 更新现在是可见、可接受、可拒绝、有证据、有字段白名
 nnz-mvp-Step4.5-SoulOps后台治理实施记录.md
 ```
 
-### Step 5: Prompt Contract 与云端 Smoke（下一步）
+### Step 5: Prompt Contract 与云端 Smoke（本地已完成，待推送后云端复测）
 
-真实 LLM 接入已经完成到 demo 级别。下一步不要重做 adapter，而是把当前 prompt 和云端行为变得可测试、可回归：
+真实 LLM 接入已经完成到 demo 级别。Step 5.1 已把当前 prompt 和 LLM 输出兜底变得可测试、可回归：
 
-1. 从 `src/demo-server.ts` 中抽出 `buildLlmReplyPrompt()` 纯函数。
-2. 为 A/B prompt 增加 contract test：
+1. 已从 `src/demo-server.ts` 中抽出 `buildLlmReplyPrompt()` 纯函数，落在 `src/runtime/llm-reply.ts`。
+2. 已为 A/B prompt 增加 contract test：
    - A 注入“女儿 / 丫头 / 你自己拿主意”。
    - B 注入“儿子 / 慢慢来”。
    - A 的 NODE_MEMORY 不进入 B。
    - recentConversations 只来自当前 `userId + personaId`。
-3. 增加 `/api/chat` smoke test：
+3. 已增加 LLM 输出 guard 测试：
+   - 空字符串 fallback。
+   - 机制泄漏 fallback。
+   - 舞台描写清洗。
+4. 推送后仍需做云端 `/api/chat` smoke：
    - 同一句消息发给 A/B。
    - A/B assistant reply 不相等。
    - reply 不含机制词。
-4. 确认 Render 环境变量：
+5. Render 环境变量已由用户配置并通过云端行为确认生效：
    - `NNZ_LLM_API_KEY`
    - `NNZ_LLM_BASE_URL`
    - `NNZ_LLM_MODEL`
@@ -966,11 +975,13 @@ POST https://nnz-kego.onrender.com/api/chat
 结果：
 
 - 本地与远端同步：`main...origin/main`。
-- 远端 `main` 指向 `504e360 feat: LLM chat + extraction pipeline + A/B prompt differentiation + docs`。
+- 远端 `main` 指向 `35349d8 docs: refresh llm deployment handoff`。
 - GitHub Actions 最新 run 为 success。
 - Render demo `/healthz` 返回 `ok=true`。
 - 云端 `/api/chat` 实测 A/B 回复不相同：A 使用“丫头 / 你自己拿主意”，B 使用“儿子 / 慢慢来”。
+- Render LLM 环境变量配置后，云端短会话确认走 LLM；连续多轮触发 extraction，A 生成 `CHAT_EXCERPT` 与 proposal，B 未被污染。
 - `/tmp` 干净副本验证通过：45 tests passed，build 通过，audit 0。
+- 当前本地 Step 5.1 验证通过：52 tests passed，`build:demo` 通过。
 
 注意：当前 iCloud/Obsidian 路径下，`node_modules` 偶发缺可选依赖或包文件，直接 `npm test` 可能误报失败。可靠验证方式是复制到 `/tmp` 后重新 `npm ci`，或清理本地 `node_modules` 后重装。
 
