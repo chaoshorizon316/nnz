@@ -467,6 +467,98 @@ export class InMemorySoulStore {
     this.users.delete(userId);
   }
 
+
+  // ── Persistence helpers ──
+
+  serialize(): {
+    users: User[];
+    personas: Persona[];
+    soulVersions: SoulVersion[];
+    soulSnapshots: SoulSnapshot[];
+    memoryItems: MemoryItem[];
+    soulUpdateProposals: SoulUpdateProposal[];
+    nodeEvents: NodeEvent[];
+    conversationMessages: ConversationMessage[];
+    sessions: Array<{
+      scopeKey: string;
+      userId: string;
+      personaId: string;
+      state: string;
+      soulSnapshotId?: string;
+      nodeId?: string;
+      nodeName?: string;
+      dailyMessageCount?: number;
+      lastMessageDate?: string;
+    }>;
+  } {
+    return {
+      users: [...this.users.values()],
+      personas: [...this.personas.values()],
+      soulVersions: [...this.soulVersions.values()],
+      soulSnapshots: [...this.soulSnapshots.values()],
+      memoryItems: [...this.memoryItems.values()],
+      soulUpdateProposals: [...this.soulUpdateProposals.values()],
+      nodeEvents: [...this.nodeEvents.values()],
+      conversationMessages: [...this.conversationMessages.values()],
+      sessions: [...this.sessions.entries()].map(([scopeKey, session]) => ({
+        scopeKey,
+        ...session,
+      })),
+    };
+  }
+
+  deserialize(data: {
+    users: User[];
+    personas: Persona[];
+    soulVersions: SoulVersion[];
+    soulSnapshots: SoulSnapshot[];
+    memoryItems: MemoryItem[];
+    soulUpdateProposals: SoulUpdateProposal[];
+    nodeEvents: NodeEvent[];
+    conversationMessages: ConversationMessage[];
+    sessions: Array<{
+      scopeKey: string;
+      userId: string;
+      personaId: string;
+      state: string;
+      soulSnapshotId?: string;
+      nodeId?: string;
+      nodeName?: string;
+      dailyMessageCount?: number;
+      lastMessageDate?: string;
+    }>;
+  }): void {
+    this.users.clear();
+    this.personas.clear();
+    this.soulVersions.clear();
+    this.soulSnapshots.clear();
+    this.memoryItems.clear();
+    this.soulUpdateProposals.clear();
+    this.nodeEvents.clear();
+    this.conversationMessages.clear();
+    this.sessions.clear();
+
+    for (const u of data.users) this.users.set(u.id, u);
+    for (const p of data.personas) this.personas.set(p.id, p);
+    for (const sv of data.soulVersions) this.soulVersions.set(sv.id, sv);
+    for (const ss of data.soulSnapshots) this.soulSnapshots.set(ss.id, ss);
+    for (const m of data.memoryItems) this.memoryItems.set(m.id, m);
+    for (const sp of data.soulUpdateProposals) this.soulUpdateProposals.set(sp.id, sp);
+    for (const n of data.nodeEvents) this.nodeEvents.set(n.id, n);
+    for (const c of data.conversationMessages) this.conversationMessages.set(c.id, c);
+    for (const s of data.sessions) {
+      this.sessions.set(s.scopeKey, {
+        userId: s.userId,
+        personaId: s.personaId,
+        state: s.state as RuntimeState,
+        soulSnapshotId: s.soulSnapshotId,
+        nodeContext: s.nodeId && s.nodeName ? { nodeId: s.nodeId, nodeName: s.nodeName } : undefined,
+        dailyMessageCount: s.dailyMessageCount,
+        lastMessageDate: s.lastMessageDate,
+      });
+    }
+  }
+
   // ── Covenant lifecycle ──
 
   sealSoul(scopeInput: OptionalScope): { snapshot: SoulSnapshot; session: RuntimeSession } {

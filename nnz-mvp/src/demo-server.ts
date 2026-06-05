@@ -5,6 +5,7 @@ loadEnv(process.cwd());
 
 import type { LlmAdapter } from './llm/types';
 import { createExtractionOrchestrator } from './extraction/orchestrator';
+import { loadStore, saveStore } from './domain/persistence';
 import { CovenantStateError } from './domain/errors';
 import { InMemorySoulStore } from './domain/soul-store';
 import type {
@@ -35,6 +36,22 @@ interface DemoFixture {
 }
 
 let fixture = createFixture();
+
+const DB_PATH = process.env['NNZ_DB_PATH'];
+if (DB_PATH) {
+  const loaded = loadStore(fixture.store, DB_PATH);
+  if (loaded) {
+    console.log(`Store loaded from ${DB_PATH}`);
+    // Refresh fixture references after loading
+    const scopeA = { userId: fixture.userA.id, personaId: fixture.personaA.id };
+    const scopeB = { userId: fixture.userB.id, personaId: fixture.personaB.id };
+    fixture.soulA = fixture.store.getLatestSoulVersion(scopeA);
+    fixture.soulB = fixture.store.getLatestSoulVersion(scopeB);
+  } else {
+    console.log(`No existing data at ${DB_PATH}, starting fresh.`);
+    saveStore(fixture.store, DB_PATH);
+  }
+}
 
 const extractionOrchestrator = createExtractionOrchestrator();
 let llmAdapter: LlmAdapter | undefined;
@@ -86,41 +103,49 @@ const server = createServer(async (req, res) => {
 
     if (req.method === 'POST' && url.pathname === '/api/apply-correction') {
       applyUserACorrection();
+      persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/accept-correction') {
       acceptUserACorrectionProposal();
+      persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/reject-correction') {
       rejectUserACorrectionProposal();
+      persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/create-node') {
       createUserANodeMemory();
+      persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/seal') {
       sealUserA();
+      persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/activate-node') {
       activateNodeForUserA();
+      persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/complete-node') {
       completeNodeForUserA();
+      persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/graduate') {
       graduateUserA();
+      persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
@@ -348,6 +373,17 @@ function isDuplicateMessage(scope: { userId: string; personaId: string }, text: 
   return false;
 }
 
+
+function persistIfEnabled(): void {
+  if (DB_PATH) {
+    try {
+      saveStore(fixture.store, DB_PATH);
+    } catch (err) {
+      console.error('Failed to persist store:', err instanceof Error ? err.message : String(err));
+    }
+  }
+}
+
 async function sendMessageToBothUsers(message: string) {
   const text = message.trim() || '爸，我今天有点紧张。';
   const scopeA = { userId: fixture.userA.id, personaId: fixture.personaA.id };
@@ -452,6 +488,7 @@ async function sendMessageToBothUsers(message: string) {
     });
   }
 
+  persistIfEnabled();
   return serializeFixture();
 }
 
