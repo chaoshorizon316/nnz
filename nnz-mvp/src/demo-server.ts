@@ -20,6 +20,7 @@ import type {
 } from './domain/types';
 import { generateLlmReply } from './runtime/llm-reply';
 import { GRADUATED_REPLY, SEALED_REPLY, generateSoulReply } from './runtime/soul-runtime';
+import { extractToken, generateUserId, hashPassword, signToken, verifyPassword, verifyToken } from './auth/auth';
 import { checkDailyLimit, checkMessageSafety, incrementDailyCount } from './runtime/soul-guard';
 
 interface DemoFixture {
@@ -154,6 +155,16 @@ const server = createServer(async (req, res) => {
       return sendJson(res, serializeFixture());
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/register') {
+      const body = await readJsonBody<{ email?: string; password?: string }>(req);
+      return await handleRegister(res, body.email ?? '', body.password ?? '');
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/login') {
+      const body = await readJsonBody<{ email?: string; password?: string }>(req);
+      return await handleLogin(res, body.email ?? '', body.password ?? '');
+    }
+
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
     res.end('Not found');
   } catch (error) {
@@ -168,6 +179,58 @@ server.listen(port, host, () => {
   const displayHost = host === '0.0.0.0' ? '127.0.0.1' : host;
   console.log(`念念在 Soul 作用域演示已启动: http://${displayHost}:${port}`);
 });
+
+
+async function handleRegister(res: ServerResponse, email: string, password: string): Promise<void> {
+  if (!email || !password || password.length < 6) {
+    res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ error: '邮箱和密码不能为空，密码至少 6 位。' }));
+    return;
+  }
+
+  const existing = fixture.store.getCredentialByEmail(email);
+  if (existing) {
+    res.writeHead(409, { 'content-type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ error: '该邮箱已注册。' }));
+    return;
+  }
+
+  const userId = generateUserId();
+  const passwordHash = await hashPassword(password);
+  fixture.store.createUser(email); // displayName = email for now
+  fixture.store.storeCredential(userId, email, passwordHash);
+
+  const token = signToken({ userId, email });
+  res.writeHead(201, { 'content-type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify({ token, userId, email }));
+}
+
+async function handleLogin(res: ServerResponse, email: string, password: string): Promise<void> {
+  const cred = fixture.store.getCredentialByEmail(email);
+  if (!cred) {
+    res.writeHead(401, { 'content-type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ error: '邮箱或密码错误。' }));
+    return;
+  }
+
+  const valid = await verifyPassword(password, cred.passwordHash);
+  if (!valid) {
+    res.writeHead(401, { 'content-type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ error: '邮箱或密码错误。' }));
+    return;
+  }
+
+  const token = signToken({ userId: cred.userId, email: cred.email });
+  res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify({ token, userId: cred.userId, email: cred.email }));
+}
+
+function getAuthUser(req: IncomingMessage): { userId: string; email: string } | null {
+  const authHeader = req.headers['authorization'];
+  const token = extractToken(authHeader);
+  if (!token) return null;
+  return verifyToken(token);
+}
 
 function createFixture(): DemoFixture {
   const store = new InMemorySoulStore();
@@ -648,6 +711,12 @@ function renderPage(): string {
     .state-graduated { background:#F0E8F4; color:#6B4E8A; }
     .messages { height:360px; overflow:auto; padding:16px; display:flex; flex-direction:column; gap:10px; }
     .loading { align-self:flex-start; color:var(--sage); font-size:13px; padding:8px 12px; animation:pulse 1.2s infinite; }
+    .auth-bar { display:flex; justify-content:center; gap:12px; margin-bottom:24px; flex-wrap:wrap; align-items:center; }
+    .auth-bar input { border:1px solid var(--line); border-radius:999px; padding:10px 16px; font:inherit; background:#fff; color:var(--ink); width:180px; }
+    .auth-bar button { border:0; border-radius:999px; padding:10px 18px; font-weight:700; cursor:pointer; }
+    .auth-bar .auth-btn { background:var(--warm); color:white; }
+    .auth-bar .auth-outline { background:transparent; color:var(--warm); border:1px solid var(--line); }
+    .auth-status { text-align:center; color:var(--sage); font-size:13px; margin-bottom:16px; }
     @keyframes pulse { 0%,100% { opacity:0.4; } 50% { opacity:1; } }
     .bubble { max-width:86%; padding:10px 12px; border-radius:16px; line-height:1.55; font-size:14px; }
     .user { align-self:flex-end; background:#DCEFD8; border-bottom-right-radius:4px; }
@@ -711,6 +780,16 @@ function renderPage(): string {
       <p style="font-family:Georgia,'Noto Serif SC',serif; font-size:20px; color:#5C7D60; margin:0;">让爱有处安放，让告别有期</p>
       <p style="color:#9B8A7A; font-size:14px; max-width:480px; margin:12px auto 0;">为你心里那个从未离开的人 — AI 哀伤辅助 · 有边界、有仪式、有告别</p>
     </header>
+
+    <!-- Auth Bar -->
+    <div class="auth-bar" id="authBar">
+      <input id="authEmail" placeholder="邮箱" type="email" autocomplete="email">
+      <input id="authPassword" placeholder="密码（6位以上）" type="password" autocomplete="current-password">
+      <button class="auth-btn" onclick="doLogin()">登录</button>
+      <button class="auth-outline" onclick="doRegister()">注册</button>
+    </div>
+    <div class="auth-status" id="authStatus"></div>
+    <div id="demoContent" style="display:none">
 
     <!-- Chat Area -->
     <div class="notice" style="margin-bottom:16px;">当前为内部测试版本。点击「一键跑完整验证」后，6 条检查全部 PASS 即确认 A/B 用户 Soul 隔离正确。</div>
@@ -783,6 +862,7 @@ function renderPage(): string {
     <footer style="text-align:center; color:#9B8A7A; font-size:12px; margin-top:48px; padding:24px 0; border-top:1px solid #F0DBD2;">
       念念在 · AI 哀伤辅助服务 · 内测版本 · 不替代真实人际关系 · 不存储真实用户数据
     </footer>
+    </div>
   </main>
   <script>
     let currentState = null;
@@ -836,7 +916,7 @@ function renderPage(): string {
       }
     }
     async function postAction(path) {
-      await fetch(path, { method: 'POST' });
+      await fetch(path, { method: 'POST', headers: getAuthHeaders() });
       await loadState();
     }
     let sending = false;
@@ -857,7 +937,7 @@ function renderPage(): string {
       document.getElementById('chatB').scrollTop = document.getElementById('chatB').scrollHeight;
 
       try {
-        await fetch('/api/chat', {
+        await fetch('/api/chat', { headers: getAuthHeaders(),
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ message: msg })
@@ -960,6 +1040,56 @@ function renderPage(): string {
     function shortClientId(id) {
       return String(id).slice(0, 13);
     }
+    // ── Auth ──
+    let authToken = localStorage.getItem('nnz_token') || '';
+    let authUser = null;
+    if (authToken) {
+      try { authUser = JSON.parse(atob(authToken.split('.')[1])); } catch(e) {}
+      if (authUser) {
+        document.getElementById('authBar').style.display = 'none';
+        document.getElementById('authStatus').innerHTML = '已登录：' + authUser.email + ' <a href="#" onclick="doLogout()" style="color:var(--warm)">退出</a>';
+        document.getElementById('demoContent').style.display = 'block';
+      }
+    }
+
+    async function doLogin() {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const res = await fetch('/api/login', {
+        method: 'POST', headers: {'content-type':'application/json'},
+        body: JSON.stringify({email, password})
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('nnz_token', data.token);
+        location.reload();
+      } else {
+        document.getElementById('authStatus').textContent = data.error || '登录失败';
+      }
+    }
+    async function doRegister() {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const res = await fetch('/api/register', {
+        method: 'POST', headers: {'content-type':'application/json'},
+        body: JSON.stringify({email, password})
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('nnz_token', data.token);
+        location.reload();
+      } else {
+        document.getElementById('authStatus').textContent = data.error || '注册失败';
+      }
+    }
+    function doLogout() {
+      localStorage.removeItem('nnz_token');
+      location.reload();
+    }
+    function getAuthHeaders() {
+      return authToken ? { 'Authorization': 'Bearer ' + authToken } : {};
+    }
+
     loadState();
   </script>
 </body>

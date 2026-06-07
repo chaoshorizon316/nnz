@@ -82,6 +82,7 @@ export class InMemorySoulStore {
   private readonly nodeEvents = new Map<string, NodeEvent>();
   private readonly conversationMessages = new Map<string, ConversationMessage>();
   private readonly sessions = new Map<string, RuntimeSession>();
+  private readonly credentials = new Map<string, { userId: string; email: string; passwordHash: string; createdAt: string }>();
 
   createUser(displayName: string): User {
     const user: User = {
@@ -459,6 +460,9 @@ export class InMemorySoulStore {
         }
       }
     }
+    for (const [userId, _cred] of this.credentials) {
+      if (userId === userId) this.credentials.delete(userId);
+    }
     for (const [key, session] of this.sessions) {
       if (session.userId === userId) {
         this.sessions.delete(key);
@@ -467,6 +471,20 @@ export class InMemorySoulStore {
     this.users.delete(userId);
   }
 
+
+
+  // ── Credentials ──
+
+  storeCredential(userId: string, email: string, passwordHash: string): void {
+    this.credentials.set(userId, { userId, email, passwordHash, createdAt: new Date().toISOString() });
+  }
+
+  getCredentialByEmail(email: string): { userId: string; email: string; passwordHash: string } | undefined {
+    for (const c of this.credentials.values()) {
+      if (c.email === email) return c;
+    }
+    return undefined;
+  }
 
   // ── Persistence helpers ──
 
@@ -504,6 +522,7 @@ export class InMemorySoulStore {
         scopeKey,
         ...session,
       })),
+      credentials: [...this.credentials.values()],
     };
   }
 
@@ -527,6 +546,12 @@ export class InMemorySoulStore {
       dailyMessageCount?: number;
       lastMessageDate?: string;
     }>;
+    credentials: Array<{
+      userId: string;
+      email: string;
+      passwordHash: string;
+      createdAt: string;
+    }>;
   }): void {
     this.users.clear();
     this.personas.clear();
@@ -537,6 +562,7 @@ export class InMemorySoulStore {
     this.nodeEvents.clear();
     this.conversationMessages.clear();
     this.sessions.clear();
+    this.credentials.clear();
 
     for (const u of data.users) this.users.set(u.id, u);
     for (const p of data.personas) this.personas.set(p.id, p);
@@ -556,6 +582,9 @@ export class InMemorySoulStore {
         dailyMessageCount: s.dailyMessageCount,
         lastMessageDate: s.lastMessageDate,
       });
+    }
+    for (const c of data.credentials) {
+      this.credentials.set(c.userId, c);
     }
   }
 

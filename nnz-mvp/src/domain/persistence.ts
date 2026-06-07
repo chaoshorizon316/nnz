@@ -98,6 +98,13 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS credentials (
+  user_id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
   scope_key TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -122,7 +129,7 @@ export function saveStore(store: InMemorySoulStore, dbPath: string): void {
   const db = createDb(dbPath);
 
   // Clear existing data
-    for (const table of ['users', 'personas', 'soul_versions', 'soul_snapshots', 'memory_items', 'soul_update_proposals', 'node_events', 'conversation_messages', 'sessions']) {
+    for (const table of ['users', 'personas', 'soul_versions', 'soul_snapshots', 'memory_items', 'soul_update_proposals', 'node_events', 'conversation_messages', 'sessions', 'credentials']) {
       db.prepare(`DELETE FROM ${table}`).run();
     }
 
@@ -159,6 +166,9 @@ export function saveStore(store: InMemorySoulStore, dbPath: string): void {
     for (const s of data.sessions) {
       db.prepare('INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?)').run(s.scopeKey, s.userId, s.personaId, s.state, s.soulSnapshotId ?? null, s.nodeId ?? null, s.nodeName ?? null, s.dailyMessageCount ?? null, s.lastMessageDate ?? null);
     }
+    for (const c of data.credentials) {
+      db.prepare('INSERT INTO credentials VALUES (?,?,?,?)').run(c.userId, c.email, c.passwordHash, c.createdAt);
+    }
   db.close();
 }
 
@@ -176,6 +186,14 @@ export function loadStore(store: InMemorySoulStore, dbPath: string): boolean {
       db.close();
       return false;
     }
+
+    const credRows = db.prepare('SELECT * FROM credentials').all() as any[];
+    const credentials = credRows.map((r: any) => ({
+      userId: r.user_id,
+      email: r.email,
+      passwordHash: r.password_hash,
+      createdAt: r.created_at,
+    }));
 
     store.deserialize({
       users: db.prepare('SELECT * FROM users').all().map((r: any) => ({
@@ -202,6 +220,7 @@ export function loadStore(store: InMemorySoulStore, dbPath: string): boolean {
       conversationMessages: db.prepare('SELECT * FROM conversation_messages').all().map((r: any) => ({
         id: r.id, userId: r.user_id, personaId: r.persona_id, nodeId: r.node_id ?? undefined, role: r.role, content: r.content, createdAt: new Date(r.created_at),
       })) as ConversationMessage[],
+      credentials,
       sessions: db.prepare('SELECT * FROM sessions').all().map((r: any) => ({
         scopeKey: r.scope_key, userId: r.user_id, personaId: r.persona_id, state: r.state, soulSnapshotId: r.soul_snapshot_id ?? undefined, nodeId: r.node_id ?? undefined, nodeName: r.node_name ?? undefined, dailyMessageCount: r.daily_message_count ?? undefined, lastMessageDate: r.last_message_date ?? undefined,
       })),
@@ -237,5 +256,11 @@ export interface StoreSnapshot {
     nodeName?: string;
     dailyMessageCount?: number;
     lastMessageDate?: string;
+  }>;
+  credentials: Array<{
+    userId: string;
+    email: string;
+    passwordHash: string;
+    createdAt: string;
   }>;
 }
