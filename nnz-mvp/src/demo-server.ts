@@ -1,4 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { loadEnv } from './env';
 loadEnv(process.cwd());
@@ -71,6 +73,26 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? '127.0.0.1'}`);
 
     if (req.method === 'GET' && url.pathname === '/') {
+      const indexPath = join(process.cwd(), 'public', 'index.html');
+      if (existsSync(indexPath)) {
+        return sendHtml(res, readFileSync(indexPath, 'utf-8'));
+      }
+      return sendHtml(res, renderPage());
+    }
+
+    if (req.method === 'GET' && url.pathname === '/styles.css') {
+      const cssPath = join(process.cwd(), 'public', 'styles.css');
+      if (existsSync(cssPath)) {
+        res.writeHead(200, { 'content-type': 'text/css; charset=utf-8' });
+        res.end(readFileSync(cssPath, 'utf-8'));
+        return;
+      }
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/demo') {
       return sendHtml(res, renderPage());
     }
 

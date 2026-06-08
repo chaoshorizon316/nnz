@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc --outDir dist",
-    "build:demo": "tsc -p tsconfig.demo.json && node -e \"require('fs').writeFileSync('dist-cjs/package.json', JSON.stringify({type:'commonjs'})+'\\n')\"",
+    "build:demo": "tsc -p tsconfig.demo.json && node -e \"require('fs').writeFileSync('dist-cjs/package.json', JSON.stringify({type:'commonjs'})+'\\n')\" && node -e \"require('fs').cpSync('public','dist-cjs/public',{recursive:true})\"",
     "demo": "npm run build:demo && node dist-cjs/demo-server.js",
     "dev": "npm run demo",
     "start": "node dist-cjs/demo-server.js",
