@@ -9,7 +9,7 @@ https://nnz-kego.onrender.com
 
 免费版无请求 15 分钟会休眠，首次访问需等 30–60 秒唤醒。部署细节见 `nnz-mvp-2026-06-04-云托管完成交接.md`。
 
-## 最新 GitHub / CI 状态（2026-06-05）
+## 最新 GitHub / CI 状态（2026-06-09）
 
 GitHub 仓库：
 
@@ -17,17 +17,19 @@ GitHub 仓库：
 https://github.com/chaoshorizon316/nnz
 ```
 
-当前远端 `main`：
+当前时间线：
 
 ```text
-ef2b364 feat: add llm prompt contract guards
+08a10b8 feat: serve landing page from Render, demo at /demo
+2d39c00 docs: 2026-06-08 handoff + state update
 ```
 
-GitHub Actions 当前状态：
+说明：
 
-```text
-NNZ MVP CI: success
-```
+- `08a10b8` 已在 GitHub 远端。
+- `2d39c00` 是本地文档提交，进入本次修复前本地领先远端 1 个 commit。
+- 6 月 8 日的 SQLite / 登录注册 / 官网首页变更曾让 GitHub Actions 失败。
+- 6 月 9 日已在本地修复 typecheck/build、credential 持久化和 credential 删除作用域问题，等待提交/推送后让 CI 回绿。
 
 CI 会在 `nnz-mvp` 中执行：
 
@@ -44,6 +46,24 @@ npm audit
 ```text
 https://github.com/chaoshorizon316/nnz/actions
 ```
+
+本地可靠验证方式仍建议使用 `/tmp` 干净副本：
+
+```bash
+tmpdir=$(mktemp -d /tmp/nnz-fix-verify.XXXXXX)
+git archive --format=tar HEAD | tar -x -C "$tmpdir"
+git diff --binary > "$tmpdir/worktree.patch"
+cd "$tmpdir"
+git apply worktree.patch
+cd nnz-mvp
+npm ci
+npm run typecheck
+npm test
+npm run build:demo
+npm audit
+```
+
+2026-06-09 本地干净副本结果：8 个测试文件、61 条测试全绿，typecheck / build / audit 通过。
 
 ## 2026-06-05 接手校验
 
@@ -121,7 +141,7 @@ nnz-mvp-Step4.5-SoulOps后台治理实施记录.md
 ACTIVE -> SEALED -> NODE -> SEALED -> GRADUATED
 ```
 
-最新工程状态、验证方式和注意事项以 `nnz-mvp/CLAUDE_CODE_HANDOFF.md` 与 `nnz-mvp-2026-06-05-工作记录.md` 为准。
+最新工程状态、验证方式和注意事项以 `nnz-mvp/CLAUDE_CODE_HANDOFF.md`、`nnz-mvp-CURRENT-STATE.md` 与 `nnz-mvp-2026-06-09-工作记录.md` 为准。
 
 截至当前，步骤二 Memory Vault 分层的基础字段与筛选规则也已落地：Runtime 记忆和 Soul Update 证据分开处理，`RISK` / `RESTRICTED` / `NODE_MEMORY` 不会误用于 Soul 更新。
 

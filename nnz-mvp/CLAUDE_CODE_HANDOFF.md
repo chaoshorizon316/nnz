@@ -968,27 +968,32 @@ npm run demo
 
 ```bash
 git status --short --branch
-git ls-remote --heads origin main
-curl https://nnz-kego.onrender.com/healthz
-POST https://nnz-kego.onrender.com/api/chat
-/tmp clean copy: npm ci -> typecheck -> test -> build:demo -> audit
+/tmp clean copy with current worktree diff:
+npm ci -> typecheck -> test -> build:demo -> audit
 ```
 
 结果：
 
-- 本地与远端同步：`main...origin/main`。
-- 远端 `main` 指向 `ef2b364 feat: add llm prompt contract guards`。
-- GitHub Actions 最新 run 为 success。
-- Render demo `/healthz` 返回 `ok=true`。
-- 云端 `/api/chat` 实测 A/B 回复不相同：A 使用“丫头 / 你自己拿主意”，B 使用“儿子 / 慢慢来”。
-- Render LLM 环境变量配置后，云端短会话确认走 LLM；连续多轮触发 extraction，A 生成 `CHAT_EXCERPT` 与 proposal，B 未被污染。
-- 推送 `ef2b364` 后云端 smoke 通过：A/B 非空、不相等、无机制词；A extraction 有 9 条 `CHAT_EXCERPT` 与 2 条 proposal，B 仍无污染。
-- `/tmp` 干净副本验证通过：45 tests passed，build 通过，audit 0。
-- 当前本地 Step 5.1 验证通过：52 tests passed，`build:demo` 通过。
+- 2026-06-09 进入修复前：本地 `main...origin/main [ahead 1]`。
+- 远端 `main` 已到 `08a10b8 feat: serve landing page from Render, demo at /demo`，但该批 2026-06-08 变更让 GitHub Actions 失败。
+- 本地修复了 `serialize()` credential 类型缺失、`deserialize()` optional undefined、credential 删除跨用户风险、注册 userId 不一致和注册后未持久化。
+- `/tmp` 干净副本验证通过：8 个测试文件、61 tests passed，typecheck/build/audit 通过。
+- 新增 credential 作用域测试：删除用户 A 不会删除用户 B credential。
+- 新增 persistence 测试：credentials save/load 后 userId 不变化。
+- 推送当前修复后，需要重新确认 GitHub Actions success，并做 Render smoke：`/healthz`、`/`、`/demo`、`/api/register`、`/api/login`、`/api/chat`。
 
 注意：当前 iCloud/Obsidian 路径下，`node_modules` 偶发缺可选依赖或包文件，直接 `npm test` 可能误报失败。可靠验证方式是复制到 `/tmp` 后重新 `npm ci`，或清理本地 `node_modules` 后重装。
 
 安全补充：本地 `origin` 曾包含 GitHub PAT，已改回普通 HTTPS URL。建议用户在 GitHub 后台 revoke 旧 token。仓库正文复查未发现真实 `ghp_` / `github_pat_` / `sk-` 密钥。
+
+## 16.1 当前下一步
+
+不要继续扩官网文案或微信接入，先完成这条链路：
+
+1. 推送 2026-06-09 修复，让 CI 从 failure 回到 success。
+2. 做 Render smoke，确认首页、demo、注册、登录、聊天端点均可用。
+3. 实现 auth user -> private Soul：登录后根据 auth `userId` 创建/读取该用户 Persona，聊天和 Memory/Node/Proposal mutation 全部走该用户自己的 `userId + personaId`。
+4. A/B 双用户页面保留为开发者验证页，真实用户入口不能暴露 A/B fixture、SoulVersion、Proposal、scope 等内部机制。
 
 ## 17. 给下一位 AI 的工作原则
 

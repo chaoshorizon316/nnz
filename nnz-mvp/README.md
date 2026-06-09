@@ -1,6 +1,6 @@
 # 念念在 MVP Core
 
-This package implements the current MVP core for user-scoped Soul data, Covenant lifecycle, Memory layering, Soul Ops maturity review, LLM chat, and the first extraction pipeline.
+This package implements the current MVP core for user-scoped Soul data, Covenant lifecycle, Memory layering, Soul Ops maturity review, LLM chat, extraction, SQLite demo persistence, and basic email/password JWT auth.
 
 Public demo:
 
@@ -109,6 +109,23 @@ The extraction pipeline is also scope-private:
 - High-confidence whitelisted fields can create `SoulUpdateProposal`.
 - Proposals still require review; they do not silently mutate Soul.
 
+## Demo Persistence And Auth
+
+SQLite demo persistence can be enabled with:
+
+```text
+NNZ_DB_PATH=./nnz.db
+```
+
+Basic email/password auth is available through:
+
+```text
+POST /api/register
+POST /api/login
+```
+
+Important boundary: auth currently stores credentials and issues JWTs, but the chat demo still uses the A/B fixture. The next product step is to map the authenticated `userId` to that user's own private Persona and Soul before treating this as a real user system.
+
 ## Future Shared Memorial Boundary
 
 Family co-creation is not part of the MVP. If it is added later, it must be implemented as a separate `Shared Memorial Space` with explicit invite, authorization, revocation, and a distinct shared Soul. It must never overwrite a user's private Soul.
@@ -122,16 +139,19 @@ npm run build:demo
 npm run demo
 ```
 
-Current test suite: 52 tests across domain scope, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+Current verified suite on 2026-06-09: 61 tests across domain scope, persistence, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
-If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume the source is broken immediately. This directory has shown flaky `node_modules` behavior. A reliable check is to copy a clean git archive to `/tmp`, run `npm ci`, then run the verification commands there.
+If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume the source is broken immediately. This directory has shown flaky `node_modules` behavior. A reliable check is to copy a clean git archive to `/tmp`, apply the worktree diff if needed, run `npm ci`, then run the verification commands there.
 
 ## Current Next Step
 
-LLM integration is already present at demo level. Prompt contract tests and fallback guards are now in place:
+First push the 2026-06-09 fix and confirm GitHub Actions plus Render smoke:
 
-- `src/runtime/llm-reply.ts` owns prompt building, model call, sanitization, empty-reply fallback, and mechanism-leak fallback.
-- `src/runtime/llm-reply.test.ts` verifies A/B prompt differences, node context isolation, recent conversation scope, knowledge cutoff, and fallback behavior.
-- Keep all tests scoped by `userId + personaId`.
+- `/healthz`
+- `/`
+- `/demo`
+- `/api/register`
+- `/api/login`
+- `/api/chat`
 
-Cloud smoke after pushing `ef2b364` passed on Render: `/healthz`, `/api/chat` A/B non-empty and different replies, no mechanism leaks, and extraction remains scoped. The next engineering step is persistence: extract a `SoulStore` interface and design SQLite/Postgres storage without weakening the `userId + personaId` boundary.
+Then implement the authenticated user -> private Soul flow. Keep the A/B fixture as a developer verification page, and route real user chat through authenticated `userId + personaId` only.

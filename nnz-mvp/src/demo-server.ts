@@ -22,7 +22,7 @@ import type {
 } from './domain/types';
 import { generateLlmReply } from './runtime/llm-reply';
 import { GRADUATED_REPLY, SEALED_REPLY, generateSoulReply } from './runtime/soul-runtime';
-import { extractToken, generateUserId, hashPassword, signToken, verifyPassword, verifyToken } from './auth/auth';
+import { extractToken, hashPassword, signToken, verifyPassword, verifyToken } from './auth/auth';
 import { checkDailyLimit, checkMessageSafety, incrementDailyCount } from './runtime/soul-guard';
 
 interface DemoFixture {
@@ -217,14 +217,14 @@ async function handleRegister(res: ServerResponse, email: string, password: stri
     return;
   }
 
-  const userId = generateUserId();
   const passwordHash = await hashPassword(password);
-  fixture.store.createUser(email); // displayName = email for now
-  fixture.store.storeCredential(userId, email, passwordHash);
+  const user = fixture.store.createUser(email); // displayName = email for now
+  fixture.store.storeCredential(user.id, email, passwordHash);
+  persistIfEnabled();
 
-  const token = signToken({ userId, email });
+  const token = signToken({ userId: user.id, email });
   res.writeHead(201, { 'content-type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify({ token, userId, email }));
+  res.end(JSON.stringify({ token, userId: user.id, email }));
 }
 
 async function handleLogin(res: ServerResponse, email: string, password: string): Promise<void> {

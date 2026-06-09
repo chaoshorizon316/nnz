@@ -87,4 +87,31 @@ describe('SQLite persistence', () => {
     const session = store2.getRuntimeSession({ userId: user.id, personaId: persona.id });
     expect(session.state).toBe('SEALED');
   });
+
+  it('saves and loads credentials without changing their user ids', () => {
+    const dbPath = tempDbPath();
+    paths.push(dbPath);
+
+    const store = new InMemorySoulStore();
+    const userA = store.createUser('a@example.com');
+    const userB = store.createUser('b@example.com');
+    store.storeCredential(userA.id, 'a@example.com', 'hash-a');
+    store.storeCredential(userB.id, 'b@example.com', 'hash-b');
+
+    saveStore(store, dbPath);
+
+    const store2 = new InMemorySoulStore();
+    expect(loadStore(store2, dbPath)).toBe(true);
+
+    expect(store2.getCredentialByEmail('a@example.com')).toMatchObject({
+      userId: userA.id,
+      email: 'a@example.com',
+      passwordHash: 'hash-a',
+    });
+    expect(store2.getCredentialByEmail('b@example.com')).toMatchObject({
+      userId: userB.id,
+      email: 'b@example.com',
+      passwordHash: 'hash-b',
+    });
+  });
 });

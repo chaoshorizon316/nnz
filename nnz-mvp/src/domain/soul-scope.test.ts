@@ -271,6 +271,21 @@ describe('user-scoped Soul model', () => {
     expect(store.getLatestSoulVersion({ userId: userA.id, personaId: personaA.id }).id).toBe(secondSoul.id);
   });
 
+  it('deletes only one user credential when deleting user-scoped data', () => {
+    const { store, userA, userB } = createTwoUsersWithSamePersonaName();
+    store.storeCredential(userA.id, 'a@example.com', 'hash-a');
+    store.storeCredential(userB.id, 'b@example.com', 'hash-b');
+
+    store.deleteUserScopedData(userA.id);
+
+    expect(store.getCredentialByEmail('a@example.com')).toBeUndefined();
+    expect(store.getCredentialByEmail('b@example.com')).toMatchObject({
+      userId: userB.id,
+      email: 'b@example.com',
+      passwordHash: 'hash-b',
+    });
+  });
+
   it('does not expose one user node memory through another user scope', () => {
     const { store, userA, userB, personaA, personaB } = createTwoUsersWithSamePersonaName();
     store.createSoulVersion({ userId: userA.id, personaId: personaA.id, kernelJson: {} });

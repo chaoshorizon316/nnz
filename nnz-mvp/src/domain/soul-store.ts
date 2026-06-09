@@ -26,6 +26,7 @@ import type {
   User,
   UserPersonaScope,
 } from './types';
+import type { CredentialRecord } from '../auth/auth';
 
 type OptionalScope = Partial<UserPersonaScope> | undefined;
 
@@ -82,7 +83,7 @@ export class InMemorySoulStore {
   private readonly nodeEvents = new Map<string, NodeEvent>();
   private readonly conversationMessages = new Map<string, ConversationMessage>();
   private readonly sessions = new Map<string, RuntimeSession>();
-  private readonly credentials = new Map<string, { userId: string; email: string; passwordHash: string; createdAt: string }>();
+  private readonly credentials = new Map<string, CredentialRecord>();
 
   createUser(displayName: string): User {
     const user: User = {
@@ -460,8 +461,8 @@ export class InMemorySoulStore {
         }
       }
     }
-    for (const [userId, _cred] of this.credentials) {
-      if (userId === userId) this.credentials.delete(userId);
+    for (const [credentialUserId] of this.credentials) {
+      if (credentialUserId === userId) this.credentials.delete(credentialUserId);
     }
     for (const [key, session] of this.sessions) {
       if (session.userId === userId) {
@@ -476,10 +477,11 @@ export class InMemorySoulStore {
   // ── Credentials ──
 
   storeCredential(userId: string, email: string, passwordHash: string): void {
+    this.requireUser(userId);
     this.credentials.set(userId, { userId, email, passwordHash, createdAt: new Date().toISOString() });
   }
 
-  getCredentialByEmail(email: string): { userId: string; email: string; passwordHash: string } | undefined {
+  getCredentialByEmail(email: string): CredentialRecord | undefined {
     for (const c of this.credentials.values()) {
       if (c.email === email) return c;
     }
@@ -508,6 +510,7 @@ export class InMemorySoulStore {
       dailyMessageCount?: number;
       lastMessageDate?: string;
     }>;
+    credentials: CredentialRecord[];
   } {
     return {
       users: [...this.users.values()],
@@ -546,12 +549,7 @@ export class InMemorySoulStore {
       dailyMessageCount?: number;
       lastMessageDate?: string;
     }>;
-    credentials: Array<{
-      userId: string;
-      email: string;
-      passwordHash: string;
-      createdAt: string;
-    }>;
+    credentials: CredentialRecord[];
   }): void {
     this.users.clear();
     this.personas.clear();
@@ -573,15 +571,18 @@ export class InMemorySoulStore {
     for (const n of data.nodeEvents) this.nodeEvents.set(n.id, n);
     for (const c of data.conversationMessages) this.conversationMessages.set(c.id, c);
     for (const s of data.sessions) {
-      this.sessions.set(s.scopeKey, {
+      const session: RuntimeSession = {
         userId: s.userId,
         personaId: s.personaId,
         state: s.state as RuntimeState,
-        soulSnapshotId: s.soulSnapshotId,
-        nodeContext: s.nodeId && s.nodeName ? { nodeId: s.nodeId, nodeName: s.nodeName } : undefined,
-        dailyMessageCount: s.dailyMessageCount,
-        lastMessageDate: s.lastMessageDate,
-      });
+      };
+      if (s.soulSnapshotId) session.soulSnapshotId = s.soulSnapshotId;
+      if (s.nodeId && s.nodeName) {
+        session.nodeContext = { nodeId: s.nodeId, nodeName: s.nodeName };
+      }
+      if (s.dailyMessageCount !== undefined) session.dailyMessageCount = s.dailyMessageCount;
+      if (s.lastMessageDate !== undefined) session.lastMessageDate = s.lastMessageDate;
+      this.sessions.set(s.scopeKey, session);
     }
     for (const c of data.credentials) {
       this.credentials.set(c.userId, c);
