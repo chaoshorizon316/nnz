@@ -20,16 +20,15 @@ https://github.com/chaoshorizon316/nnz
 当前时间线：
 
 ```text
-08a10b8 feat: serve landing page from Render, demo at /demo
-2d39c00 docs: 2026-06-08 handoff + state update
+5ac654a fix: restore auth persistence scope
 ```
 
 说明：
 
-- `08a10b8` 已在 GitHub 远端。
-- `2d39c00` 是本地文档提交，进入本次修复前本地领先远端 1 个 commit。
 - 6 月 8 日的 SQLite / 登录注册 / 官网首页变更曾让 GitHub Actions 失败。
-- 6 月 9 日已在本地修复 typecheck/build、credential 持久化和 credential 删除作用域问题，等待提交/推送后让 CI 回绿。
+- 6 月 9 日已修复 typecheck/build、credential 持久化和 credential 删除作用域问题。
+- `5ac654a` 已推送到 GitHub，`NNZ MVP CI` 已恢复 success。
+- Render smoke 已通过：`/healthz`、`/`、`/demo`、`/api/register`、`/api/login`、`/api/chat`。
 
 CI 会在 `nnz-mvp` 中执行：
 
@@ -63,7 +62,7 @@ npm run build:demo
 npm audit
 ```
 
-2026-06-09 本地干净副本结果：8 个测试文件、61 条测试全绿，typecheck / build / audit 通过。
+2026-06-09 结果：8 个测试文件、61 条测试全绿，typecheck / build / audit 通过；GitHub Actions success；Render smoke 通过。
 
 ## 2026-06-05 接手校验
 

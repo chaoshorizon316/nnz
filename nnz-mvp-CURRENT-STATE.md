@@ -14,17 +14,17 @@ https://github.com/chaoshorizon316/nnz
 当前已知状态：
 
 ```text
-远端 main: 08a10b8 feat: serve landing page from Render, demo at /demo
-本地 HEAD: 2d39c00 docs: 2026-06-08 handoff + state update
+远端 main: 5ac654a fix: restore auth persistence scope
+本地 HEAD: 5ac654a fix: restore auth persistence scope
 ```
 
-进入 2026-06-09 修复前，本地领先远端 1 个文档 commit：
+当前本地与远端同步：
 
 ```text
-main...origin/main [ahead 1]
+main...origin/main
 ```
 
-6 月 8 日引入 SQLite / 登录注册 / 官网首页后，远端 GitHub Actions 出现 failure。6 月 9 日本地已修复：
+6 月 8 日引入 SQLite / 登录注册 / 官网首页后，远端 GitHub Actions 出现 failure。6 月 9 日已修复并推送：
 
 - `serialize()` / `deserialize()` 的 credential 类型与 `exactOptionalPropertyTypes` 问题。
 - `deleteUserScopedData()` 误删所有 credentials 的作用域 bug。
@@ -43,9 +43,11 @@ npm run build:demo
 npm audit
 ```
 
-2026-06-09 本地干净副本验证通过：
+2026-06-09 验证通过：
 
 ```text
+GitHub Actions: success
+Render smoke: /healthz, /, /demo, /api/register, /api/login, /api/chat
 8 test files passed
 61 tests passed
 typecheck passed
@@ -225,22 +227,9 @@ POST /api/reset               — 重置演示
 
 ## 下一步：推荐推进顺序
 
-### 优先：推送修复并做云端 smoke
+### 优先：把登录接入真实用户私有 Soul
 
-2026-06-09 本地修复已通过干净副本验证，但还需要推送到 GitHub，让 CI 从 failure 回到 success。推送后立刻验证 Render：
-
-```bash
-curl https://nnz-kego.onrender.com/healthz
-curl https://nnz-kego.onrender.com/
-curl https://nnz-kego.onrender.com/demo
-POST https://nnz-kego.onrender.com/api/register
-POST https://nnz-kego.onrender.com/api/login
-POST https://nnz-kego.onrender.com/api/chat
-```
-
-### 其次：把登录接入真实用户私有 Soul
-
-当前注册/登录只解决 credential 和 JWT。聊天仍使用 A/B demo fixture，因此还不能宣称“真实用户系统完成”。
+当前注册/登录只解决 credential 和 JWT。聊天仍使用 A/B demo fixture，因此还不能宣称“真实用户系统完成”。云端 smoke 已证明注册/登录可用，下一步要把 auth user 接到自己的 Soul。
 
 建议顺序：
 
@@ -364,4 +353,4 @@ npm run build:demo
 npm audit        # 0 vulnerabilities
 ```
 
-下一步：先提交并推送当前修复，再做 Render smoke，然后进入 auth user -> private Soul 的真实数据流。
+当前修复已推送并通过 GitHub Actions / Render smoke。下一步：进入 auth user -> private Soul 的真实数据流。

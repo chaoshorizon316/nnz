@@ -980,7 +980,8 @@ npm ci -> typecheck -> test -> build:demo -> audit
 - `/tmp` 干净副本验证通过：8 个测试文件、61 tests passed，typecheck/build/audit 通过。
 - 新增 credential 作用域测试：删除用户 A 不会删除用户 B credential。
 - 新增 persistence 测试：credentials save/load 后 userId 不变化。
-- 推送当前修复后，需要重新确认 GitHub Actions success，并做 Render smoke：`/healthz`、`/`、`/demo`、`/api/register`、`/api/login`、`/api/chat`。
+- `5ac654a fix: restore auth persistence scope` 已推送到 GitHub，`NNZ MVP CI` 已恢复 success。
+- Render smoke 已通过：`/healthz`、`/`、`/demo`、`/api/register`、`/api/login`、`/api/chat`。
 
 注意：当前 iCloud/Obsidian 路径下，`node_modules` 偶发缺可选依赖或包文件，直接 `npm test` 可能误报失败。可靠验证方式是复制到 `/tmp` 后重新 `npm ci`，或清理本地 `node_modules` 后重装。
 
@@ -990,10 +991,9 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 不要继续扩官网文案或微信接入，先完成这条链路：
 
-1. 推送 2026-06-09 修复，让 CI 从 failure 回到 success。
-2. 做 Render smoke，确认首页、demo、注册、登录、聊天端点均可用。
-3. 实现 auth user -> private Soul：登录后根据 auth `userId` 创建/读取该用户 Persona，聊天和 Memory/Node/Proposal mutation 全部走该用户自己的 `userId + personaId`。
-4. A/B 双用户页面保留为开发者验证页，真实用户入口不能暴露 A/B fixture、SoulVersion、Proposal、scope 等内部机制。
+1. 实现 auth user -> private Soul：登录后根据 auth `userId` 创建/读取该用户 Persona，聊天和 Memory/Node/Proposal mutation 全部走该用户自己的 `userId + personaId`。
+2. A/B 双用户页面保留为开发者验证页，真实用户入口不能暴露 A/B fixture、SoulVersion、Proposal、scope 等内部机制。
+3. 为真实用户入口补 API 测试：未登录拒绝、登录后只能访问自己的 Soul、A 用户节点/记忆/proposal 不进入 B 用户结果。
 
 ## 17. 给下一位 AI 的工作原则
 
