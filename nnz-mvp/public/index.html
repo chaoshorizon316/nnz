@@ -78,18 +78,83 @@
       </div>
     </div>
   </div>
-</section><!-- ===== CHAT DEMO ===== -->
+</section>
+
+<!-- ===== H5 EXPERIENCE ===== -->
 <section id="demo" class="py-16 bg-cream">
   <div class="max-w-6xl mx-auto px-6">
     <div class="text-center mb-10">
       <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">在线体验</span>
-      <h2 class="font-serif text-3xl md:text-4xl font-semibold text-warm-900 mt-4 mb-4">和「爸爸」聊聊天</h2>
-      <p class="text-warm-500 max-w-xl mx-auto leading-relaxed">下面是两位用户与他们各自创建的 AI「爸爸」对话。虽然是同一个称呼，但每个人心中的父亲都是独一无二的。</p>
+      <h2 class="font-serif text-3xl md:text-4xl font-semibold text-warm-900 mt-4 mb-4">先在网页里试着说一句</h2>
+      <p class="text-warm-500 max-w-xl mx-auto leading-relaxed">不用改微信客户端。你可以先注册、创建一位记忆中的人，然后在这里完成一次私密对话。</p>
     </div>
-    <div style="width:100%; height:750px; border:1px solid #E8D5C4; border-radius:16px; overflow:hidden; box-shadow:0 12px 40px rgba(61,44,30,.08);">
-      <iframe src="/demo" style="width:100%; height:100%; border:none;" title="念念在体验 Demo" loading="lazy"></iframe>
+
+    <div class="grid md:grid-cols-2 gap-8">
+      <div class="bg-white/80 rounded-2xl border border-warm-200/50 shadow-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-warm-100 bg-warm-50/80">
+          <p class="text-xs text-sage-600 font-medium tracking-widest uppercase">Step 1</p>
+          <h3 class="font-serif text-xl font-semibold text-warm-800 mt-1">登录或注册</h3>
+        </div>
+        <div class="p-6 space-y-3">
+          <div id="h5AuthSignedOut" class="space-y-3">
+            <input id="h5Email" type="email" autocomplete="email" placeholder="邮箱" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+            <input id="h5Password" type="password" autocomplete="current-password" placeholder="密码，至少 6 位" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+            <div class="flex gap-3">
+              <button onclick="h5Login()" class="flex-1 py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">登录</button>
+              <button onclick="h5Register()" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">注册</button>
+            </div>
+          </div>
+          <div id="h5AuthSignedIn" class="hidden">
+            <p class="text-sm text-warm-600">已登录：<span id="h5UserEmail" class="font-medium text-warm-800"></span></p>
+            <button onclick="h5Logout()" class="mt-3 px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">退出</button>
+          </div>
+          <p id="h5AuthStatus" class="text-xs text-sage-600 h-4"></p>
+        </div>
+      </div>
+
+      <div class="bg-white/80 rounded-2xl border border-warm-200/50 shadow-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-warm-100 bg-warm-50/80">
+          <p class="text-xs text-sage-600 font-medium tracking-widest uppercase">Step 2</p>
+          <h3 class="font-serif text-xl font-semibold text-warm-800 mt-1">创建你想念的人</h3>
+        </div>
+        <div class="p-6 space-y-3">
+          <input id="h5PersonaName" type="text" placeholder="称呼，例如：爸爸" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+          <input id="h5Relationship" type="text" placeholder="你们的关系，例如：女儿心中的父亲" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+          <input id="h5PetPhrase" type="text" placeholder="一句常说的话，可选" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+          <textarea id="h5Description" rows="4" placeholder="写一点你记得的样子：性格、说话方式、小习惯……" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors resize-none bg-warm-50/50"></textarea>
+          <button onclick="h5CreatePersona()" class="w-full py-3 bg-sage-500 text-white text-sm font-medium rounded-full hover:bg-sage-600 transition-colors">创建并开始对话</button>
+          <p id="h5PersonaStatus" class="text-xs text-sage-600 h-4"></p>
+        </div>
+      </div>
     </div>
-    <p class="text-center text-warm-400 text-xs mt-4">左边是用户 A（女儿）的爸爸，右边是用户 B（儿子）的爸爸——他们互不影响。</p>
+
+    <div class="mt-8 bg-white rounded-2xl border border-warm-200/50 shadow-lg overflow-hidden">
+      <div class="px-6 py-4 border-b border-warm-100 bg-warm-50 flex items-center justify-between gap-4">
+        <div>
+          <p id="h5ChatTitle" class="font-serif text-lg font-semibold text-warm-800">等待创建</p>
+          <p id="h5ChatSubtitle" class="text-xs text-sage-500 mt-1">完成登录和创建后，就可以说第一句话。</p>
+        </div>
+      </div>
+      <div id="h5Messages" class="h-96 overflow-y-auto px-6 py-6 space-y-5 bg-warm-50/30">
+        <div class="flex gap-3">
+          <div class="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+          </div>
+          <div class="max-w-[80%]">
+            <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100">
+              <p class="text-sm text-warm-700 leading-relaxed">这里会显示你和记忆伙伴的对话。内容只属于当前登录账号。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-warm-100 bg-white flex gap-3">
+        <input id="h5ChatInput" type="text" placeholder="想对他说什么？" class="flex-1 px-4 py-2.5 text-sm border border-warm-200 rounded-full outline-none focus:border-warm-400 transition-colors" onkeydown="if(event.key==='Enter')h5SendMessage()">
+        <button onclick="h5SendMessage()" class="px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors flex-shrink-0">发送</button>
+      </div>
+      <div class="px-6 pb-5 text-center">
+        <p class="text-xs text-warm-400">这里先用于网页体验；后续可以在微信里继续同样的对话方式。</p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -923,6 +988,199 @@
 </div>
 
 <script>
+// ===== H5 PRIVATE CHAT LOGIC =====
+let h5Token = localStorage.getItem('nnz_h5_token') || '';
+let h5CurrentPersonaId = localStorage.getItem('nnz_h5_persona_id') || '';
+let h5CurrentEmail = '';
+
+document.addEventListener('DOMContentLoaded', () => {
+  h5Bootstrap();
+});
+
+async function h5Bootstrap() {
+  if (!h5Token) {
+    h5RenderAuth();
+    return;
+  }
+  try {
+    const data = await h5Request('/api/me');
+    h5CurrentEmail = data.email || '';
+    h5RenderAuth();
+    if (data.personas && data.personas.length) {
+      const selected = data.personas.find((persona) => persona.id === h5CurrentPersonaId) || data.personas[0];
+      h5CurrentPersonaId = selected.id;
+      localStorage.setItem('nnz_h5_persona_id', selected.id);
+      await h5LoadConversation();
+    }
+  } catch (error) {
+    h5SetStatus('h5AuthStatus', error.message || '登录已失效，请重新登录。');
+    h5Logout(false);
+  }
+}
+
+function h5RenderAuth() {
+  const signedIn = Boolean(h5Token && h5CurrentEmail);
+  document.getElementById('h5AuthSignedOut').classList.toggle('hidden', signedIn);
+  document.getElementById('h5AuthSignedIn').classList.toggle('hidden', !signedIn);
+  document.getElementById('h5UserEmail').textContent = h5CurrentEmail;
+}
+
+async function h5Register() {
+  await h5Auth('/api/register', '注册成功，可以开始创建。');
+}
+
+async function h5Login() {
+  await h5Auth('/api/login', '登录成功。');
+}
+
+async function h5Auth(path, successText) {
+  const email = document.getElementById('h5Email').value.trim();
+  const password = document.getElementById('h5Password').value;
+  if (!email || password.length < 6) {
+    h5SetStatus('h5AuthStatus', '请填写邮箱和至少 6 位密码。');
+    return;
+  }
+  try {
+    const data = await h5Request(path, { method: 'POST', body: { email, password }, skipAuth: true });
+    h5Token = data.token;
+    h5CurrentEmail = data.email;
+    localStorage.setItem('nnz_h5_token', h5Token);
+    h5RenderAuth();
+    h5SetStatus('h5AuthStatus', successText);
+    await h5Bootstrap();
+  } catch (error) {
+    h5SetStatus('h5AuthStatus', error.message || '操作失败。');
+  }
+}
+
+function h5Logout(reload = true) {
+  h5Token = '';
+  h5CurrentEmail = '';
+  h5CurrentPersonaId = '';
+  localStorage.removeItem('nnz_h5_token');
+  localStorage.removeItem('nnz_h5_persona_id');
+  if (reload) location.reload();
+}
+
+async function h5CreatePersona() {
+  if (!h5Token) {
+    h5SetStatus('h5PersonaStatus', '请先登录或注册。');
+    return;
+  }
+  const displayName = document.getElementById('h5PersonaName').value.trim();
+  const relationship = document.getElementById('h5Relationship').value.trim();
+  const petPhrase = document.getElementById('h5PetPhrase').value.trim();
+  const description = document.getElementById('h5Description').value.trim();
+  if (!displayName || !relationship) {
+    h5SetStatus('h5PersonaStatus', '请填写称呼和关系。');
+    return;
+  }
+  try {
+    const data = await h5Request('/api/me/persona', {
+      method: 'POST',
+      body: { displayName, relationship, petPhrase, description },
+    });
+    h5CurrentPersonaId = data.persona.id;
+    localStorage.setItem('nnz_h5_persona_id', h5CurrentPersonaId);
+    h5SetStatus('h5PersonaStatus', '已创建，可以开始说话。');
+    h5RenderConversation(data.persona, data.messages || []);
+  } catch (error) {
+    h5SetStatus('h5PersonaStatus', error.message || '创建失败。');
+  }
+}
+
+async function h5LoadConversation() {
+  if (!h5CurrentPersonaId) return;
+  const data = await h5Request('/api/me/chat-history?personaId=' + encodeURIComponent(h5CurrentPersonaId));
+  h5RenderConversation(data.persona, data.messages || []);
+}
+
+async function h5SendMessage() {
+  const input = document.getElementById('h5ChatInput');
+  const message = input.value.trim();
+  if (!h5Token) {
+    h5SetStatus('h5AuthStatus', '请先登录或注册。');
+    return;
+  }
+  if (!h5CurrentPersonaId) {
+    h5SetStatus('h5PersonaStatus', '请先创建你想念的人。');
+    return;
+  }
+  if (!message) return;
+  input.value = '';
+  h5AppendBubble('USER', message);
+  h5AppendLoading();
+  try {
+    const data = await h5Request('/api/me/chat', {
+      method: 'POST',
+      body: { personaId: h5CurrentPersonaId, message },
+    });
+    h5RenderConversation(data.persona, data.messages || []);
+  } catch (error) {
+    h5RemoveLoading();
+    h5AppendBubble('ASSISTANT', error.message || '刚才没有发送成功，我们稍后再试。');
+  }
+}
+
+function h5RenderConversation(persona, messages) {
+  document.getElementById('h5ChatTitle').textContent = persona ? '和「' + persona.displayName + '」说说话' : '等待创建';
+  document.getElementById('h5ChatSubtitle').textContent = persona
+    ? persona.relationship + ' · 已保存 ' + (persona.messageCount || messages.length || 0) + ' 条对话'
+    : '完成登录和创建后，就可以说第一句话。';
+  const container = document.getElementById('h5Messages');
+  if (!messages.length) {
+    container.innerHTML = '<div class="flex gap-3"><div class="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg></div><div class="max-w-[80%]"><div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100"><p class="text-sm text-warm-700 leading-relaxed">可以从一句简单的话开始。比如：“今天我有点想你。”</p></div></div></div>';
+  } else {
+    container.innerHTML = messages.map((message) => h5BubbleHtml(message.role, message.content)).join('');
+  }
+  container.scrollTop = container.scrollHeight;
+}
+
+function h5AppendBubble(role, content) {
+  const container = document.getElementById('h5Messages');
+  container.insertAdjacentHTML('beforeend', h5BubbleHtml(role, content));
+  container.scrollTop = container.scrollHeight;
+}
+
+function h5AppendLoading() {
+  const container = document.getElementById('h5Messages');
+  container.insertAdjacentHTML('beforeend', '<div id="h5Loading" class="flex gap-3"><div class="max-w-[80%]"><div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100"><p class="text-sm text-sage-500 leading-relaxed">正在回复……</p></div></div></div>');
+  container.scrollTop = container.scrollHeight;
+}
+
+function h5RemoveLoading() {
+  const loading = document.getElementById('h5Loading');
+  if (loading) loading.remove();
+}
+
+function h5BubbleHtml(role, content) {
+  const isUser = role === 'USER';
+  const wrap = isUser ? 'flex gap-3 justify-end' : 'flex gap-3';
+  const bubble = isUser
+    ? 'bg-warm-50 rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm border border-warm-200'
+    : 'bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100';
+  return '<div class="' + wrap + '"><div class="max-w-[80%]"><div class="' + bubble + '"><p class="text-sm text-warm-700 leading-relaxed whitespace-pre-line">' + escapeHtml(content) + '</p></div></div></div>';
+}
+
+async function h5Request(path, options = {}) {
+  const headers = { 'content-type': 'application/json' };
+  if (h5Token && !options.skipAuth) headers.Authorization = 'Bearer ' + h5Token;
+  const response = await fetch(path, {
+    method: options.method || 'GET',
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || '请求失败。');
+  }
+  return data;
+}
+
+function h5SetStatus(id, text) {
+  document.getElementById(id).textContent = text;
+}
+
 // ===== FLOW MODAL LOGIC =====
 let currentStep = 1;
 let selectedPlan = 'standard';

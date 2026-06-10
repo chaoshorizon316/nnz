@@ -1,6 +1,6 @@
 # 念念在 MVP Core
 
-This package implements the current MVP core for user-scoped Soul data, Covenant lifecycle, Memory layering, Soul Ops maturity review, LLM chat, extraction, SQLite demo persistence, and basic email/password JWT auth.
+This package implements the current MVP core for user-scoped Soul data, Covenant lifecycle, Memory layering, Soul Ops maturity review, LLM chat, extraction, SQLite demo persistence, basic email/password JWT auth, and a homepage H5 private-chat verification flow.
 
 Public demo:
 
@@ -124,7 +124,27 @@ POST /api/register
 POST /api/login
 ```
 
-Important boundary: auth currently stores credentials and issues JWTs, but the chat demo still uses the A/B fixture. The next product step is to map the authenticated `userId` to that user's own private Persona and Soul before treating this as a real user system.
+Important boundary: the homepage H5 flow now maps the authenticated token user to that user's own private Persona and Soul. The developer page `/demo` still uses the A/B fixture for scope-isolation checks and Soul Ops inspection, so it should not be treated as the end-user product surface.
+
+## Homepage H5 Private Chat
+
+The homepage `/` now includes a user-facing H5 verification flow:
+
+- register or log in
+- create a remembered person
+- send a private chat message
+
+It uses auth-aware endpoints that read `userId` from the JWT:
+
+```text
+GET /api/me
+GET /api/me/personas
+POST /api/me/persona
+GET /api/me/chat-history?personaId=...
+POST /api/me/chat
+```
+
+The developer page `/demo` still exists for A/B scope-isolation checks and Soul Ops inspection. Do not expose `/demo` internals as the user product surface.
 
 ## Future Shared Memorial Boundary
 
@@ -139,19 +159,21 @@ npm run build:demo
 npm run demo
 ```
 
-Current verified suite on 2026-06-09: 61 tests across domain scope, persistence, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+Current verified suite on 2026-06-10: 62 tests across domain scope, persistence, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
 If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume the source is broken immediately. This directory has shown flaky `node_modules` behavior. A reliable check is to copy a clean git archive to `/tmp`, apply the worktree diff if needed, run `npm ci`, then run the verification commands there.
 
 ## Current Next Step
 
-First push the 2026-06-09 fix and confirm GitHub Actions plus Render smoke:
+First push the 2026-06-10 H5/API change and confirm GitHub Actions plus Render smoke:
 
 - `/healthz`
 - `/`
 - `/demo`
 - `/api/register`
 - `/api/login`
-- `/api/chat`
+- `/api/me`
+- `/api/me/persona`
+- `/api/me/chat`
 
-Then implement the authenticated user -> private Soul flow. Keep the A/B fixture as a developer verification page, and route real user chat through authenticated `userId + personaId` only.
+Then add durable production storage. Render free Web Service local files are not reliable for long-lived demo data.

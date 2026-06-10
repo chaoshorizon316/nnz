@@ -1,9 +1,9 @@
 # nnz-mvp 当前状态与交接指南
 
-> 更新：2026-06-09
+> 更新：2026-06-10
 > 覆盖：Soul 作用域、Covenant 状态机、Memory 分层、Soul Ops、安全护栏、Render demo、LLM 对话、自动化提取管线、SQLite 持久化、登录注册、官网首页
 
-## 2026-06-09 GitHub / CI 状态
+## 2026-06-10 GitHub / CI / 本地状态
 
 GitHub 仓库已经建立：
 
@@ -14,14 +14,14 @@ https://github.com/chaoshorizon316/nnz
 当前已知状态：
 
 ```text
-远端 main: 5ac654a fix: restore auth persistence scope
-本地 HEAD: 5ac654a fix: restore auth persistence scope
+远端 main: c449eec docs: record ci and render verification
+本地当前变更: 首页 H5 真实用户私有聊天流 + /api/me/* auth-aware 接口
 ```
 
-当前本地与远端同步：
+当前本地相对远端：
 
 ```text
-main...origin/main
+main...origin/main with local H5/API/doc changes
 ```
 
 6 月 8 日引入 SQLite / 登录注册 / 官网首页后，远端 GitHub Actions 出现 failure。6 月 9 日已修复并推送：
@@ -227,17 +227,40 @@ POST /api/reset               — 重置演示
 
 ## 下一步：推荐推进顺序
 
-### 优先：把登录接入真实用户私有 Soul
+### 已完成：首页 H5 真实用户私有 Soul 验证入口
 
-当前注册/登录只解决 credential 和 JWT。聊天仍使用 A/B demo fixture，因此还不能宣称“真实用户系统完成”。云端 smoke 已证明注册/登录可用，下一步要把 auth user 接到自己的 Soul。
+2026-06-10 已把验证流程切到 `index` 首页：
+
+- 首页 `/` 的“在线体验”不再嵌入 `/demo`。
+- 用户可以在首页注册/登录、创建记忆中的人、发送第一句话。
+- 新增 `/api/me/*` 用户端接口，统一从 JWT 取 auth user，不接受前端传 `userId`。
+- `/demo` 保留为开发者 A/B 双用户验证页。
+- 干净副本验证通过：62 tests passed，typecheck/build/audit 通过。
+- 本地 API/browser smoke 通过：未登录 401，跨用户 persona 访问 403，首页不露“双人演示”开发入口。
+
+详细记录：`nnz-mvp-2026-06-10-工作记录.md`
+
+### 优先：推送并做云端 H5 smoke
+
+当前本地已经跑通首页 H5 真实用户链路。下一步是推送后验证 Render：
+
+```bash
+GET /
+POST /api/register
+GET /api/me
+POST /api/me/persona
+POST /api/me/chat
+GET /api/me/chat-history
+GET /demo
+```
 
 建议顺序：
 
-1. 登录后根据 auth `userId` 创建或读取该用户自己的 Persona。
-2. 用户端 chat 只使用自己的 `userId + personaId`。
-3. A/B 双用户演示保留为开发者验证页，和真实用户入口拆开。
-4. `/api/chat`、Memory、Node、Proposal mutation 增加 auth-aware scope 路径。
-5. 所有新 API 继续禁止只按 `personaId` 访问。
+1. 推送当前 H5/API 改动，让 CI 通过。
+2. Render smoke 首页 H5 注册/创建/聊天。
+3. 接 Postgres 或 Render managed database，避免线上演示数据随重启丢失。
+4. 继续补用户端 persona 列表、切换会话、删除数据、封存/节点/毕业入口。
+5. 微信客户端后续复用 `/api/me/*` 的 auth-aware 数据流。
 
 ### 再次：后台拆分
 
@@ -353,4 +376,4 @@ npm run build:demo
 npm audit        # 0 vulnerabilities
 ```
 
-当前修复已推送并通过 GitHub Actions / Render smoke。下一步：进入 auth user -> private Soul 的真实数据流。
+当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已在本地实现首页 H5 真实用户私有 Soul 验证入口；下一步是推送并做云端 H5 smoke。

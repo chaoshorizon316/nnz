@@ -9,7 +9,7 @@ https://nnz-kego.onrender.com
 
 免费版无请求 15 分钟会休眠，首次访问需等 30–60 秒唤醒。部署细节见 `nnz-mvp-2026-06-04-云托管完成交接.md`。
 
-## 最新 GitHub / CI 状态（2026-06-09）
+## 最新 GitHub / CI / 本地状态（2026-06-10）
 
 GitHub 仓库：
 
@@ -20,15 +20,18 @@ https://github.com/chaoshorizon316/nnz
 当前时间线：
 
 ```text
-5ac654a fix: restore auth persistence scope
+远端 main: c449eec docs: record ci and render verification
+本地当前变更: 首页 H5 真实用户私有聊天流 + /api/me/* auth-aware 接口 + 62 tests 验证
 ```
 
 说明：
 
 - 6 月 8 日的 SQLite / 登录注册 / 官网首页变更曾让 GitHub Actions 失败。
 - 6 月 9 日已修复 typecheck/build、credential 持久化和 credential 删除作用域问题。
-- `5ac654a` 已推送到 GitHub，`NNZ MVP CI` 已恢复 success。
+- `c449eec` 已推送到 GitHub，`NNZ MVP CI` 已恢复 success。
 - Render smoke 已通过：`/healthz`、`/`、`/demo`、`/api/register`、`/api/login`、`/api/chat`。
+- 6 月 10 日本地已把真实验证流程切到首页 H5：注册/登录 -> 创建记忆中的人 -> 私密聊天；新增 `/api/me/*`，用户端不接受前端传 `userId`。
+- 6 月 10 日 `/tmp` 干净副本验证：8 个测试文件、62 条测试全绿，typecheck / build / audit 通过；本地 API/browser smoke 通过。下一步是推送后做 GitHub Actions + Render H5 smoke。
 
 CI 会在 `nnz-mvp` 中执行：
 
@@ -62,7 +65,7 @@ npm run build:demo
 npm audit
 ```
 
-2026-06-09 结果：8 个测试文件、61 条测试全绿，typecheck / build / audit 通过；GitHub Actions success；Render smoke 通过。
+2026-06-10 结果：8 个测试文件、62 条测试全绿，typecheck / build / audit 通过；首页 H5 桌面/移动浏览器 smoke 通过；API smoke 覆盖 401、403、A/B 同名 persona 隔离。GitHub Actions 与 Render H5 smoke 需在推送后复验。
 
 ## 2026-06-05 接手校验
 
@@ -140,7 +143,7 @@ nnz-mvp-Step4.5-SoulOps后台治理实施记录.md
 ACTIVE -> SEALED -> NODE -> SEALED -> GRADUATED
 ```
 
-最新工程状态、验证方式和注意事项以 `nnz-mvp/CLAUDE_CODE_HANDOFF.md`、`nnz-mvp-CURRENT-STATE.md` 与 `nnz-mvp-2026-06-09-工作记录.md` 为准。
+最新工程状态、验证方式和注意事项以 `nnz-mvp/CLAUDE_CODE_HANDOFF.md`、`nnz-mvp-CURRENT-STATE.md` 与 `nnz-mvp-2026-06-10-工作记录.md` 为准。
 
 截至当前，步骤二 Memory Vault 分层的基础字段与筛选规则也已落地：Runtime 记忆和 Soul Update 证据分开处理，`RISK` / `RESTRICTED` / `NODE_MEMORY` 不会误用于 Soul 更新。
 
@@ -179,7 +182,9 @@ nnz-mvp/src/domain/soul-scope.test.ts
 nnz-mvp/src/runtime/soul-runtime.ts
 nnz-mvp/src/runtime/soul-runtime.test.ts
 nnz-mvp/src/demo-server.ts
+nnz-mvp/public/index.html
 nnz-mvp/CLAUDE_CODE_HANDOFF.md
+nnz-mvp-2026-06-10-工作记录.md
 nnz-mvp-Step4.5-SoulOps后台治理实施记录.md
 念念在-产品与技术架构：后台治理与Soul成熟度.md
 ```

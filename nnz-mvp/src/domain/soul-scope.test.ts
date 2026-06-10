@@ -271,6 +271,15 @@ describe('user-scoped Soul model', () => {
     expect(store.getLatestSoulVersion({ userId: userA.id, personaId: personaA.id }).id).toBe(secondSoul.id);
   });
 
+  it('lists and reads personas only inside the owning user scope', () => {
+    const { store, userA, userB, personaA, personaB } = createTwoUsersWithSamePersonaName();
+
+    expect(store.listPersonasForUser(userA.id)).toEqual([personaA]);
+    expect(store.listPersonasForUser(userB.id)).toEqual([personaB]);
+    expect(store.getPersonaForUser(userA.id, personaA.id)).toEqual(personaA);
+    expect(() => store.getPersonaForUser(userA.id, personaB.id)).toThrow(OwnershipError);
+  });
+
   it('deletes only one user credential when deleting user-scoped data', () => {
     const { store, userA, userB } = createTwoUsersWithSamePersonaName();
     store.storeCredential(userA.id, 'a@example.com', 'hash-a');

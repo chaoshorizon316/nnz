@@ -8,7 +8,7 @@ loadEnv(process.cwd());
 import type { LlmAdapter } from './llm/types';
 import { createExtractionOrchestrator } from './extraction/orchestrator';
 import { loadStore, saveStore } from './domain/persistence';
-import { CovenantStateError } from './domain/errors';
+import { CovenantStateError, NotFoundError, OwnershipError } from './domain/errors';
 import { InMemorySoulStore } from './domain/soul-store';
 import type {
   MemoryItem,
@@ -104,6 +104,64 @@ const server = createServer(async (req, res) => {
       return sendJson(res, buildVerification());
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/me') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      return sendJson(res, buildMeResponse(authUser));
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/me/personas') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      return sendJson(res, { personas: listUserPersonaSummaries(authUser.userId) });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/me/persona') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      const body = await readJsonBody<{
+        displayName?: string;
+        relationship?: string;
+        description?: string;
+        petPhrase?: string;
+      }>(req);
+      if (!normalizeVisibleText(body.displayName, 24) || !normalizeVisibleText(body.relationship, 24)) {
+        return sendJson(res, { error: '请填写称呼和关系。' }, 400);
+      }
+      return sendJson(res, createUserPersona(authUser.userId, body));
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/me/chat-history') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      const personaId = url.searchParams.get('personaId') ?? '';
+      if (!personaId) {
+        return sendJson(res, { error: '请先选择要对话的人。' }, 400);
+      }
+      const scope = { userId: authUser.userId, personaId };
+      if (!ensureUserPersonaAccess(res, scope.userId, scope.personaId)) return;
+      return sendJson(res, {
+        persona: summarizeUserPersona(scope),
+        messages: serializeUserMessages(scope),
+      });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/me/chat') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      const body = await readJsonBody<{ personaId?: string; message?: string }>(req);
+      if (!body.personaId) {
+        return sendJson(res, { error: '请先选择要对话的人。' }, 400);
+      }
+      const message = normalizeVisibleText(body.message, 600);
+      if (!message) {
+        return sendJson(res, { error: '请输入想说的话。' }, 400);
+      }
+      if (!ensureUserPersonaAccess(res, authUser.userId, body.personaId)) return;
+      const reply = await sendMessageToUserPersona(authUser.userId, body.personaId, message);
+      return sendJson(res, reply);
+    }
+
     if (req.method === 'GET' && url.pathname === '/healthz') {
       return sendJson(res, {
         ok: true,
@@ -190,7 +248,8 @@ const server = createServer(async (req, res) => {
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
     res.end('Not found');
   } catch (error) {
-    res.writeHead(500, { 'content-type': 'application/json; charset=utf-8' });
+    const status = error instanceof OwnershipError ? 403 : error instanceof NotFoundError ? 404 : 500;
+    res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
   }
 });
@@ -252,6 +311,33 @@ function getAuthUser(req: IncomingMessage): { userId: string; email: string } | 
   const token = extractToken(authHeader);
   if (!token) return null;
   return verifyToken(token);
+}
+
+function requireAuth(req: IncomingMessage, res: ServerResponse): { userId: string; email: string } | null {
+  const authUser = getAuthUser(req);
+  if (!authUser) {
+    res.writeHead(401, { 'content-type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ error: '请先登录。' }));
+    return null;
+  }
+  return authUser;
+}
+
+function ensureUserPersonaAccess(res: ServerResponse, userId: string, personaId: string): boolean {
+  try {
+    fixture.store.getPersonaForUser(userId, personaId);
+    return true;
+  } catch (error) {
+    if (error instanceof OwnershipError) {
+      sendJson(res, { error: '没有权限访问这段对话。' }, 403);
+      return false;
+    }
+    if (error instanceof NotFoundError) {
+      sendJson(res, { error: '没有找到这段对话。' }, 404);
+      return false;
+    }
+    throw error;
+  }
 }
 
 function createFixture(): DemoFixture {
@@ -456,6 +542,179 @@ function isDuplicateMessage(scope: { userId: string; personaId: string }, text: 
     }
   }
   return false;
+}
+
+interface UserPersonaSummary {
+  id: string;
+  displayName: string;
+  relationship: string;
+  createdAt: Date;
+  memoryCount: number;
+  messageCount: number;
+}
+
+function buildMeResponse(authUser: { userId: string; email: string }) {
+  return {
+    email: authUser.email,
+    personas: listUserPersonaSummaries(authUser.userId),
+  };
+}
+
+function listUserPersonaSummaries(userId: string): UserPersonaSummary[] {
+  return fixture.store.listPersonasForUser(userId).map((persona) => {
+    const scope = { userId, personaId: persona.id };
+    return {
+      id: persona.id,
+      displayName: persona.displayName,
+      relationship: persona.relationship,
+      createdAt: persona.createdAt,
+      memoryCount: fixture.store.listMemory(scope).length,
+      messageCount: fixture.store.listConversations(scope).length,
+    };
+  });
+}
+
+function createUserPersona(
+  userId: string,
+  input: { displayName?: string; relationship?: string; description?: string; petPhrase?: string },
+) {
+  const displayName = normalizeVisibleText(input.displayName, 24);
+  const relationship = normalizeVisibleText(input.relationship, 24);
+  const description = normalizeVisibleText(input.description, 600);
+  const petPhrase = normalizeVisibleText(input.petPhrase, 40);
+
+  if (!displayName || !relationship) {
+    throw new Error('请填写称呼和关系。');
+  }
+
+  const persona = fixture.store.createPersona({
+    userId,
+    displayName,
+    relationship,
+    type: 'DECEASED',
+  });
+  const scope = { userId, personaId: persona.id };
+  fixture.store.createSoulVersion({
+    ...scope,
+    kernelJson: {
+      identityCore: {
+        displayName,
+        relationship,
+      },
+      affectModel: {
+        humorLevel: 'medium',
+      },
+      languageModel: {
+        petPhrases: petPhrase ? [petPhrase] : [],
+      },
+    },
+  });
+
+  if (description) {
+    fixture.store.addMemory({
+      ...scope,
+      type: 'DESCRIPTION',
+      content: description,
+      confidence: 0.85,
+      enabledForSoul: true,
+    });
+  }
+
+  persistIfEnabled();
+
+  return {
+    persona: summarizeUserPersona(scope),
+    messages: serializeUserMessages(scope),
+  };
+}
+
+async function sendMessageToUserPersona(userId: string, personaId: string, message: string) {
+  const persona = fixture.store.getPersonaForUser(userId, personaId);
+  const scope = { userId, personaId: persona.id };
+  const text = message.trim();
+  if (!text) {
+    throw new Error('请输入想说的话。');
+  }
+
+  const guard = applySafetyGuard(scope, text);
+  const duplicate = isDuplicateMessage(scope, text);
+  fixture.store.addConversation({ ...scope, role: 'USER', content: text });
+
+  let reply: string;
+  if (duplicate) {
+    reply = getLastAssistantReply(scope) ?? '嗯，我听见了。';
+  } else if (guard.blocked && guard.reply) {
+    reply = guard.reply;
+  } else {
+    try {
+      const ctx = fixture.store.getRuntimeContext(scope);
+      if (llmAdapter) {
+        reply = await generateLlmReply(llmAdapter, {
+          soul: ctx.soul,
+          memories: ctx.memories,
+          recentConversations: fixture.store.listConversations(scope),
+          message: text,
+        });
+      } else {
+        reply = generateSoulReply({
+          soul: ctx.soul,
+          memories: ctx.memories,
+          message: text,
+        }).content;
+      }
+    } catch (error) {
+      if (error instanceof CovenantStateError) {
+        reply = error.message.includes('SEALED') ? '现在先让这段思念休息一下。等到重要时刻，我们再重新打开。' : '这段告别已经完成了。谢谢你曾经认真说过这些话。';
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  fixture.store.addConversation({ ...scope, role: 'ASSISTANT', content: reply });
+
+  if (llmAdapter) {
+    const adapter = llmAdapter;
+    setImmediate(async () => {
+      try {
+        await extractionOrchestrator.maybeExtractAndPropose(scope, fixture.store, adapter);
+      } catch (err) {
+        console.error('Extraction error (user persona):', err instanceof Error ? err.message : String(err));
+      }
+    });
+  }
+
+  persistIfEnabled();
+
+  return {
+    persona: summarizeUserPersona(scope),
+    messages: serializeUserMessages(scope),
+    reply,
+  };
+}
+
+function summarizeUserPersona(scope: UserPersonaScope): UserPersonaSummary {
+  const persona = fixture.store.getPersonaForUser(scope.userId, scope.personaId);
+  return {
+    id: persona.id,
+    displayName: persona.displayName,
+    relationship: persona.relationship,
+    createdAt: persona.createdAt,
+    memoryCount: fixture.store.listMemory(scope).length,
+    messageCount: fixture.store.listConversations(scope).length,
+  };
+}
+
+function serializeUserMessages(scope: UserPersonaScope) {
+  return fixture.store.listConversations(scope).map((message) => ({
+    role: message.role,
+    content: message.content,
+    createdAt: message.createdAt,
+  }));
+}
+
+function normalizeVisibleText(value: string | undefined, maxLength: number): string {
+  return (value ?? '').trim().replace(/\s+/g, ' ').slice(0, maxLength);
 }
 
 
@@ -1163,7 +1422,7 @@ function sendHtml(res: ServerResponse, html: string): void {
   res.end(html);
 }
 
-function sendJson(res: ServerResponse, data: unknown): void {
-  res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+function sendJson(res: ServerResponse, data: unknown, status = 200): void {
+  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(data, null, 2));
 }

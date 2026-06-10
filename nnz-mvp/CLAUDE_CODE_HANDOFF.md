@@ -64,7 +64,7 @@ Shared Memorial Space
 2. Soul Runtime：确定性 fallback，把当前用户自己的 Soul + Memory + 输入消息转成自然回复。
 3. LLM Adapter：OpenAI-compatible 对话生成，支持 DeepSeek 等兼容服务。
 4. Extraction Pipeline：从用户私有对话中提取候选记忆，并生成可审核 proposal。
-5. Demo Server：一个本地网页，展示“两个用户并排聊天”的可感知演示和 Soul Ops Console。
+5. Demo Server：同时提供首页 H5 用户端验证流，以及 `/demo` 的“两用户并排聊天”开发者验证页和 Soul Ops Console。
 
 ### 4.1 Domain Store
 
@@ -193,7 +193,24 @@ src/demo-server.ts
 http://127.0.0.1:3007
 ```
 
-页面展示：
+首页 `/` 当前展示：
+
+- 用户注册 / 登录。
+- 创建“记忆中的人”。
+- 发送第一句话并查看私密对话。
+- 所有用户端接口都从 JWT 读取 auth user，不接受前端传 `userId`。
+
+用户端接口：
+
+```text
+GET /api/me
+GET /api/me/personas
+POST /api/me/persona
+GET /api/me/chat-history?personaId=...
+POST /api/me/chat
+```
+
+`/demo` 开发者页面展示：
 
 - 用户 A 与“爸爸”的聊天栏。
 - 用户 B 与“爸爸”的聊天栏。
@@ -204,7 +221,7 @@ http://127.0.0.1:3007
 - PASS / WAIT 检查项。
 - 原始状态 JSON。
 
-当前 demo fixture：
+当前 `/demo` fixture：
 
 - 用户 A：关系是“女儿”，初始幽默度 low，口头禅“你自己拿主意”。
 - 用户 B：关系是“儿子”，幽默度 medium，口头禅“慢慢来”。
@@ -974,6 +991,12 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 结果：
 
+- 2026-06-10 已在首页 `/` 实现真实 H5 用户端私密聊天验证流。
+- 新增 `/api/me/*` auth-aware 接口，统一从 token 取 `userId`，创建/读取 persona、conversation、runtime chat 都限制在当前 `userId + personaId`。
+- `/demo` 保留为开发者 A/B 隔离和 Soul Ops 页面，不作为用户端产品面。
+- `/tmp` 干净副本验证通过：8 个测试文件、62 tests passed，typecheck/build/audit 通过。
+- API smoke 通过：未登录 `/api/me` 返回 401；用户 A 访问用户 B 的 persona chat history 返回 403；同名“爸爸”的 A/B 回复不同且无机制词泄露。
+- 浏览器验证通过：首页桌面注册 -> 创建 -> 聊天；首页未出现“双人演示”开发入口；移动 390x844 无横向溢出；用户可见文案未发现机制词泄露。
 - 2026-06-09 进入修复前：本地 `main...origin/main [ahead 1]`。
 - 远端 `main` 已到 `08a10b8 feat: serve landing page from Render, demo at /demo`，但该批 2026-06-08 变更让 GitHub Actions 失败。
 - 本地修复了 `serialize()` credential 类型缺失、`deserialize()` optional undefined、credential 删除跨用户风险、注册 userId 不一致和注册后未持久化。
@@ -989,11 +1012,13 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-不要继续扩官网文案或微信接入，先完成这条链路：
+auth user -> private Soul 的首页 H5 验证链路已经落地。下一步不要急着扩官网营销文案，先把它推到云端并补持久化：
 
-1. 实现 auth user -> private Soul：登录后根据 auth `userId` 创建/读取该用户 Persona，聊天和 Memory/Node/Proposal mutation 全部走该用户自己的 `userId + personaId`。
-2. A/B 双用户页面保留为开发者验证页，真实用户入口不能暴露 A/B fixture、SoulVersion、Proposal、scope 等内部机制。
-3. 为真实用户入口补 API 测试：未登录拒绝、登录后只能访问自己的 Soul、A 用户节点/记忆/proposal 不进入 B 用户结果。
+1. 推送当前 H5/API 改动，让 GitHub Actions 跑 `typecheck -> test -> build:demo -> audit`。
+2. Render 云端 smoke：首页 `/` 注册/登录、创建记忆中的人、发送消息；`/demo` 仍能做 A/B 隔离验证。
+3. 接入 Postgres 或 Render managed database。Render 免费 Web Service 本地文件不适合长期保存线上演示数据。
+4. 用户端继续补 persona 列表、切换会话、删除数据、封存/节点/毕业入口。
+5. 微信客户端后续复用 `/api/me/*` 的 auth-aware 设计，不另造一条绕过 `userId + personaId` 的数据流。
 
 ## 17. 给下一位 AI 的工作原则
 

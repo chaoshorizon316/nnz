@@ -110,6 +110,17 @@ export class InMemorySoulStore {
     return persona;
   }
 
+  listPersonasForUser(userId: string): Persona[] {
+    this.requireUser(userId);
+    return [...this.personas.values()]
+      .filter((persona) => persona.userId === userId)
+      .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
+  }
+
+  getPersonaForUser(userId: string, personaId: string): Persona {
+    return this.requirePersonaOwnership({ userId, personaId });
+  }
+
   createSoulVersion(input: CreateSoulVersionInput): SoulVersion {
     const scope = this.requireScope(input);
     this.requirePersonaOwnership(scope);
