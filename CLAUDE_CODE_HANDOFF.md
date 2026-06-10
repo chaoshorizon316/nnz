@@ -20,18 +20,18 @@ https://github.com/chaoshorizon316/nnz
 当前时间线：
 
 ```text
-远端 main: c449eec docs: record ci and render verification
-本地当前变更: 首页 H5 真实用户私有聊天流 + /api/me/* auth-aware 接口 + 62 tests 验证
+远端 main: 4c21d13 feat: add homepage private chat flow
+本地状态: main...origin/main，同步
 ```
 
 说明：
 
 - 6 月 8 日的 SQLite / 登录注册 / 官网首页变更曾让 GitHub Actions 失败。
 - 6 月 9 日已修复 typecheck/build、credential 持久化和 credential 删除作用域问题。
-- `c449eec` 已推送到 GitHub，`NNZ MVP CI` 已恢复 success。
-- Render smoke 已通过：`/healthz`、`/`、`/demo`、`/api/register`、`/api/login`、`/api/chat`。
+- `4c21d13` 已推送到 GitHub，`NNZ MVP CI` success。
 - 6 月 10 日本地已把真实验证流程切到首页 H5：注册/登录 -> 创建记忆中的人 -> 私密聊天；新增 `/api/me/*`，用户端不接受前端传 `userId`。
-- 6 月 10 日 `/tmp` 干净副本验证：8 个测试文件、62 条测试全绿，typecheck / build / audit 通过；本地 API/browser smoke 通过。下一步是推送后做 GitHub Actions + Render H5 smoke。
+- 6 月 10 日 `/tmp` 干净副本验证：8 个测试文件、62 条测试全绿，typecheck / build / audit 通过；本地 API/browser smoke 通过。
+- 6 月 10 日 Render 云端 smoke 通过：`/healthz` 200，首页 `/` 已是 H5 真实用户流，`/demo` 仍是开发者验证页，`/api/me` 未登录 401，跨用户 persona 访问 403，A/B 同名“爸爸”回复不同且无机制词泄露。
 
 CI 会在 `nnz-mvp` 中执行：
 
@@ -65,7 +65,13 @@ npm run build:demo
 npm audit
 ```
 
-2026-06-10 结果：8 个测试文件、62 条测试全绿，typecheck / build / audit 通过；首页 H5 桌面/移动浏览器 smoke 通过；API smoke 覆盖 401、403、A/B 同名 persona 隔离。GitHub Actions 与 Render H5 smoke 需在推送后复验。
+2026-06-10 结果：8 个测试文件、62 条测试全绿，typecheck / build / audit 通过；首页 H5 桌面/移动浏览器 smoke 通过；API smoke 覆盖 401、403、A/B 同名 persona 隔离；GitHub Actions success；Render H5 smoke 通过。
+
+最新 CI run：
+
+```text
+https://github.com/chaoshorizon316/nnz/actions/runs/27264947043
+```
 
 ## 2026-06-05 接手校验
 

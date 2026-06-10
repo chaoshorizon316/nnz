@@ -14,14 +14,14 @@ https://github.com/chaoshorizon316/nnz
 当前已知状态：
 
 ```text
-远端 main: c449eec docs: record ci and render verification
-本地当前变更: 首页 H5 真实用户私有聊天流 + /api/me/* auth-aware 接口
+远端 main: 4c21d13 feat: add homepage private chat flow
+本地状态: main...origin/main，同步
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main with local H5/API/doc changes
+main...origin/main
 ```
 
 6 月 8 日引入 SQLite / 登录注册 / 官网首页后，远端 GitHub Actions 出现 failure。6 月 9 日已修复并推送：
@@ -240,27 +240,31 @@ POST /api/reset               — 重置演示
 
 详细记录：`nnz-mvp-2026-06-10-工作记录.md`
 
-### 优先：推送并做云端 H5 smoke
+### 已完成：推送并做云端 H5 smoke
 
-当前本地已经跑通首页 H5 真实用户链路。下一步是推送后验证 Render：
+2026-06-10 已推送 `4c21d13 feat: add homepage private chat flow`。GitHub Actions 和 Render smoke 均已通过：
 
-```bash
-GET /
-POST /api/register
-GET /api/me
-POST /api/me/persona
-POST /api/me/chat
-GET /api/me/chat-history
-GET /demo
+```text
+GitHub Actions: success
+Run: https://github.com/chaoshorizon316/nnz/actions/runs/27264947043
+Render /healthz: 200 ok
+首页 /: 新 H5 真实用户流，未回退到旧 iframe
+/demo: 仍是开发者 A/B + Soul Ops 验证页
+/api/me 未登录: 401
+跨用户 persona chat-history: 403
+A/B 同名“爸爸”: 回复不同，无机制词泄露
 ```
 
-建议顺序：
+### 优先：接 Postgres / Render managed database
 
-1. 推送当前 H5/API 改动，让 CI 通过。
-2. Render smoke 首页 H5 注册/创建/聊天。
-3. 接 Postgres 或 Render managed database，避免线上演示数据随重启丢失。
-4. 继续补用户端 persona 列表、切换会话、删除数据、封存/节点/毕业入口。
-5. 微信客户端后续复用 `/api/me/*` 的 auth-aware 数据流。
+当前云端 demo 仍显示 `fixture: in-memory`，Render 服务重启后用户演示数据不可依赖。下一步建议：
+
+1. 设计 `SoulRepository`/`StoreRepository` 抽象，保持 `userId + personaId` 作为所有查询条件。
+2. 建 Render Postgres 或兼容数据库。
+3. 将 User、Credential、Persona、SoulVersion、Memory、Conversation、Node、Snapshot、Proposal 落到数据库。
+4. 保留 in-memory/SQLite 作为本地 demo fallback。
+5. 增加持久化隔离测试：重启后 A/B 同名 persona 仍独立，删除 A 不影响 B。
+6. 微信客户端后续复用 `/api/me/*` 的 auth-aware 数据流。
 
 ### 再次：后台拆分
 
@@ -376,4 +380,4 @@ npm run build:demo
 npm audit        # 0 vulnerabilities
 ```
 
-当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已在本地实现首页 H5 真实用户私有 Soul 验证入口；下一步是推送并做云端 H5 smoke。
+当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；下一步是接 Postgres / Render managed database。

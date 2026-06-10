@@ -165,15 +165,6 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 ## Current Next Step
 
-First push the 2026-06-10 H5/API change and confirm GitHub Actions plus Render smoke:
+The 2026-06-10 H5/API change has been pushed as `4c21d13`, GitHub Actions is green, and Render smoke passed for `/`, `/demo`, `/healthz`, `/api/register`, `/api/login`, and `/api/me/*`.
 
-- `/healthz`
-- `/`
-- `/demo`
-- `/api/register`
-- `/api/login`
-- `/api/me`
-- `/api/me/persona`
-- `/api/me/chat`
-
-Then add durable production storage. Render free Web Service local files are not reliable for long-lived demo data.
+Next add durable production storage. Render free Web Service local files and in-memory fixtures are not reliable for long-lived demo data.

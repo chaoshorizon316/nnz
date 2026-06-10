@@ -997,6 +997,8 @@ npm ci -> typecheck -> test -> build:demo -> audit
 - `/tmp` 干净副本验证通过：8 个测试文件、62 tests passed，typecheck/build/audit 通过。
 - API smoke 通过：未登录 `/api/me` 返回 401；用户 A 访问用户 B 的 persona chat history 返回 403；同名“爸爸”的 A/B 回复不同且无机制词泄露。
 - 浏览器验证通过：首页桌面注册 -> 创建 -> 聊天；首页未出现“双人演示”开发入口；移动 390x844 无横向溢出；用户可见文案未发现机制词泄露。
+- `4c21d13 feat: add homepage private chat flow` 已推送到 GitHub；`NNZ MVP CI` success。
+- Render 云端 smoke 通过：`/healthz` 200，首页 `/` 已是 H5 真实用户流，`/demo` 仍是开发者验证页，云端 `/api/me/*` 401/403/A-B 隔离均正常。
 - 2026-06-09 进入修复前：本地 `main...origin/main [ahead 1]`。
 - 远端 `main` 已到 `08a10b8 feat: serve landing page from Render, demo at /demo`，但该批 2026-06-08 变更让 GitHub Actions 失败。
 - 本地修复了 `serialize()` credential 类型缺失、`deserialize()` optional undefined、credential 删除跨用户风险、注册 userId 不一致和注册后未持久化。
@@ -1012,11 +1014,11 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-auth user -> private Soul 的首页 H5 验证链路已经落地。下一步不要急着扩官网营销文案，先把它推到云端并补持久化：
+auth user -> private Soul 的首页 H5 验证链路已经落地，并已通过 GitHub Actions 与 Render smoke。下一步不要急着扩官网营销文案，先补持久化：
 
-1. 推送当前 H5/API 改动，让 GitHub Actions 跑 `typecheck -> test -> build:demo -> audit`。
-2. Render 云端 smoke：首页 `/` 注册/登录、创建记忆中的人、发送消息；`/demo` 仍能做 A/B 隔离验证。
-3. 接入 Postgres 或 Render managed database。Render 免费 Web Service 本地文件不适合长期保存线上演示数据。
+1. 接入 Postgres 或 Render managed database。当前云端 `/healthz` 仍显示 `fixture: in-memory`，服务重启后数据不可依赖。
+2. 为数据库访问加 repository 抽象，所有查询继续强制携带 `userId + personaId`。
+3. 增加重启后数据仍在、A/B 同名 persona 仍隔离、删除 A 不影响 B 的持久化测试。
 4. 用户端继续补 persona 列表、切换会话、删除数据、封存/节点/毕业入口。
 5. 微信客户端后续复用 `/api/me/*` 的 auth-aware 设计，不另造一条绕过 `userId + personaId` 的数据流。
 
