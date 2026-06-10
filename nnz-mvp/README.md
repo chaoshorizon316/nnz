@@ -111,11 +111,22 @@ The extraction pipeline is also scope-private:
 
 ## Demo Persistence And Auth
 
+Postgres snapshot persistence can be enabled with either:
+
+```text
+DATABASE_URL=postgres://...
+NNZ_POSTGRES_URL=postgres://...
+```
+
+When this is configured, the demo loads and saves a store snapshot in Postgres before starting the server. `/healthz` reports `fixture: "postgres"`.
+
 SQLite demo persistence can be enabled with:
 
 ```text
 NNZ_DB_PATH=./nnz.db
 ```
+
+Postgres takes priority over SQLite when both are configured.
 
 Basic email/password auth is available through:
 
@@ -159,7 +170,7 @@ npm run build:demo
 npm run demo
 ```
 
-Current verified suite on 2026-06-10: 62 tests across domain scope, persistence, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+Current verified suite on 2026-06-10: 64 tests across domain scope, SQLite/Postgres persistence, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
 If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume the source is broken immediately. This directory has shown flaky `node_modules` behavior. A reliable check is to copy a clean git archive to `/tmp`, apply the worktree diff if needed, run `npm ci`, then run the verification commands there.
 
@@ -167,4 +178,4 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 The 2026-06-10 H5/API change has been pushed as `4c21d13`, GitHub Actions is green, and Render smoke passed for `/`, `/demo`, `/healthz`, `/api/register`, `/api/login`, and `/api/me/*`.
 
-Next add durable production storage. Render free Web Service local files and in-memory fixtures are not reliable for long-lived demo data.
+Postgres snapshot persistence is implemented in code. Next configure a Render Postgres database and set `DATABASE_URL` or `NNZ_POSTGRES_URL`, then verify `/healthz` reports `fixture: "postgres"` and user data survives a redeploy.

@@ -8,6 +8,7 @@ loadEnv(process.cwd());
 import type { LlmAdapter } from './llm/types';
 import { createExtractionOrchestrator } from './extraction/orchestrator';
 import { loadStore, saveStore } from './domain/persistence';
+import { createPostgresPersistence, type PostgresPersistence } from './domain/postgres-persistence';
 import { CovenantStateError, NotFoundError, OwnershipError } from './domain/errors';
 import { InMemorySoulStore } from './domain/soul-store';
 import type {
@@ -41,20 +42,9 @@ interface DemoFixture {
 let fixture = createFixture();
 
 const DB_PATH = process.env['NNZ_DB_PATH'];
-if (DB_PATH) {
-  const loaded = loadStore(fixture.store, DB_PATH);
-  if (loaded) {
-    console.log(`Store loaded from ${DB_PATH}`);
-    // Refresh fixture references after loading
-    const scopeA = { userId: fixture.userA.id, personaId: fixture.personaA.id };
-    const scopeB = { userId: fixture.userB.id, personaId: fixture.personaB.id };
-    fixture.soulA = fixture.store.getLatestSoulVersion(scopeA);
-    fixture.soulB = fixture.store.getLatestSoulVersion(scopeB);
-  } else {
-    console.log(`No existing data at ${DB_PATH}, starting fresh.`);
-    saveStore(fixture.store, DB_PATH);
-  }
-}
+const POSTGRES_URL = process.env['NNZ_POSTGRES_URL'] ?? process.env['DATABASE_URL'];
+let postgresPersistence: PostgresPersistence | undefined;
+let persistenceMode: 'memory' | 'sqlite' | 'postgres' = 'memory';
 
 const extractionOrchestrator = createExtractionOrchestrator();
 let llmAdapter: LlmAdapter | undefined;
@@ -128,7 +118,7 @@ const server = createServer(async (req, res) => {
       if (!normalizeVisibleText(body.displayName, 24) || !normalizeVisibleText(body.relationship, 24)) {
         return sendJson(res, { error: '请填写称呼和关系。' }, 400);
       }
-      return sendJson(res, createUserPersona(authUser.userId, body));
+      return sendJson(res, await createUserPersona(authUser.userId, body));
     }
 
     if (req.method === 'GET' && url.pathname === '/api/me/chat-history') {
@@ -166,7 +156,7 @@ const server = createServer(async (req, res) => {
       return sendJson(res, {
         ok: true,
         service: 'nnz-mvp-demo',
-        fixture: 'in-memory',
+        fixture: persistenceMode === 'memory' ? 'in-memory' : persistenceMode,
       });
     }
 
@@ -179,54 +169,55 @@ const server = createServer(async (req, res) => {
       applyUserACorrection();
       acceptUserACorrectionProposal();
       createUserANodeMemory();
+      await persistIfEnabled();
       return sendJson(res, buildVerification());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/apply-correction') {
       applyUserACorrection();
-      persistIfEnabled();
+      await persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/accept-correction') {
       acceptUserACorrectionProposal();
-      persistIfEnabled();
+      await persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/reject-correction') {
       rejectUserACorrectionProposal();
-      persistIfEnabled();
+      await persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/create-node') {
       createUserANodeMemory();
-      persistIfEnabled();
+      await persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/seal') {
       sealUserA();
-      persistIfEnabled();
+      await persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/activate-node') {
       activateNodeForUserA();
-      persistIfEnabled();
+      await persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/complete-node') {
       completeNodeForUserA();
-      persistIfEnabled();
+      await persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
     if (req.method === 'POST' && url.pathname === '/api/graduate') {
       graduateUserA();
-      persistIfEnabled();
+      await persistIfEnabled();
       return sendJson(res, serializeFixture());
     }
 
@@ -254,11 +245,9 @@ const server = createServer(async (req, res) => {
   }
 });
 
-const port = Number(process.env.PORT ?? 3007);
-const host = process.env.HOST ?? '0.0.0.0';
-server.listen(port, host, () => {
-  const displayHost = host === '0.0.0.0' ? '127.0.0.1' : host;
-  console.log(`念念在 Soul 作用域演示已启动: http://${displayHost}:${port}`);
+startServer().catch((error) => {
+  console.error('Failed to start demo server:', error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
 });
 
 
@@ -279,7 +268,7 @@ async function handleRegister(res: ServerResponse, email: string, password: stri
   const passwordHash = await hashPassword(password);
   const user = fixture.store.createUser(email); // displayName = email for now
   fixture.store.storeCredential(user.id, email, passwordHash);
-  persistIfEnabled();
+  await persistIfEnabled();
 
   const token = signToken({ userId: user.id, email });
   res.writeHead(201, { 'content-type': 'application/json; charset=utf-8' });
@@ -338,6 +327,84 @@ function ensureUserPersonaAccess(res: ServerResponse, userId: string, personaId:
     }
     throw error;
   }
+}
+
+async function startServer(): Promise<void> {
+  await initializePersistence();
+
+  const port = Number(process.env.PORT ?? 3007);
+  const host = process.env.HOST ?? '0.0.0.0';
+  server.listen(port, host, () => {
+    const displayHost = host === '0.0.0.0' ? '127.0.0.1' : host;
+    console.log(`念念在 Soul 作用域演示已启动: http://${displayHost}:${port}`);
+  });
+}
+
+async function initializePersistence(): Promise<void> {
+  if (POSTGRES_URL) {
+    postgresPersistence = createPostgresPersistence(POSTGRES_URL);
+    const loaded = await postgresPersistence.load(fixture.store);
+    persistenceMode = 'postgres';
+    if (loaded) {
+      refreshDemoFixtureReferences();
+      console.log('Store loaded from Postgres.');
+    } else {
+      console.log('No existing Postgres snapshot, starting fresh.');
+      await postgresPersistence.save(fixture.store);
+    }
+    return;
+  }
+
+  if (DB_PATH) {
+    persistenceMode = 'sqlite';
+    const loaded = loadStore(fixture.store, DB_PATH);
+    if (loaded) {
+      refreshDemoFixtureReferences();
+      console.log(`Store loaded from ${DB_PATH}`);
+    } else {
+      console.log(`No existing data at ${DB_PATH}, starting fresh.`);
+      saveStore(fixture.store, DB_PATH);
+    }
+  }
+}
+
+function refreshDemoFixtureReferences(): void {
+  const data = fixture.store.serialize();
+  const userA = data.users.find((user) => user.displayName === '用户 A');
+  const userB = data.users.find((user) => user.displayName === '用户 B');
+  if (!userA || !userB) {
+    throw new Error('Persisted demo store is missing 用户 A or 用户 B.');
+  }
+
+  const personaA = data.personas.find((persona) => persona.userId === userA.id && persona.displayName === '爸爸');
+  const personaB = data.personas.find((persona) => persona.userId === userB.id && persona.displayName === '爸爸');
+  if (!personaA || !personaB) {
+    throw new Error('Persisted demo store is missing A/B 爸爸 personas.');
+  }
+
+  fixture.userA = userA;
+  fixture.userB = userB;
+  fixture.personaA = personaA;
+  fixture.personaB = personaB;
+  fixture.soulA = fixture.store.getLatestSoulVersion({ userId: userA.id, personaId: personaA.id });
+  fixture.soulB = fixture.store.getLatestSoulVersion({ userId: userB.id, personaId: personaB.id });
+  const correction = fixture.store
+    .listMemory({ userId: userA.id, personaId: personaA.id })
+    .find((memory) => memory.type === 'CORRECTION');
+  if (correction) fixture.correction = correction;
+  else delete fixture.correction;
+
+  const correctionProposalId = fixture.store
+    .listSoulUpdateProposals({ userId: userA.id, personaId: personaA.id })
+    .at(-1)?.id;
+  if (correctionProposalId) fixture.correctionProposalId = correctionProposalId;
+  else delete fixture.correctionProposalId;
+
+  const node = fixture.store
+    .listNodes({ userId: userA.id, personaId: personaA.id })
+    .find((node) => node.name === '婚礼');
+  if (node) fixture.node = node;
+  else delete fixture.node;
 }
 
 function createFixture(): DemoFixture {
@@ -574,10 +641,10 @@ function listUserPersonaSummaries(userId: string): UserPersonaSummary[] {
   });
 }
 
-function createUserPersona(
+async function createUserPersona(
   userId: string,
   input: { displayName?: string; relationship?: string; description?: string; petPhrase?: string },
-) {
+): Promise<{ persona: UserPersonaSummary; messages: ReturnType<typeof serializeUserMessages> }> {
   const displayName = normalizeVisibleText(input.displayName, 24);
   const relationship = normalizeVisibleText(input.relationship, 24);
   const description = normalizeVisibleText(input.description, 600);
@@ -620,7 +687,7 @@ function createUserPersona(
     });
   }
 
-  persistIfEnabled();
+  await persistIfEnabled();
 
   return {
     persona: summarizeUserPersona(scope),
@@ -678,13 +745,14 @@ async function sendMessageToUserPersona(userId: string, personaId: string, messa
     setImmediate(async () => {
       try {
         await extractionOrchestrator.maybeExtractAndPropose(scope, fixture.store, adapter);
+        await persistIfEnabled();
       } catch (err) {
         console.error('Extraction error (user persona):', err instanceof Error ? err.message : String(err));
       }
     });
   }
 
-  persistIfEnabled();
+  await persistIfEnabled();
 
   return {
     persona: summarizeUserPersona(scope),
@@ -718,13 +786,20 @@ function normalizeVisibleText(value: string | undefined, maxLength: number): str
 }
 
 
-function persistIfEnabled(): void {
-  if (DB_PATH) {
-    try {
-      saveStore(fixture.store, DB_PATH);
-    } catch (err) {
-      console.error('Failed to persist store:', err instanceof Error ? err.message : String(err));
-    }
+async function persistIfEnabled(): Promise<void> {
+  if (postgresPersistence) {
+    await postgresPersistence.save(fixture.store).catch((err: unknown) => {
+      console.error('Failed to persist store to Postgres:', err instanceof Error ? err.message : String(err));
+    });
+    return;
+  }
+
+  if (!DB_PATH) return;
+
+  try {
+    saveStore(fixture.store, DB_PATH);
+  } catch (err) {
+    console.error('Failed to persist store:', err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -818,6 +893,7 @@ async function sendMessageToBothUsers(message: string) {
         if (proposals.length) {
           console.log(`Extraction generated ${proposals.length} proposal(s) for user A.`);
         }
+        await persistIfEnabled();
       } catch (err) {
         console.error('Extraction error (user A):', err instanceof Error ? err.message : String(err));
       }
@@ -826,13 +902,14 @@ async function sendMessageToBothUsers(message: string) {
         if (proposalsB.length) {
           console.log(`Extraction generated ${proposalsB.length} proposal(s) for user B.`);
         }
+        await persistIfEnabled();
       } catch (err) {
         console.error('Extraction error (user B):', err instanceof Error ? err.message : String(err));
       }
     });
   }
 
-  persistIfEnabled();
+  await persistIfEnabled();
   return serializeFixture();
 }
 

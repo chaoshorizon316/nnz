@@ -1014,11 +1014,11 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-auth user -> private Soul 的首页 H5 验证链路已经落地，并已通过 GitHub Actions 与 Render smoke。下一步不要急着扩官网营销文案，先补持久化：
+auth user -> private Soul 的首页 H5 验证链路已经落地，并已通过 GitHub Actions 与 Render smoke。Postgres snapshot persistence 已在代码中实现，下一步是配置云端数据库并验证：
 
-1. 接入 Postgres 或 Render managed database。当前云端 `/healthz` 仍显示 `fixture: in-memory`，服务重启后数据不可依赖。
-2. 为数据库访问加 repository 抽象，所有查询继续强制携带 `userId + personaId`。
-3. 增加重启后数据仍在、A/B 同名 persona 仍隔离、删除 A 不影响 B 的持久化测试。
+1. 在 Render 创建 Postgres 或兼容数据库，并给 Web Service 设置 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
+2. 推送后验证 `/healthz` 显示 `fixture: "postgres"`。
+3. 在云端注册/创建/聊天后 redeploy，确认数据可恢复。
 4. 用户端继续补 persona 列表、切换会话、删除数据、封存/节点/毕业入口。
 5. 微信客户端后续复用 `/api/me/*` 的 auth-aware 设计，不另造一条绕过 `userId + personaId` 的数据流。
 

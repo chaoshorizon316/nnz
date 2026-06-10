@@ -255,16 +255,23 @@ Render /healthz: 200 ok
 A/B 同名“爸爸”: 回复不同，无机制词泄露
 ```
 
-### 优先：接 Postgres / Render managed database
+### 进行中：接 Postgres / Render managed database
 
-当前云端 demo 仍显示 `fixture: in-memory`，Render 服务重启后用户演示数据不可依赖。下一步建议：
+当前云端 demo 仍显示 `fixture: in-memory`，Render 服务重启后用户演示数据不可依赖。2026-06-10 已在代码中实现 Postgres snapshot persistence：
 
-1. 设计 `SoulRepository`/`StoreRepository` 抽象，保持 `userId + personaId` 作为所有查询条件。
-2. 建 Render Postgres 或兼容数据库。
-3. 将 User、Credential、Persona、SoulVersion、Memory、Conversation、Node、Snapshot、Proposal 落到数据库。
-4. 保留 in-memory/SQLite 作为本地 demo fallback。
-5. 增加持久化隔离测试：重启后 A/B 同名 persona 仍独立，删除 A 不影响 B。
-6. 微信客户端后续复用 `/api/me/*` 的 auth-aware 数据流。
+- 新增 `src/domain/postgres-persistence.ts`。
+- 支持 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
+- Postgres 优先级高于 `NNZ_DB_PATH`。
+- `/healthz` 会显示 `fixture: "postgres"` / `"sqlite"` / `"in-memory"`。
+- 新增 Postgres snapshot persistence 测试，验证 A/B 同名 persona、conversation、credential 恢复后仍隔离。
+
+下一步建议：
+
+1. 在 Render 创建 Postgres 或兼容数据库。
+2. 给 Web Service 配置 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
+3. 推送后验证 `/healthz` 显示 `fixture: "postgres"`。
+4. 注册/创建/聊天后触发 redeploy，确认数据可恢复。
+5. 后续再把 snapshot persistence 演进为逐表 repository，不要绕开 `userId + personaId`。
 
 ### 再次：后台拆分
 
