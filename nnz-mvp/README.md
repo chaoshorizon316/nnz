@@ -176,6 +176,6 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 ## Current Next Step
 
-The 2026-06-10 H5/API change has been pushed as `4c21d13`, GitHub Actions is green, and Render smoke passed for `/`, `/demo`, `/healthz`, `/api/register`, `/api/login`, and `/api/me/*`.
+The 2026-06-10 H5/API and Postgres snapshot persistence changes have been pushed through `99c38cb`, GitHub Actions is green, and Render smoke passed for `/`, `/demo`, `/healthz`, `/api/register`, `/api/login`, and `/api/me/*`.
 
 Postgres snapshot persistence is implemented in code. Next configure a Render Postgres database and set `DATABASE_URL` or `NNZ_POSTGRES_URL`, then verify `/healthz` reports `fixture: "postgres"` and user data survives a redeploy.

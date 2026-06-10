@@ -14,8 +14,9 @@ https://github.com/chaoshorizon316/nnz
 当前已知状态：
 
 ```text
-远端 main: 4c21d13 feat: add homepage private chat flow
-本地状态: main...origin/main，同步
+远端 main: 99c38cb feat: add postgres snapshot persistence
+本地代码状态: main...origin/main，同步
+本地文档状态: 可能包含尚未推送的交接记录更新
 ```
 
 当前本地相对远端：
@@ -24,7 +25,7 @@ https://github.com/chaoshorizon316/nnz
 main...origin/main
 ```
 
-6 月 8 日引入 SQLite / 登录注册 / 官网首页后，远端 GitHub Actions 出现 failure。6 月 9 日已修复并推送：
+6 月 8 日引入 SQLite / 登录注册 / 官网首页后，远端 GitHub Actions 出现 failure。6 月 9 日已修复；6 月 10 日首页 H5 和 Postgres snapshot persistence 已推送：
 
 - `serialize()` / `deserialize()` 的 credential 类型与 `exactOptionalPropertyTypes` 问题。
 - `deleteUserScopedData()` 误删所有 credentials 的作用域 bug。
@@ -235,19 +236,19 @@ POST /api/reset               — 重置演示
 - 用户可以在首页注册/登录、创建记忆中的人、发送第一句话。
 - 新增 `/api/me/*` 用户端接口，统一从 JWT 取 auth user，不接受前端传 `userId`。
 - `/demo` 保留为开发者 A/B 双用户验证页。
-- 干净副本验证通过：62 tests passed，typecheck/build/audit 通过。
+- 干净副本验证通过：64 tests passed，typecheck/build/audit 通过。
 - 本地 API/browser smoke 通过：未登录 401，跨用户 persona 访问 403，首页不露“双人演示”开发入口。
 
 详细记录：`nnz-mvp-2026-06-10-工作记录.md`
 
 ### 已完成：推送并做云端 H5 smoke
 
-2026-06-10 已推送 `4c21d13 feat: add homepage private chat flow`。GitHub Actions 和 Render smoke 均已通过：
+2026-06-10 已推送到 `99c38cb feat: add postgres snapshot persistence`。GitHub Actions 和 Render smoke 均已通过：
 
 ```text
 GitHub Actions: success
-Run: https://github.com/chaoshorizon316/nnz/actions/runs/27264947043
-Render /healthz: 200 ok
+Run: https://github.com/chaoshorizon316/nnz/actions/runs/27267872384
+Render /healthz: 200 ok, fixture: "in-memory"
 首页 /: 新 H5 真实用户流，未回退到旧 iframe
 /demo: 仍是开发者 A/B + Soul Ops 验证页
 /api/me 未登录: 401
@@ -269,7 +270,7 @@ A/B 同名“爸爸”: 回复不同，无机制词泄露
 
 1. 在 Render 创建 Postgres 或兼容数据库。
 2. 给 Web Service 配置 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
-3. 推送后验证 `/healthz` 显示 `fixture: "postgres"`。
+3. 验证 `/healthz` 显示 `fixture: "postgres"`。
 4. 注册/创建/聊天后触发 redeploy，确认数据可恢复。
 5. 后续再把 snapshot persistence 演进为逐表 repository，不要绕开 `userId + personaId`。
 
