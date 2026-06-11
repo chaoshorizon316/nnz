@@ -22,6 +22,7 @@ https://github.com/chaoshorizon316/nnz
 ```text
 远端 main: 9f67ef9 docs: record render postgres resource
 2026-06-11 新增: Render Postgres 已配置并通过重启持久化 smoke
+2026-06-11 Step 1: 后台测试数据清理 + 独立 /ops Soul Ops 后台雏形已本地实现并验证
 ```
 
 说明：
@@ -36,6 +37,10 @@ https://github.com/chaoshorizon316/nnz
 - 当前 `/healthz`：`fixture: "postgres"`，`persistence.mode: "postgres"`，`persistence.postgresConfigured: true`，`persistence.postgresEnv: "DATABASE_URL"`。
 - 6 月 11 日云端持久化 smoke：注册临时测试用户 -> 创建“爸爸” -> 发送一句话 -> Restart service -> 重新登录后 persona 与 2 条 chat-history 均可读回。
 - Render runtime logs 已确认：`Postgres persistence configured via DATABASE_URL.` 与 `LLM adapter initialized for extraction pipeline.`。
+- 6 月 11 日 Step 1 已实现：新增 `src/ops/ops-console.ts` / `src/ops/ops-console.test.ts`，拆出独立 `/ops` 后台，新增受 `NNZ_OPS_TOKEN` 保护的 `/api/ops/overview` 和 `/api/ops/cleanup-test-users`。
+- `/api/ops/cleanup-test-users` 默认 dry-run；真删除必须传 `dryRun:false` 和 `confirm:"DELETE_TEST_USERS"`；只匹配明确 smoke/test 账号并调用 `deleteUserScopedData(userId)`，不会删除 A/B demo 或普通用户。
+- 本地干净副本验证：`/tmp/nnz-step1-final.MF0YVg` 中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过，10 个测试文件、67 条测试全绿，0 vulnerabilities。
+- 本地 `/ops` browser smoke 通过：输入 `dev-ops-token` 后显示 8 个核心指标、用户表、2 个 Persona 成熟度卡片和测试数据清理面板。
 
 CI 会在 `nnz-mvp` 中执行：
 
@@ -69,7 +74,7 @@ npm run build:demo
 npm audit
 ```
 
-2026-06-11 结果：`/tmp/nnz-healthz-verify.kfHGyo` 干净副本中 9 个测试文件、64 条测试全绿，typecheck / build / audit 通过；首页 H5 桌面/移动浏览器 smoke 通过；API smoke 覆盖 401、403、A/B 同名 persona 隔离；GitHub Actions success；Render H5 smoke 通过。
+2026-06-11 结果：`/tmp/nnz-step1-final.MF0YVg` 干净副本中 10 个测试文件、67 条测试全绿，typecheck / build / audit 通过；首页 H5 桌面/移动浏览器 smoke 通过；API smoke 覆盖 401、403、A/B 同名 persona 隔离；GitHub Actions success；Render H5/Postgres smoke 通过；本地 `/ops` 和清理 API smoke 通过。
 
 最新 CI run：
 
@@ -141,6 +146,14 @@ nnz-mvp-Step4.5-SoulOps后台治理实施记录.md
 
 这份文档记录了已改文件、验证方式、API 结果、页面确认和下一步 Step 4.6 建议。
 
+Step 1 独立后台雏形和测试数据清理记录在：
+
+```text
+nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md
+```
+
+这份文档记录了 `/ops` 访问方式、`NNZ_OPS_TOKEN`、测试数据清理规则、API 验证结果、浏览器校验、Render 依赖和下一步计划。
+
 ## 当前最重要目标
 
 当前 MVP 核心仍是：
@@ -192,8 +205,11 @@ nnz-mvp/src/domain/soul-scope.test.ts
 nnz-mvp/src/runtime/soul-runtime.ts
 nnz-mvp/src/runtime/soul-runtime.test.ts
 nnz-mvp/src/demo-server.ts
+nnz-mvp/src/ops/ops-console.ts
+nnz-mvp/src/ops/ops-console.test.ts
 nnz-mvp/public/index.html
 nnz-mvp/CLAUDE_CODE_HANDOFF.md
+nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md
 nnz-mvp-2026-06-10-工作记录.md
 nnz-mvp-Step4.5-SoulOps后台治理实施记录.md
 念念在-产品与技术架构：后台治理与Soul成熟度.md

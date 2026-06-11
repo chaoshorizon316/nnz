@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { timingSafeEqual } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -25,6 +26,7 @@ import { generateLlmReply } from './runtime/llm-reply';
 import { GRADUATED_REPLY, SEALED_REPLY, generateSoulReply } from './runtime/soul-runtime';
 import { extractToken, hashPassword, signToken, verifyPassword, verifyToken } from './auth/auth';
 import { checkDailyLimit, checkMessageSafety, incrementDailyCount } from './runtime/soul-guard';
+import { buildOpsOverview, cleanupTestUsers } from './ops/ops-console';
 
 interface DemoFixture {
   store: InMemorySoulStore;
@@ -44,6 +46,7 @@ let fixture = createFixture();
 const DB_PATH = readNonEmptyEnv('NNZ_DB_PATH');
 const POSTGRES_ENV_SOURCE = readFirstConfiguredEnvKey(['NNZ_POSTGRES_URL', 'DATABASE_URL']);
 const POSTGRES_URL = POSTGRES_ENV_SOURCE ? readNonEmptyEnv(POSTGRES_ENV_SOURCE) : undefined;
+const OPS_TOKEN = readNonEmptyEnv('NNZ_OPS_TOKEN');
 let postgresPersistence: PostgresPersistence | undefined;
 let persistenceMode: 'memory' | 'sqlite' | 'postgres' = 'memory';
 
@@ -85,6 +88,38 @@ const server = createServer(async (req, res) => {
 
     if (req.method === 'GET' && url.pathname === '/demo') {
       return sendHtml(res, renderPage());
+    }
+
+    if (req.method === 'GET' && url.pathname === '/ops') {
+      return sendHtml(res, renderOpsPage(Boolean(OPS_TOKEN)));
+    }
+
+    if (url.pathname.startsWith('/api/ops/')) {
+      const opsAllowed = requireOpsAccess(req, res);
+      if (!opsAllowed) return;
+
+      if (req.method === 'GET' && url.pathname === '/api/ops/overview') {
+        return sendJson(res, buildOpsOverview(fixture.store, getOpsPersistenceInfo()));
+      }
+
+      if (req.method === 'POST' && url.pathname === '/api/ops/cleanup-test-users') {
+        const body = await readJsonBody<{ dryRun?: boolean; confirm?: string }>(req);
+        const dryRun = body.dryRun !== false;
+        if (!dryRun && body.confirm !== 'DELETE_TEST_USERS') {
+          return sendJson(res, {
+            error: '需要确认码 DELETE_TEST_USERS 才能执行清理。',
+            result: cleanupTestUsers(fixture.store, true),
+          }, 400);
+        }
+
+        const result = cleanupTestUsers(fixture.store, dryRun);
+        if (!dryRun) {
+          await persistIfEnabled();
+        }
+        return sendJson(res, { result });
+      }
+
+      return sendJson(res, { error: 'Unknown Soul Ops endpoint.' }, 404);
     }
 
     if (req.method === 'GET' && url.pathname === '/api/state') {
@@ -317,6 +352,49 @@ function requireAuth(req: IncomingMessage, res: ServerResponse): { userId: strin
     return null;
   }
   return authUser;
+}
+
+function requireOpsAccess(req: IncomingMessage, res: ServerResponse): boolean {
+  if (!OPS_TOKEN) {
+    sendJson(res, { error: 'Soul Ops 后台未启用。请设置 NNZ_OPS_TOKEN。' }, 404);
+    return false;
+  }
+
+  const token = getOpsRequestToken(req);
+  if (!token) {
+    sendJson(res, { error: '缺少 Soul Ops 访问 token。' }, 401);
+    return false;
+  }
+  if (!safeSecretEquals(token, OPS_TOKEN)) {
+    sendJson(res, { error: 'Soul Ops 访问 token 无效。' }, 403);
+    return false;
+  }
+  return true;
+}
+
+function getOpsRequestToken(req: IncomingMessage): string | null {
+  const header = req.headers['x-ops-token'];
+  if (Array.isArray(header)) {
+    if (header[0]) return header[0];
+  } else if (header) {
+    return header;
+  }
+  return extractToken(req.headers['authorization']);
+}
+
+function safeSecretEquals(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function getOpsPersistenceInfo() {
+  return {
+    mode: persistenceMode,
+    postgresConfigured: Boolean(POSTGRES_URL),
+    postgresEnv: POSTGRES_ENV_SOURCE ?? null,
+    sqliteConfigured: Boolean(DB_PATH),
+  };
 }
 
 function ensureUserPersonaAccess(res: ServerResponse, userId: string, personaId: string): boolean {
@@ -1051,6 +1129,339 @@ function buildVerification() {
   };
 }
 
+function renderOpsPage(opsEnabled: boolean): string {
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>念念在 Soul Ops</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg:#F7F5EF;
+      --surface:#FFFFFF;
+      --ink:#20231F;
+      --muted:#6E756D;
+      --line:#DDD8CC;
+      --sage:#4F7564;
+      --amber:#B77928;
+      --red:#A94442;
+      --blue:#3D6278;
+      --soft:#EEF3EE;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Noto Sans SC","PingFang SC",sans-serif; }
+    main { max-width:1280px; margin:0 auto; padding:28px 24px 56px; }
+    header { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; margin-bottom:22px; }
+    h1 { margin:0 0 6px; font-size:30px; letter-spacing:0; }
+    h2 { margin:0 0 14px; font-size:18px; }
+    h3 { margin:0; font-size:15px; }
+    p { line-height:1.6; }
+    .eyebrow { color:var(--sage); font-weight:800; font-size:12px; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
+    .muted { color:var(--muted); }
+    .toolbar { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; align-items:center; }
+    input { min-height:40px; border:1px solid var(--line); border-radius:8px; padding:9px 12px; font:inherit; background:#fff; color:var(--ink); }
+    input[type="password"] { min-width:260px; }
+    button { min-height:40px; border:0; border-radius:8px; background:var(--sage); color:#fff; padding:9px 14px; font-weight:800; cursor:pointer; }
+    button.secondary { background:var(--blue); }
+    button.ghost { background:#fff; color:var(--sage); border:1px solid var(--line); }
+    button.danger { background:var(--red); }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .status { border:1px solid var(--line); background:var(--surface); padding:12px 14px; border-radius:8px; margin:0 0 18px; }
+    .status.error { border-color:#E3B4AA; background:#FFF4F1; color:#8E332F; }
+    .status.ok { border-color:#BFD5C4; background:#F1F7F2; color:#315B3F; }
+    .layout { display:grid; grid-template-columns:320px minmax(0,1fr); gap:18px; align-items:start; }
+    .panel { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:18px; }
+    .metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+    .metric { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:14px; }
+    .metric span { display:block; color:var(--muted); font-size:12px; font-weight:800; margin-bottom:6px; }
+    .metric strong { font-size:26px; line-height:1; }
+    .cleanup-list { display:grid; gap:8px; margin:14px 0; }
+    .cleanup-item { border:1px solid var(--line); border-radius:8px; padding:10px; background:#FCFBF7; }
+    .cleanup-item code, .scope { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; background:#EEF3EE; border-radius:6px; padding:2px 6px; }
+    .confirm-row { display:grid; gap:8px; margin-top:12px; }
+    table { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+    th, td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; font-size:13px; }
+    th { background:#F0EEE7; color:#555D55; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+    tr:last-child td { border-bottom:0; }
+    .tag { display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:3px 8px; font-size:12px; font-weight:800; background:#ECE8DE; color:#5F594F; white-space:nowrap; }
+    .tag.test { background:#FFF0D8; color:#8A5B14; }
+    .tag.demo { background:#EAF0F8; color:#365C7A; }
+    .tag.active { background:#E4F2E7; color:#315B3F; }
+    .tag.sealed { background:#F3EDE1; color:#765C36; }
+    .tag.node { background:#FFF0D8; color:#8A5B14; }
+    .tag.graduated { background:#EEE8F5; color:#594779; }
+    .personas { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:18px; }
+    .persona { border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:16px; }
+    .persona-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:12px; }
+    .score-row { display:grid; grid-template-columns:86px minmax(0,1fr); gap:14px; align-items:center; }
+    .score { font-size:42px; font-weight:900; color:var(--amber); line-height:1; }
+    .bars { display:grid; gap:7px; margin-top:12px; }
+    .bar-row { display:grid; grid-template-columns:96px minmax(0,1fr) 36px; gap:8px; align-items:center; color:#4A514B; font-size:12px; }
+    .bar-track { height:8px; background:#E5E1D7; border-radius:999px; overflow:hidden; }
+    .bar-fill { height:100%; background:var(--sage); }
+    .mini-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:12px; }
+    .mini { background:#FAF9F4; border:1px solid var(--line); border-radius:8px; padding:8px; }
+    .mini span { display:block; color:var(--muted); font-size:11px; }
+    .mini strong { font-size:17px; }
+    .recommendations { display:grid; gap:6px; margin-top:10px; }
+    .recommendation { background:#FAF9F4; border:1px solid var(--line); border-radius:8px; padding:8px; font-size:12px; }
+    .empty { border:1px dashed var(--line); background:#FCFBF7; padding:14px; border-radius:8px; color:var(--muted); }
+    @media (max-width: 900px) {
+      header, .toolbar { display:block; }
+      .toolbar { margin-top:14px; }
+      .toolbar input, .toolbar button { width:100%; margin-bottom:8px; }
+      .layout, .personas { grid-template-columns:1fr; }
+      .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .bar-row { grid-template-columns:1fr; }
+      table { display:block; overflow-x:auto; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="eyebrow">Soul Ops Console</p>
+        <h1>后台治理工作台</h1>
+        <p class="muted">内部视图：用户、Persona、成熟度、提案队列、节点与测试数据清理。</p>
+      </div>
+      <div class="toolbar">
+        <input id="opsToken" type="password" placeholder="NNZ_OPS_TOKEN">
+        <button onclick="saveToken()">连接</button>
+        <button class="ghost" onclick="clearToken()">清除</button>
+        <button class="secondary" onclick="loadOverview()">刷新</button>
+      </div>
+    </header>
+    <div id="status" class="status">准备连接后台。</div>
+    <section id="app"></section>
+  </main>
+  <script>
+    const OPS_ENABLED = ${opsEnabled ? 'true' : 'false'};
+    let overview = null;
+
+    const savedToken = sessionStorage.getItem('nnz_ops_token') || '';
+    document.getElementById('opsToken').value = savedToken;
+
+    if (!OPS_ENABLED) {
+      setStatus('error', '后台未启用：需要在服务端设置 NNZ_OPS_TOKEN。');
+      document.getElementById('app').innerHTML = '<div class="empty">当前实例没有开启 Soul Ops API。配置环境变量后重新部署即可访问。</div>';
+    } else if (savedToken) {
+      loadOverview();
+    }
+
+    function saveToken() {
+      const token = document.getElementById('opsToken').value.trim();
+      if (!token) {
+        setStatus('error', '请输入后台访问 token。');
+        return;
+      }
+      sessionStorage.setItem('nnz_ops_token', token);
+      loadOverview();
+    }
+
+    function clearToken() {
+      sessionStorage.removeItem('nnz_ops_token');
+      document.getElementById('opsToken').value = '';
+      overview = null;
+      setStatus('', '已清除本页 token。');
+      document.getElementById('app').innerHTML = '';
+    }
+
+    async function loadOverview() {
+      if (!OPS_ENABLED) return;
+      const token = document.getElementById('opsToken').value.trim() || sessionStorage.getItem('nnz_ops_token') || '';
+      if (!token) {
+        setStatus('error', '请输入后台访问 token。');
+        return;
+      }
+      setStatus('', '正在读取后台数据...');
+      const res = await fetch('/api/ops/overview', { headers: { 'x-ops-token': token } });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus('error', data.error || '读取失败。');
+        return;
+      }
+      sessionStorage.setItem('nnz_ops_token', token);
+      overview = data;
+      setStatus('ok', '已连接。数据生成时间：' + formatDate(data.generatedAt));
+      renderApp(data);
+    }
+
+    async function runCleanup(dryRun) {
+      if (!overview) return;
+      const token = document.getElementById('opsToken').value.trim() || sessionStorage.getItem('nnz_ops_token') || '';
+      const confirm = document.getElementById('cleanupConfirm') ? document.getElementById('cleanupConfirm').value.trim() : '';
+      setStatus('', dryRun ? '正在生成清理预案...' : '正在执行测试数据清理...');
+      const res = await fetch('/api/ops/cleanup-test-users', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-ops-token': token },
+        body: JSON.stringify({ dryRun, confirm })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus('error', data.error || '清理请求失败。');
+        return;
+      }
+      const result = data.result;
+      setStatus('ok', dryRun
+        ? 'Dry-run 完成：发现 ' + result.plan.totals.users + ' 个测试用户。'
+        : '清理完成：删除 ' + result.deletedUserIds.length + ' 个测试用户。');
+      await loadOverview();
+    }
+
+    function renderApp(data) {
+      document.getElementById('app').innerHTML =
+        '<section class="metrics">' + renderMetrics(data) + '</section>' +
+        '<section class="layout">' +
+          '<aside class="panel">' + renderCleanup(data.cleanupPlan) + '</aside>' +
+          '<section>' +
+            '<div class="panel">' +
+              '<h2>用户总览</h2>' +
+              renderUserTable(data.users) +
+            '</div>' +
+            '<div class="personas">' + renderPersonas(data.users) + '</div>' +
+          '</section>' +
+        '</section>';
+    }
+
+    function renderMetrics(data) {
+      const persistence = data.persistence.mode === 'memory' ? 'in-memory' : data.persistence.mode;
+      return [
+        metric('Users', data.totals.users),
+        metric('Personas', data.totals.personas),
+        metric('Memories', data.totals.memories),
+        metric('Pending Proposals', data.totals.pendingProposals),
+        metric('Nodes', data.totals.nodes),
+        metric('Conversations', data.totals.conversations),
+        metric('Test Users', data.totals.testUsers),
+        metric('Persistence', persistence)
+      ].join('');
+    }
+
+    function metric(label, value) {
+      return '<article class="metric"><span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong></article>';
+    }
+
+    function renderCleanup(plan) {
+      const items = plan.users.length
+        ? '<div class="cleanup-list">' + plan.users.map(function(user) {
+            return '<div class="cleanup-item"><strong>' + escapeHtml(user.email || user.displayName) + '</strong>' +
+              '<p class="muted">原因：' + escapeHtml(user.reason) + '</p>' +
+              '<p><code>' + shortId(user.userId) + '</code> Persona ' + user.counts.personas +
+              ' / Memory ' + user.counts.memories + ' / Conversation ' + user.counts.conversations + '</p></div>';
+          }).join('') + '</div>'
+        : '<div class="empty">没有发现可清理的测试用户。</div>';
+
+      return '<h2>测试数据清理</h2>' +
+        '<p class="muted">只匹配明确 smoke/test 账号，不触碰 A/B 演示用户和普通用户。</p>' +
+        '<p><span class="tag test">可清理 ' + plan.totals.users + '</span></p>' +
+        items +
+        '<div class="confirm-row">' +
+          '<button class="ghost" onclick="runCleanup(true)">Dry-run</button>' +
+          '<input id="cleanupConfirm" placeholder="DELETE_TEST_USERS">' +
+          '<button class="danger" onclick="runCleanup(false)">确认清理</button>' +
+        '</div>';
+    }
+
+    function renderUserTable(users) {
+      if (!users.length) return '<div class="empty">暂无用户。</div>';
+      return '<table><thead><tr><th>User</th><th>Tags</th><th>Counts</th><th>Created</th></tr></thead><tbody>' +
+        users.map(function(user) {
+          const tags = [
+            user.isDemoUser ? '<span class="tag demo">DEMO</span>' : '',
+            user.isTestUser ? '<span class="tag test">TEST</span>' : ''
+          ].filter(Boolean).join(' ');
+          return '<tr><td><strong>' + escapeHtml(user.email || user.displayName) + '</strong><br><span class="scope">' + shortId(user.id) + '</span></td>' +
+            '<td>' + (tags || '<span class="muted">-</span>') + '</td>' +
+            '<td>Persona ' + user.counts.personas + ' / Memory ' + user.counts.memories + ' / Proposal ' + user.counts.proposals + ' / Message ' + user.counts.conversations + '</td>' +
+            '<td>' + formatDate(user.createdAt) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    }
+
+    function renderPersonas(users) {
+      const personas = users.flatMap(function(user) {
+        return user.personas.map(function(persona) {
+          return { user: user, persona: persona };
+        });
+      });
+      if (!personas.length) return '<div class="empty">暂无 Persona。</div>';
+      return personas.map(function(item) {
+        return renderPersona(item.user, item.persona);
+      }).join('');
+    }
+
+    function renderPersona(user, persona) {
+      const report = persona.maturity;
+      const stateClassName = String(report.runtimeState || '').toLowerCase();
+      const dimensions = [
+        ['证据覆盖', report.evidenceCoverage],
+        ['身份清晰', report.identityClarity],
+        ['语气稳定', report.voiceConsistency],
+        ['记忆可靠', report.memoryReliability],
+        ['运行稳定', report.runtimeStability],
+        ['安全就绪', report.safetyReadiness]
+      ];
+      const bars = dimensions.map(function(pair) {
+        return '<div class="bar-row"><span>' + pair[0] + '</span><div class="bar-track"><div class="bar-fill" style="width:' + Number(pair[1]) + '%"></div></div><strong>' + Number(pair[1]) + '</strong></div>';
+      }).join('');
+      const recommendations = report.recommendations.length
+        ? report.recommendations.slice(0, 3).map(function(item) {
+            return '<div class="recommendation"><strong>' + escapeHtml(item.priority) + '</strong> ' + escapeHtml(item.type) + '<br><span class="muted">' + escapeHtml(item.reason) + '</span></div>';
+          }).join('')
+        : '<div class="recommendation"><strong>OK</strong> <span class="muted">暂无开放建议。</span></div>';
+
+      return '<article class="persona">' +
+        '<div class="persona-head"><div><h3>' + escapeHtml(user.email || user.displayName) + ' / ' + escapeHtml(persona.displayName) + '</h3>' +
+        '<p class="muted">' + escapeHtml(persona.relationship) + ' · <span class="scope">' + shortId(report.userId) + ' + ' + shortId(report.personaId) + '</span></p></div>' +
+        '<span class="tag ' + stateClassName + '">' + escapeHtml(report.runtimeState) + '</span></div>' +
+        '<div class="score-row"><div class="score">' + report.score + '</div><div><span class="tag">' + escapeHtml(report.level) + '</span><p class="muted">Soul v' + escapeHtml(persona.latestSoulVersion || '-') + ' · ' + escapeHtml(persona.latestSoulStatus || '-') + '</p></div></div>' +
+        '<div class="bars">' + bars + '</div>' +
+        '<div class="mini-grid">' +
+          mini('Memory', report.memoryCount) +
+          mini('Proposal', report.proposalCount) +
+          mini('Snapshot', report.snapshotCount) +
+          mini('Node', report.nodeCount) +
+        '</div>' +
+        '<div class="recommendations">' + recommendations + '</div>' +
+      '</article>';
+    }
+
+    function mini(label, value) {
+      return '<div class="mini"><span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong></div>';
+    }
+
+    function setStatus(kind, text) {
+      const el = document.getElementById('status');
+      el.className = 'status' + (kind ? ' ' + kind : '');
+      el.textContent = text;
+    }
+
+    function shortId(id) {
+      return String(id || '').slice(0, 13);
+    }
+
+    function formatDate(value) {
+      if (!value) return '-';
+      try {
+        return new Date(value).toLocaleString('zh-CN', { hour12:false });
+      } catch {
+        return String(value);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, function(char) {
+        const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' };
+        return map[char];
+      });
+    }
+  </script>
+</body>
+</html>`;
+}
+
 function renderPage(): string {
   return `<!doctype html>
 <html lang="zh-CN">
@@ -1127,28 +1538,7 @@ function renderPage(): string {
     .proposal-status.PENDING { background:#FFF3DB; color:#9B7108; }
     .proposal-status.ACCEPTED { background:#DCEFD8; color:#2F7D4E; }
     .proposal-status.REJECTED { background:#F7E6E1; color:#B94343; }
-    .ops-shell { margin:28px 0; padding:18px; background:#283126; color:#F8F2E8; border-radius:18px; }
-    .ops-shell .label { color:#BFD5B9; }
-    .ops-shell h2 { margin:4px 0 8px; font-size:24px; }
-    .ops-note { color:#D8C8B5; margin:0 0 16px; }
-    .ops-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; }
-    .ops-card { background:#FDF8F0; color:var(--ink); border-radius:14px; padding:16px; border:1px solid rgba(255,255,255,.18); }
-    .ops-card h3 { margin:0 0 10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; }
-    .score-row { display:flex; align-items:flex-end; gap:10px; margin-bottom:12px; }
-    .score { font-size:42px; line-height:1; font-weight:900; color:var(--warm); }
-    .level { border-radius:999px; padding:4px 10px; background:#DCEFD8; color:#2F7D4E; font-weight:800; font-size:12px; }
-    .bars { display:grid; gap:7px; }
-    .bar-row { display:grid; grid-template-columns: 130px 1fr 38px; gap:8px; align-items:center; font-size:12px; }
-    .bar-track { height:8px; border-radius:999px; background:#E9DDCE; overflow:hidden; }
-    .bar-fill { height:100%; background:var(--sage); border-radius:999px; }
-    .ops-metrics { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:8px; margin:12px 0; }
-    .ops-mini { background:#fff; border:1px solid var(--line); border-radius:10px; padding:8px; }
-    .ops-mini span { display:block; color:#7A4E2C; font-size:11px; }
-    .ops-mini strong { font-size:18px; }
-    .recommendations { display:grid; gap:6px; margin-top:10px; }
-    .recommendation { border:1px solid var(--line); border-radius:10px; padding:8px; background:#fff; font-size:13px; }
-    .recommendation strong { margin-right:6px; color:var(--warm); }
-    @media (max-width: 760px) { .grid, .summary, .chat-grid, .ops-grid { grid-template-columns:1fr; } .check { flex-direction:column; } .chat-controls { flex-direction:column; } .summary { grid-template-columns: repeat(3, 1fr); } .ops-metrics { grid-template-columns: repeat(2, 1fr); } .bar-row { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) { .grid, .summary, .chat-grid { grid-template-columns:1fr; } .check { flex-direction:column; } .chat-controls { flex-direction:column; } .summary { grid-template-columns: repeat(3, 1fr); } }
   </style>
 </head>
 <body>
@@ -1219,12 +1609,6 @@ function renderPage(): string {
       <div class="metric"><span class="label">A 节点记忆</span><strong id="aMemory">-</strong></div>
     </section>
     <section class="checks" id="checks"></section>
-    <section class="ops-shell">
-      <p class="label">Soul Ops Console</p>
-      <h2>后台治理视图</h2>
-      <p class="ops-note">这是运营和产品侧看到的视图：用户端不展示这些机制，但后台需要观察每个用户自己的 Soul 成熟度、证据质量、提案队列和状态边界。</p>
-      <div class="ops-grid" id="opsGrid"></div>
-    </section>
     <details>
       <summary>查看原始状态 JSON</summary>
       <section class="grid">
@@ -1253,7 +1637,6 @@ function renderPage(): string {
       renderProposals(data.userA.proposals, data.userA.proposalEvidence);
       renderChat('chatA', data.userA.conversations);
       renderChat('chatB', data.userB.conversations);
-      renderOps(data);
       document.getElementById('userA').textContent = JSON.stringify(data.userA, null, 2);
       document.getElementById('userB').textContent = JSON.stringify(data.userB, null, 2);
       updateChatControls();
@@ -1370,31 +1753,6 @@ function renderPage(): string {
         return '<article class="proposal"><div class="proposal-row"><span class="proposal-status ' + proposal.status + '">' + proposal.status + '</span><code>' + escapeHtml(proposal.fieldPath) + '</code></div><div class="proposal-change"><span>变更</span><code>' + formatValue(proposal.oldValue) + '</code><strong>→</strong><code>' + formatValue(proposal.newValue) + '</code></div><div>证据：' + evidence + '</div></article>';
       }).join('');
     }
-    function renderOps(data) {
-      const grid = document.getElementById('opsGrid');
-      grid.innerHTML = [
-        renderOpsCard('用户 A', data.userA),
-        renderOpsCard('用户 B', data.userB),
-      ].join('');
-    }
-    function renderOpsCard(label, userState) {
-      const report = userState.ops.maturity;
-      const dimensions = [
-        ['证据覆盖', report.evidenceCoverage],
-        ['身份清晰', report.identityClarity],
-        ['语气稳定', report.voiceConsistency],
-        ['记忆可靠', report.memoryReliability],
-        ['运行稳定', report.runtimeStability],
-        ['安全就绪', report.safetyReadiness],
-      ];
-      const bars = dimensions.map(([name, value]) => {
-        return '<div class="bar-row"><span>' + name + '</span><div class="bar-track"><div class="bar-fill" style="width:' + Number(value) + '%"></div></div><strong>' + Number(value) + '</strong></div>';
-      }).join('');
-      const recommendations = report.recommendations.length
-        ? report.recommendations.map((item) => '<div class="recommendation"><strong>' + item.priority + '</strong>' + escapeHtml(item.reason) + '</div>').join('')
-        : '<div class="recommendation"><strong>OK</strong>暂无开放建议。</div>';
-      return '<article class="ops-card"><h3>' + label + ' · ' + escapeHtml(userState.persona.displayName) + '<span class="state-tag ' + stateClass(report.runtimeState) + '">' + report.runtimeState + '</span></h3><div class="score-row"><div class="score">' + report.score + '</div><div><span class="level">' + report.level + '</span><p class="proposal-hint">Scope: ' + escapeHtml(shortClientId(report.userId)) + ' + ' + escapeHtml(shortClientId(report.personaId)) + '</p></div></div><div class="bars">' + bars + '</div><div class="ops-metrics"><div class="ops-mini"><span>Memory</span><strong>' + report.memoryCount + '</strong></div><div class="ops-mini"><span>Proposal</span><strong>' + report.proposalCount + '</strong></div><div class="ops-mini"><span>Snapshot</span><strong>' + report.snapshotCount + '</strong></div><div class="ops-mini"><span>Node</span><strong>' + report.nodeCount + '</strong></div></div><div class="recommendations">' + recommendations + '</div></article>';
-    }
     function renderChat(id, messages) {
       const el = document.getElementById(id);
       el.innerHTML = messages.map((message) => {
@@ -1415,9 +1773,6 @@ function renderPage(): string {
     function readKernelValue(soul, section, field) {
       if (!soul || !soul.kernelJson || !soul.kernelJson[section]) return undefined;
       return soul.kernelJson[section][field];
-    }
-    function shortClientId(id) {
-      return String(id).slice(0, 13);
     }
     // ── Auth ──
     let authToken = localStorage.getItem('nnz_token') || '';

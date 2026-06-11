@@ -3,7 +3,7 @@
 > 更新：2026-06-11
 > 覆盖：Soul 作用域、Covenant 状态机、Memory 分层、Soul Ops、安全护栏、Render demo、LLM 对话、自动化提取管线、SQLite 持久化、登录注册、官网首页
 
-## 2026-06-10 GitHub / CI / 本地状态
+## 2026-06-11 GitHub / CI / 本地状态
 
 GitHub 仓库已经建立：
 
@@ -16,6 +16,7 @@ https://github.com/chaoshorizon316/nnz
 ```text
 远端 main: 9f67ef9 docs: record render postgres resource
 2026-06-11 新增: Render Postgres 已配置并通过重启持久化 smoke
+2026-06-11 Step 1: 后台测试数据清理 + 独立 /ops Soul Ops 后台雏形已本地实现并验证
 ```
 
 当前本地相对远端：
@@ -216,14 +217,18 @@ POST /api/reset               — 重置演示
 
 ## 测试覆盖
 
-**52 条测试通过**（本地 typecheck/test/build 验证）：
+**67 条测试通过**（2026-06-11 `/tmp` 干净环境 typecheck/test/build 验证）：
 
-- `soul-scope.test.ts` — 19 条
-- `soul-runtime.test.ts` — 4 条
-- `llm-reply.test.ts` — 7 条
-- `soul-guard.test.ts` — 14 条
-- `llm/adapter.test.ts` — 4 条
-- `extraction/orchestrator.test.ts` — 4 条
+- `auth/auth.test.ts`
+- `domain/soul-scope.test.ts`
+- `domain/persistence.test.ts`
+- `domain/postgres-persistence.test.ts`
+- `extraction/orchestrator.test.ts`
+- `llm/adapter.test.ts`
+- `ops/ops-console.test.ts`
+- `runtime/soul-runtime.test.ts`
+- `runtime/llm-reply.test.ts`
+- `runtime/soul-guard.test.ts`
 
 ## 下一步：推荐推进顺序
 
@@ -249,7 +254,7 @@ GitHub Actions: success
 Run: https://github.com/chaoshorizon316/nnz/actions/runs/27267872384
 Render /healthz: 200 ok，当时 fixture: "in-memory"（2026-06-11 已切到 "postgres"）
 首页 /: 新 H5 真实用户流，未回退到旧 iframe
-/demo: 仍是开发者 A/B + Soul Ops 验证页
+/demo: 仍是开发者 A/B 验证页；Soul Ops 已拆到受保护的 /ops
 /api/me 未登录: 401
 跨用户 persona chat-history: 403
 A/B 同名“爸爸”: 回复不同，无机制词泄露
@@ -308,7 +313,30 @@ persistedAfterRestart = true
 
 ### 再次：后台拆分
 
-将 Soul Ops Console 从 demo 页面拆成独立后台模块，增加 RBAC、audit log、数据删除流水。
+2026-06-11 Step 1 已完成第一版后台拆分：
+
+- 新增 `src/ops/ops-console.ts` 和 `src/ops/ops-console.test.ts`。
+- 新增独立 `/ops` 后台页面。
+- 新增受 `NNZ_OPS_TOKEN` 保护的 `GET /api/ops/overview`。
+- 新增受 `NNZ_OPS_TOKEN` 保护的 `POST /api/ops/cleanup-test-users`。
+- 清理接口默认 dry-run；真删除必须传 `confirm:"DELETE_TEST_USERS"`。
+- 仅匹配明确 smoke/test 账号，例如 `@example.test`、`codex-postgres-smoke-*`、`codex-ops-smoke-*`、`nnz-smoke-*`。
+- 删除复用 `deleteUserScopedData(userId)`，不会跨用户删除。
+
+本地验证：
+
+```text
+/tmp/nnz-step1-final.MF0YVg
+npm ci
+npm run typecheck
+npm test         # 10 files, 67 tests passed
+npm run build:demo
+npm audit        # 0 vulnerabilities
+```
+
+浏览器 smoke：`/ops` 输入 `dev-ops-token` 后显示 Users / Personas / Memories / Pending Proposals / Nodes / Conversations / Test Users / Persistence 指标、用户表、Persona 成熟度卡片和测试数据清理面板。
+
+下一步：在 Render 配置 `NNZ_OPS_TOKEN` 后做云端 `/ops` smoke，再增加 RBAC、audit log、数据删除流水。
 
 ### 后续：微信 / H5 用户端雏形
 
@@ -420,4 +448,4 @@ npm run build:demo
 npm audit        # 0 vulnerabilities
 ```
 
-当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke。下一步是后台测试数据清理、Soul Ops Console 拆分，以及把 snapshot persistence 演进为逐表 repository。
+当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。下一步是给云端 Render 配置 `NNZ_OPS_TOKEN` 后做 `/ops` 云端 smoke，然后进入 RBAC / audit log / scoped repository。

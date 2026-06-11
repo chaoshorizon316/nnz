@@ -1,6 +1,6 @@
 # 念念在 MVP Core
 
-This package implements the current MVP core for user-scoped Soul data, Covenant lifecycle, Memory layering, Soul Ops maturity review, LLM chat, extraction, SQLite demo persistence, basic email/password JWT auth, and a homepage H5 private-chat verification flow.
+This package implements the current MVP core for user-scoped Soul data, Covenant lifecycle, Memory layering, Soul Ops maturity review, LLM chat, extraction, SQLite/Postgres demo persistence, basic email/password JWT auth, a homepage H5 private-chat verification flow, and a protected Soul Ops admin prototype.
 
 Public demo:
 
@@ -74,20 +74,30 @@ The demo shows user A's proposal diff (`oldValue -> newValue`) and evidence. Acc
 
 ## Soul Ops Console
 
-The demo now includes a lightweight backend governance view for Step 4.5.
+The admin console is split from the user/demo surfaces and is available at:
+
+```text
+GET /ops
+GET /api/ops/overview
+POST /api/ops/cleanup-test-users
+```
+
+Set `NNZ_OPS_TOKEN` before enabling it. Without this env var, `/ops` renders a disabled state and `/api/ops/*` returns 404. With it configured, API calls must include either `x-ops-token: <token>` or `Authorization: Bearer <token>`.
 
 Store helper:
 
 - `buildSoulMaturityReport(scope)`
 
-The report is still scoped by `userId + personaId` and summarizes:
+The overview is still scoped by `userId + personaId` for every persona and summarizes:
 
 - Soul maturity score and level
 - evidence coverage, identity clarity, voice consistency, memory reliability, runtime stability, and safety readiness
 - memory, proposal, snapshot, node, and runtime state counts
 - backend recommendations such as `ASK_MORE_MEMORY`, `REVIEW_PROPOSAL`, `SUGGEST_SEAL`, and `READY_FOR_NODE`
 
-This console is intentionally admin-facing. The user-facing app or WeChat flow should not expose Soul internals such as `SoulVersion`, `SoulSnapshot`, `SoulUpdateProposal`, evidence chains, or scope ids.
+`POST /api/ops/cleanup-test-users` defaults to dry-run. Actual deletion requires `dryRun:false` and `confirm:"DELETE_TEST_USERS"`. The cleanup matcher is intentionally conservative and only targets explicit smoke/test accounts such as `@example.test`, `codex-postgres-smoke-*`, `codex-ops-smoke-*`, and `nnz-smoke-*`. It deletes via `store.deleteUserScopedData(userId)`, so one user's Soul, Memory, Node, Conversation, Credential, and Session are removed without crossing into other users.
+
+This console is intentionally admin-facing. The user-facing app, WeChat flow, and `/demo` validation page should not expose Soul internals such as `SoulVersion`, `SoulSnapshot`, `SoulUpdateProposal`, evidence chains, or scope ids.
 
 ## LLM Chat And Extraction
 
@@ -148,7 +158,7 @@ POST /api/register
 POST /api/login
 ```
 
-Important boundary: the homepage H5 flow now maps the authenticated token user to that user's own private Persona and Soul. The developer page `/demo` still uses the A/B fixture for scope-isolation checks and Soul Ops inspection, so it should not be treated as the end-user product surface.
+Important boundary: the homepage H5 flow now maps the authenticated token user to that user's own private Persona and Soul. The developer page `/demo` still uses the A/B fixture for scope-isolation checks. Soul Ops now lives under the separate protected `/ops` admin surface.
 
 ## Homepage H5 Private Chat
 
@@ -168,7 +178,7 @@ GET /api/me/chat-history?personaId=...
 POST /api/me/chat
 ```
 
-The developer page `/demo` still exists for A/B scope-isolation checks and Soul Ops inspection. Do not expose `/demo` internals as the user product surface.
+The developer page `/demo` still exists for A/B scope-isolation checks. Do not expose `/demo` internals as the user product surface. Admin governance belongs under `/ops`.
 
 ## Future Shared Memorial Boundary
 
@@ -183,12 +193,12 @@ npm run build:demo
 npm run demo
 ```
 
-Current verified suite on 2026-06-10: 64 tests across domain scope, SQLite/Postgres persistence, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+Current verified suite on 2026-06-11: 67 tests across domain scope, Soul Ops cleanup/overview, SQLite/Postgres persistence, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
 If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume the source is broken immediately. This directory has shown flaky `node_modules` behavior. A reliable check is to copy a clean git archive to `/tmp`, apply the worktree diff if needed, run `npm ci`, then run the verification commands there.
 
-## Current Next Step
+## Current State
 
-The 2026-06-10 H5/API and Postgres snapshot persistence changes have been pushed through `99c38cb`, GitHub Actions is green, and Render smoke passed for `/`, `/demo`, `/healthz`, `/api/register`, `/api/login`, and `/api/me/*`.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented locally. Render has Postgres persistence configured and verified. To enable `/ops` in cloud, configure `NNZ_OPS_TOKEN` in Render, redeploy, then verify `/api/ops/overview` and a dry-run cleanup with that token.
 
-Postgres snapshot persistence is implemented in code. On 2026-06-11, the Render Web Service environment was checked and currently has only LLM env vars; `DATABASE_URL` / `NNZ_POSTGRES_URL` are not configured. Next configure a Render Postgres database and set `DATABASE_URL` or `NNZ_POSTGRES_URL`, then verify `/healthz` reports `fixture: "postgres"` and user data survives a redeploy.
+Next engineering steps: add real admin auth/RBAC + audit log, make cleanup/audit events durable, then evolve snapshot persistence into scoped repositories.

@@ -64,7 +64,7 @@ Shared Memorial Space
 2. Soul Runtime：确定性 fallback，把当前用户自己的 Soul + Memory + 输入消息转成自然回复。
 3. LLM Adapter：OpenAI-compatible 对话生成，支持 DeepSeek 等兼容服务。
 4. Extraction Pipeline：从用户私有对话中提取候选记忆，并生成可审核 proposal。
-5. Demo Server：同时提供首页 H5 用户端验证流，以及 `/demo` 的“两用户并排聊天”开发者验证页和 Soul Ops Console。
+5. Demo Server：同时提供首页 H5 用户端验证流、`/demo` 的“两用户并排聊天”开发者验证页，以及受 `NNZ_OPS_TOKEN` 保护的独立 `/ops` Soul Ops 后台雏形。
 
 ### 4.1 Domain Store
 
@@ -278,6 +278,65 @@ src/extraction/orchestrator.test.ts
 
 这条管线不会把 A 的对话提取给 B，也不会跨用户合并同名“爸爸”。
 
+### 4.6 Soul Ops Admin Prototype
+
+主要文件：
+
+```text
+src/ops/ops-console.ts
+src/ops/ops-console.test.ts
+```
+
+当前后台入口：
+
+```text
+GET  /ops
+GET  /api/ops/overview
+POST /api/ops/cleanup-test-users
+```
+
+启用条件：
+
+```bash
+NNZ_OPS_TOKEN=<strong-random-token>
+```
+
+权限行为：
+
+- 未配置 `NNZ_OPS_TOKEN`：`/ops` 显示后台未启用，`/api/ops/*` 返回 404。
+- 已配置但请求缺 token：返回 401。
+- token 错误：返回 403。
+- token 可放在 `x-ops-token`，也可放在 `Authorization: Bearer ...`。
+
+后台概览能力：
+
+- 全局 totals：users、personas、memories、pending proposals、nodes、conversations、test users、persistence mode。
+- 用户表：displayName/email、demo/test 标识、persona/memory/proposal/message 计数。
+- Persona 成熟度卡片：score、level、runtimeState、scope 短 ID、六维成熟度、recommendations。
+- 所有 persona 成熟度仍通过 `store.buildSoulMaturityReport({ userId, personaId })` 得到，不按 `personaId` 单查。
+
+测试数据清理能力：
+
+- `POST /api/ops/cleanup-test-users` 默认 dry-run。
+- 真删除必须传：
+
+```json
+{
+  "dryRun": false,
+  "confirm": "DELETE_TEST_USERS"
+}
+```
+
+- 匹配规则保守，只识别明确 smoke/test 账号：
+  - `@example.test`
+  - `codex-postgres-smoke-*`
+  - `codex-ops-smoke-*`
+  - `nnz-smoke-*`
+- 删除执行 `store.deleteUserScopedData(userId)`，只删该用户自己的 Persona、Soul、Snapshot、Memory、Proposal、Node、Conversation、Session、Credential。
+- A/B demo 用户和普通用户不会因为名字里含类似 test 的词而被删除。
+
+注意：这是内部后台，不是用户端页面。用户端 H5 / 微信 / `/demo` 都不应显示 `userId`、`personaId`、scope、proposal evidence 等后台治理对象。
+
 ## 5. 环境和依赖
 
 当前本机环境：
@@ -350,6 +409,21 @@ npm run demo
 
 ```text
 http://127.0.0.1:3007
+```
+
+本地启用 Soul Ops：
+
+```bash
+NNZ_OPS_TOKEN=dev-ops-token npm run demo
+open http://127.0.0.1:3007/ops
+```
+
+如果本地 `.env` 配了 `NNZ_DB_PATH` 且 `better-sqlite3` 原生包架构不匹配，可先构建，再从不含 `.env` 的目录启动内存模式验证后台：
+
+```bash
+npm run build:demo
+cd /tmp
+HOST=127.0.0.1 PORT=3041 NNZ_OPS_TOKEN=dev-ops-token node "/Users/will/Library/Mobile Documents/iCloud~md~obsidian/Documents/黑曜石知识库/Personal/我还在/nnz-mvp/dist-cjs/demo-server.js"
 ```
 
 ## 7. 重要构建细节
@@ -500,12 +574,22 @@ Demo server routes：
 
 ```text
 GET  /
+GET  /demo
+GET  /ops
 GET  /api/state
 GET  /api/verification
+GET  /api/ops/overview
 POST /api/chat
 POST /api/run-all
 POST /api/apply-correction
+POST /api/accept-correction
+POST /api/reject-correction
 POST /api/create-node
+POST /api/seal
+POST /api/activate-node
+POST /api/complete-node
+POST /api/graduate
+POST /api/ops/cleanup-test-users
 POST /api/reset
 ```
 
@@ -582,15 +666,19 @@ POST /api/reset
 当前测试文件：
 
 ```text
+src/auth/auth.test.ts
 src/domain/soul-scope.test.ts
+src/domain/persistence.test.ts
+src/domain/postgres-persistence.test.ts
+src/extraction/orchestrator.test.ts
+src/llm/adapter.test.ts
+src/ops/ops-console.test.ts
 src/runtime/soul-runtime.test.ts
 src/runtime/llm-reply.test.ts
 src/runtime/soul-guard.test.ts
-src/llm/adapter.test.ts
-src/extraction/orchestrator.test.ts
 ```
 
-当前共 52 条测试。
+当前共 67 条测试。
 
 Domain tests 覆盖：
 
@@ -616,6 +704,7 @@ Guard / LLM / Extraction tests 覆盖：
 - LLM 空回复 fallback、机制泄漏 fallback、舞台描写清洗。
 - OpenAI-compatible adapter 的请求格式、JSON mode、错误处理、env factory。
 - Extraction trigger window、JSON parse fallback、confidence merge、proposal 生成。
+- Soul Ops overview / cleanup：只识别明确 smoke 用户，dry-run 不改数据，确认清理只删除测试用户并保留 A/B demo 和普通用户。
 
 ## 12. 当前设计边界
 
@@ -993,8 +1082,8 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 - 2026-06-10 已在首页 `/` 实现真实 H5 用户端私密聊天验证流。
 - 新增 `/api/me/*` auth-aware 接口，统一从 token 取 `userId`，创建/读取 persona、conversation、runtime chat 都限制在当前 `userId + personaId`。
-- `/demo` 保留为开发者 A/B 隔离和 Soul Ops 页面，不作为用户端产品面。
-- `/tmp` 干净副本验证通过：9 个测试文件、64 tests passed，typecheck/build/audit 通过。
+- `/demo` 保留为开发者 A/B 隔离验证页，不作为用户端产品面；Soul Ops 已拆到受保护的 `/ops`。
+- `/tmp` 干净副本验证通过：10 个测试文件、67 tests passed，typecheck/build 通过。
 - API smoke 通过：未登录 `/api/me` 返回 401；用户 A 访问用户 B 的 persona chat history 返回 403；同名“爸爸”的 A/B 回复不同且无机制词泄露。
 - 浏览器验证通过：首页桌面注册 -> 创建 -> 聊天；首页未出现“双人演示”开发入口；移动 390x844 无横向溢出；用户可见文案未发现机制词泄露。
 - `99c38cb feat: add postgres snapshot persistence` 已推送到 GitHub；`NNZ MVP CI` success。
@@ -1065,7 +1154,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`。下一步不是再配置数据库，而是：后台测试数据清理、Soul Ops Console 拆分、以及把 snapshot persistence 演进为逐表 repository。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md` 和 `nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`。下一步不是再配置数据库，也不是再拆 `/demo`，而是：给 Render 配置 `NNZ_OPS_TOKEN` 后做云端 `/ops` smoke，然后进入 RBAC、audit log，以及把 snapshot persistence 演进为逐表 repository。
 
 ## 17. 给下一位 AI 的工作原则
 
