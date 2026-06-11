@@ -118,7 +118,20 @@ DATABASE_URL=postgres://...
 NNZ_POSTGRES_URL=postgres://...
 ```
 
-When this is configured, the demo loads and saves a store snapshot in Postgres before starting the server. `/healthz` reports `fixture: "postgres"`.
+When this is configured, the demo loads and saves a store snapshot in Postgres before starting the server. `/healthz` reports `fixture: "postgres"` and includes a non-secret persistence diagnostic:
+
+```json
+{
+  "persistence": {
+    "mode": "postgres",
+    "postgresConfigured": true,
+    "postgresEnv": "DATABASE_URL",
+    "sqliteConfigured": false
+  }
+}
+```
+
+The diagnostic returns only env key names and booleans. It never returns database URLs or secret values.
 
 SQLite demo persistence can be enabled with:
 
@@ -178,4 +191,4 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 The 2026-06-10 H5/API and Postgres snapshot persistence changes have been pushed through `99c38cb`, GitHub Actions is green, and Render smoke passed for `/`, `/demo`, `/healthz`, `/api/register`, `/api/login`, and `/api/me/*`.
 
-Postgres snapshot persistence is implemented in code. Next configure a Render Postgres database and set `DATABASE_URL` or `NNZ_POSTGRES_URL`, then verify `/healthz` reports `fixture: "postgres"` and user data survives a redeploy.
+Postgres snapshot persistence is implemented in code. On 2026-06-11, the Render Web Service environment was checked and currently has only LLM env vars; `DATABASE_URL` / `NNZ_POSTGRES_URL` are not configured. Next configure a Render Postgres database and set `DATABASE_URL` or `NNZ_POSTGRES_URL`, then verify `/healthz` reports `fixture: "postgres"` and user data survives a redeploy.

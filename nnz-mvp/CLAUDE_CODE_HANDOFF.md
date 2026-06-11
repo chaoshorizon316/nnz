@@ -1022,6 +1022,30 @@ auth user -> private Soul 的首页 H5 验证链路已经落地，并已通过 G
 4. 用户端继续补 persona 列表、切换会话、删除数据、封存/节点/毕业入口。
 5. 微信客户端后续复用 `/api/me/*` 的 auth-aware 设计，不另造一条绕过 `userId + personaId` 的数据流。
 
+## 16.2 2026-06-11 Render Postgres 排查
+
+已用 Chrome 登录态核查 Render 控制台：
+
+- Web Service `nnz` / `srv-d8go7pmq1p3s739r12jg` 的服务级 Environment 只有 `NNZ_LLM_API_KEY`、`NNZ_LLM_BASE_URL`、`NNZ_LLM_MODEL`。
+- 未配置 `DATABASE_URL` / `NNZ_POSTGRES_URL`。
+- 项目级 Environment 里 `Env Groups: 0`，不存在“变量在 Env Group 但未链接”的情况。
+- 因此线上 `/healthz` 仍是 `fixture: "in-memory"` 的原因是 Web Service 没有数据库连接变量。
+
+已增强 `/healthz`，新增不泄露密钥的 `persistence` 诊断字段：
+
+```json
+{
+  "persistence": {
+    "mode": "in-memory",
+    "postgresConfigured": false,
+    "postgresEnv": null,
+    "sqliteConfigured": false
+  }
+}
+```
+
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`。下一步仍是：创建/确认 Render Postgres，复制 Internal Database URL 到 Web Service `DATABASE_URL` 或 `NNZ_POSTGRES_URL`，保存并 redeploy，然后验证 `/healthz.fixture === "postgres"`。
+
 ## 17. 给下一位 AI 的工作原则
 
 接手时请优先保持以下判断：

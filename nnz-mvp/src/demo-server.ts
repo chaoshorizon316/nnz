@@ -41,8 +41,9 @@ interface DemoFixture {
 
 let fixture = createFixture();
 
-const DB_PATH = process.env['NNZ_DB_PATH'];
-const POSTGRES_URL = process.env['NNZ_POSTGRES_URL'] ?? process.env['DATABASE_URL'];
+const DB_PATH = readNonEmptyEnv('NNZ_DB_PATH');
+const POSTGRES_ENV_SOURCE = readFirstConfiguredEnvKey(['NNZ_POSTGRES_URL', 'DATABASE_URL']);
+const POSTGRES_URL = POSTGRES_ENV_SOURCE ? readNonEmptyEnv(POSTGRES_ENV_SOURCE) : undefined;
 let postgresPersistence: PostgresPersistence | undefined;
 let persistenceMode: 'memory' | 'sqlite' | 'postgres' = 'memory';
 
@@ -157,6 +158,12 @@ const server = createServer(async (req, res) => {
         ok: true,
         service: 'nnz-mvp-demo',
         fixture: persistenceMode === 'memory' ? 'in-memory' : persistenceMode,
+        persistence: {
+          mode: persistenceMode === 'memory' ? 'in-memory' : persistenceMode,
+          postgresConfigured: Boolean(POSTGRES_URL),
+          postgresEnv: POSTGRES_ENV_SOURCE ?? null,
+          sqliteConfigured: Boolean(DB_PATH),
+        },
       });
     }
 
@@ -342,6 +349,7 @@ async function startServer(): Promise<void> {
 
 async function initializePersistence(): Promise<void> {
   if (POSTGRES_URL) {
+    console.log(`Postgres persistence configured via ${POSTGRES_ENV_SOURCE}.`);
     postgresPersistence = createPostgresPersistence(POSTGRES_URL);
     const loaded = await postgresPersistence.load(fixture.store);
     persistenceMode = 'postgres';
@@ -356,6 +364,7 @@ async function initializePersistence(): Promise<void> {
   }
 
   if (DB_PATH) {
+    console.log('SQLite persistence configured via NNZ_DB_PATH.');
     persistenceMode = 'sqlite';
     const loaded = loadStore(fixture.store, DB_PATH);
     if (loaded) {
@@ -365,7 +374,19 @@ async function initializePersistence(): Promise<void> {
       console.log(`No existing data at ${DB_PATH}, starting fresh.`);
       saveStore(fixture.store, DB_PATH);
     }
+    return;
   }
+
+  console.log('No persistent store configured; using in-memory demo store.');
+}
+
+function readNonEmptyEnv(key: string): string | undefined {
+  const value = process.env[key]?.trim();
+  return value ? value : undefined;
+}
+
+function readFirstConfiguredEnvKey(keys: readonly string[]): string | undefined {
+  return keys.find((key) => readNonEmptyEnv(key));
 }
 
 function refreshDemoFixtureReferences(): void {

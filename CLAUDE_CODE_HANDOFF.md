@@ -9,7 +9,7 @@ https://nnz-kego.onrender.com
 
 免费版无请求 15 分钟会休眠，首次访问需等 30–60 秒唤醒。部署细节见 `nnz-mvp-2026-06-04-云托管完成交接.md`。
 
-## 最新 GitHub / CI / 本地状态（2026-06-10）
+## 最新 GitHub / CI / 本地状态（2026-06-11）
 
 GitHub 仓库：
 
@@ -20,9 +20,8 @@ https://github.com/chaoshorizon316/nnz
 当前时间线：
 
 ```text
-远端 main: 99c38cb feat: add postgres snapshot persistence
-本地代码状态: main...origin/main，同步
-本地文档状态: 本文件可能包含尚未推送的交接记录更新
+远端 main: 1526b78 docs: record postgres cloud verification
+2026-06-11 新增: healthz 持久化诊断增强 + Render Postgres 排查记录
 ```
 
 说明：
@@ -34,6 +33,8 @@ https://github.com/chaoshorizon316/nnz
 - 6 月 10 日 `/tmp` 干净副本验证：9 个测试文件、64 条测试全绿，typecheck / build / audit 通过；本地 API/browser smoke 通过。
 - 6 月 10 日 Render 云端 smoke 通过：`/healthz` 200 且当前 `fixture: "in-memory"`，首页 `/` 已是 H5 真实用户流，`/demo` 仍是开发者验证页，`/api/me` 未登录 401，跨用户 persona 访问 403，A/B 同名“爸爸”回复不同且无机制词泄露。
 - Postgres snapshot persistence 已合入并通过 CI；Render 当前仍是 `fixture: "in-memory"`，下一步需要在 Render 配置 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
+- 6 月 11 日 Chrome 登录态核查 Render 控制台：Web Service `nnz` 的 Environment 只有 `NNZ_LLM_API_KEY`、`NNZ_LLM_BASE_URL`、`NNZ_LLM_MODEL`，没有 `DATABASE_URL` / `NNZ_POSTGRES_URL`；项目 Env Groups 为 0。
+- 6 月 11 日已给 `/healthz` 增加不泄露密钥的 `persistence` 诊断字段，详见 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`。
 
 CI 会在 `nnz-mvp` 中执行：
 
@@ -67,7 +68,7 @@ npm run build:demo
 npm audit
 ```
 
-2026-06-10 结果：9 个测试文件、64 条测试全绿，typecheck / build / audit 通过；首页 H5 桌面/移动浏览器 smoke 通过；API smoke 覆盖 401、403、A/B 同名 persona 隔离；GitHub Actions success；Render H5 smoke 通过。
+2026-06-11 结果：`/tmp/nnz-healthz-verify.kfHGyo` 干净副本中 9 个测试文件、64 条测试全绿，typecheck / build / audit 通过；首页 H5 桌面/移动浏览器 smoke 通过；API smoke 覆盖 401、403、A/B 同名 persona 隔离；GitHub Actions success；Render H5 smoke 通过。
 
 最新 CI run：
 

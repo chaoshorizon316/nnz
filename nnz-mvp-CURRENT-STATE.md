@@ -1,6 +1,6 @@
 # nnz-mvp 当前状态与交接指南
 
-> 更新：2026-06-10
+> 更新：2026-06-11
 > 覆盖：Soul 作用域、Covenant 状态机、Memory 分层、Soul Ops、安全护栏、Render demo、LLM 对话、自动化提取管线、SQLite 持久化、登录注册、官网首页
 
 ## 2026-06-10 GitHub / CI / 本地状态
@@ -14,9 +14,8 @@ https://github.com/chaoshorizon316/nnz
 当前已知状态：
 
 ```text
-远端 main: 99c38cb feat: add postgres snapshot persistence
-本地代码状态: main...origin/main，同步
-本地文档状态: 可能包含尚未推送的交接记录更新
+远端 main: 1526b78 docs: record postgres cloud verification
+2026-06-11 新增: healthz 持久化诊断增强 + Render Postgres 排查记录
 ```
 
 当前本地相对远端：
@@ -264,7 +263,10 @@ A/B 同名“爸爸”: 回复不同，无机制词泄露
 - 支持 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
 - Postgres 优先级高于 `NNZ_DB_PATH`。
 - `/healthz` 会显示 `fixture: "postgres"` / `"sqlite"` / `"in-memory"`。
+- 2026-06-11 已增强 `/healthz.persistence`，可看到 `postgresConfigured`、`postgresEnv`、`sqliteConfigured`，但不会返回 secret value。
 - 新增 Postgres snapshot persistence 测试，验证 A/B 同名 persona、conversation、credential 恢复后仍隔离。
+
+2026-06-11 Render 控制台核查：Web Service `nnz` 目前只有 LLM 相关环境变量，未配置 `DATABASE_URL` / `NNZ_POSTGRES_URL`；项目 Env Groups 为 0。详见 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`。
 
 下一步建议：
 
