@@ -14,8 +14,8 @@ https://github.com/chaoshorizon316/nnz
 当前已知状态：
 
 ```text
-远端 main: 1526b78 docs: record postgres cloud verification
-2026-06-11 新增: healthz 持久化诊断增强 + Render Postgres 排查记录
+远端 main: 9f67ef9 docs: record render postgres resource
+2026-06-11 新增: Render Postgres 已配置并通过重启持久化 smoke
 ```
 
 当前本地相对远端：
@@ -247,7 +247,7 @@ POST /api/reset               — 重置演示
 ```text
 GitHub Actions: success
 Run: https://github.com/chaoshorizon316/nnz/actions/runs/27267872384
-Render /healthz: 200 ok, fixture: "in-memory"
+Render /healthz: 200 ok，当时 fixture: "in-memory"（2026-06-11 已切到 "postgres"）
 首页 /: 新 H5 真实用户流，未回退到旧 iframe
 /demo: 仍是开发者 A/B + Soul Ops 验证页
 /api/me 未登录: 401
@@ -255,9 +255,9 @@ Render /healthz: 200 ok, fixture: "in-memory"
 A/B 同名“爸爸”: 回复不同，无机制词泄露
 ```
 
-### 进行中：接 Postgres / Render managed database
+### 已完成：接 Postgres / Render managed database
 
-当前云端 demo 仍显示 `fixture: in-memory`，Render 服务重启后用户演示数据不可依赖。2026-06-10 已在代码中实现 Postgres snapshot persistence：
+2026-06-11 云端 demo 已从 `fixture: in-memory` 切到 `fixture: postgres`。Render Web Service `nnz` 已配置 `DATABASE_URL`，并通过重新部署和重启持久化 smoke：
 
 - 新增 `src/domain/postgres-persistence.ts`。
 - 支持 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
@@ -266,16 +266,45 @@ A/B 同名“爸爸”: 回复不同，无机制词泄露
 - 2026-06-11 已增强 `/healthz.persistence`，可看到 `postgresConfigured`、`postgresEnv`、`sqliteConfigured`，但不会返回 secret value。
 - 新增 Postgres snapshot persistence 测试，验证 A/B 同名 persona、conversation、credential 恢复后仍隔离。
 
-2026-06-11 Render 控制台核查：Web Service `nnz` 目前只有 LLM 相关环境变量，未配置 `DATABASE_URL` / `NNZ_POSTGRES_URL`；项目 Env Groups 为 0。已创建 Free Postgres `nnz-mvp-postgres`，region Ohio，Service ID `dpg-d8l271hkh4rs73fmdtn0-a`，2026-07-11 到期；尚未把 Internal Database URL 配到 Web Service。详见 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`。
+2026-06-11 Render 状态：
+
+```text
+Web Service: nnz
+Service ID: srv-d8go7pmq1p3s739r12jg
+URL: https://nnz-kego.onrender.com
+Database: nnz-mvp-postgres
+Database Service ID: dpg-d8l271hkh4rs73fmdtn0-a
+Region: Ohio
+Plan: Free
+Expiration: 2026-07-11
+Runtime persistence env: DATABASE_URL
+```
+
+当前 `/healthz`：
+
+```text
+fixture = "postgres"
+persistence.mode = "postgres"
+persistence.postgresConfigured = true
+persistence.postgresEnv = "DATABASE_URL"
+```
+
+云端 smoke：
+
+```text
+注册测试用户 -> 创建“爸爸” -> 发送一句话 -> chat-history 2 条
+Manual Deploy -> Restart service
+重新登录同一测试用户 -> persona 和 chat-history 均可读回
+persistedAfterRestart = true
+```
+
+注意：Render 编辑态中 LLM secret 值显示为空是平台保护值，不代表已清空；部署日志已确认 `LLM adapter initialized for extraction pipeline.`。
 
 下一步建议：
 
-1. 打开已创建的 Render Postgres `nnz-mvp-postgres`。
-2. 复制 Internal Database URL。
-3. 给 Web Service `nnz` 配置 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
-4. 保存并 redeploy，验证 `/healthz` 显示 `fixture: "postgres"`。
-5. 注册/创建/聊天后触发 redeploy，确认数据可恢复。
-6. 后续再把 snapshot persistence 演进为逐表 repository，不要绕开 `userId + personaId`。
+1. 后续再把 snapshot persistence 演进为逐表 repository，不要绕开 `userId + personaId`。
+2. 增加后台测试数据清理能力，避免 smoke 用户长期堆积。
+3. 如果要把 `DATABASE_URL` 从 External URL 切回 Render Internal URL，必须重新做 `/healthz` 和重启后数据恢复 smoke。
 
 ### 再次：后台拆分
 
@@ -391,4 +420,4 @@ npm run build:demo
 npm audit        # 0 vulnerabilities
 ```
 
-当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；下一步是接 Postgres / Render managed database。
+当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke。下一步是后台测试数据清理、Soul Ops Console 拆分，以及把 snapshot persistence 演进为逐表 repository。

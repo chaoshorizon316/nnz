@@ -998,7 +998,7 @@ npm ci -> typecheck -> test -> build:demo -> audit
 - API smoke 通过：未登录 `/api/me` 返回 401；用户 A 访问用户 B 的 persona chat history 返回 403；同名“爸爸”的 A/B 回复不同且无机制词泄露。
 - 浏览器验证通过：首页桌面注册 -> 创建 -> 聊天；首页未出现“双人演示”开发入口；移动 390x844 无横向溢出；用户可见文案未发现机制词泄露。
 - `99c38cb feat: add postgres snapshot persistence` 已推送到 GitHub；`NNZ MVP CI` success。
-- Render 云端 smoke 通过：`/healthz` 200 且当前 `fixture: "in-memory"`，首页 `/` 已是 H5 真实用户流，`/demo` 仍是开发者验证页，云端 `/api/me/*` 401/403/A-B 隔离均正常。
+- Render 云端 smoke 通过：`/healthz` 200 且当时 `fixture: "in-memory"`（2026-06-11 已切到 `fixture: "postgres"`），首页 `/` 已是 H5 真实用户流，`/demo` 仍是开发者验证页，云端 `/api/me/*` 401/403/A-B 隔离均正常。
 - 2026-06-09 进入修复前：本地 `main...origin/main [ahead 1]`。
 - 远端 `main` 已到 `08a10b8 feat: serve landing page from Render, demo at /demo`，但该批 2026-06-08 变更让 GitHub Actions 失败。
 - 本地修复了 `serialize()` credential 类型缺失、`deserialize()` optional undefined、credential 删除跨用户风险、注册 userId 不一致和注册后未持久化。
@@ -1014,39 +1014,58 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-auth user -> private Soul 的首页 H5 验证链路已经落地，并已通过 GitHub Actions 与 Render smoke。Postgres snapshot persistence 已在代码中实现，下一步是配置云端数据库并验证：
+auth user -> private Soul 的首页 H5 验证链路已经落地，并已通过 GitHub Actions 与 Render smoke。Postgres snapshot persistence 已在代码中实现，云端数据库也已完成配置和重启持久化验证：
 
-1. 在 Render 创建 Postgres 或兼容数据库，并给 Web Service 设置 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
-2. 验证 `/healthz` 显示 `fixture: "postgres"`。
-3. 在云端注册/创建/聊天后 redeploy，确认数据可恢复。
+1. Render Web Service `nnz` 已配置 `DATABASE_URL`。
+2. `/healthz` 已显示 `fixture: "postgres"`。
+3. 已完成“注册 -> 创建 persona -> 聊天 -> Restart service -> 再登录读取”的持久化 smoke。
 4. 用户端继续补 persona 列表、切换会话、删除数据、封存/节点/毕业入口。
 5. 微信客户端后续复用 `/api/me/*` 的 auth-aware 设计，不另造一条绕过 `userId + personaId` 的数据流。
 
 ## 16.2 2026-06-11 Render Postgres 排查
 
-已用 Chrome 登录态核查 Render 控制台：
+已用 Chrome 登录态核查并配置 Render 控制台：
 
-- Web Service `nnz` / `srv-d8go7pmq1p3s739r12jg` 的服务级 Environment 只有 `NNZ_LLM_API_KEY`、`NNZ_LLM_BASE_URL`、`NNZ_LLM_MODEL`。
-- 未配置 `DATABASE_URL` / `NNZ_POSTGRES_URL`。
+- Web Service `nnz` / `srv-d8go7pmq1p3s739r12jg` 的服务级 Environment 包含 `DATABASE_URL`、`NNZ_LLM_API_KEY`、`NNZ_LLM_BASE_URL`、`NNZ_LLM_MODEL`。
 - 项目级 Environment 里 `Env Groups: 0`，不存在“变量在 Env Group 但未链接”的情况。
-- 因此线上 `/healthz` 仍是 `fixture: "in-memory"` 的原因是 Web Service 没有数据库连接变量。
 - 已创建 Free Postgres `nnz-mvp-postgres`，Service ID `dpg-d8l271hkh4rs73fmdtn0-a`，region Ohio，1 GB，$0/month，2026-07-11 到期。
-- 数据库已 ready，Internal Database URL 已可用；由于 Chrome 自动化通道后续连续超时，尚未把该 URL 配到 Web Service `nnz`。
+- 当前 Web Service 使用 `DATABASE_URL` 连接 Postgres。不要把连接串写进仓库、文档或聊天记录。
+- 排查过程中曾出现 `Failed to start demo server: getaddrinfo ENOTFOUND base`，原因是 `DATABASE_URL` 被错误值污染；已重新覆盖为 Render Postgres URL 并部署成功。
 
 已增强 `/healthz`，新增不泄露密钥的 `persistence` 诊断字段：
 
 ```json
 {
   "persistence": {
-    "mode": "in-memory",
-    "postgresConfigured": false,
-    "postgresEnv": null,
+    "mode": "postgres",
+    "postgresConfigured": true,
+    "postgresEnv": "DATABASE_URL",
     "sqliteConfigured": false
   }
 }
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`。下一步仍是：从已创建的 Render Postgres `nnz-mvp-postgres` 复制 Internal Database URL 到 Web Service `DATABASE_URL` 或 `NNZ_POSTGRES_URL`，保存并 redeploy，然后验证 `/healthz.fixture === "postgres"`。
+2026-06-11 云端持久化 smoke 已通过：
+
+```text
+注册临时测试用户
+创建 persona: 爸爸 / 孩子
+发送一句话
+chat-history: 2 条（USER + ASSISTANT）
+Render Manual Deploy -> Restart service
+重新登录同一测试用户
+persona 和 chat-history 均可读回
+persistedAfterRestart = true
+```
+
+Render runtime logs 已确认：
+
+```text
+Postgres persistence configured via DATABASE_URL.
+LLM adapter initialized for extraction pipeline.
+```
+
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`。下一步不是再配置数据库，而是：后台测试数据清理、Soul Ops Console 拆分、以及把 snapshot persistence 演进为逐表 repository。
 
 ## 17. 给下一位 AI 的工作原则
 
