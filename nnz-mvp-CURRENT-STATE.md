@@ -266,15 +266,16 @@ A/B 同名“爸爸”: 回复不同，无机制词泄露
 - 2026-06-11 已增强 `/healthz.persistence`，可看到 `postgresConfigured`、`postgresEnv`、`sqliteConfigured`，但不会返回 secret value。
 - 新增 Postgres snapshot persistence 测试，验证 A/B 同名 persona、conversation、credential 恢复后仍隔离。
 
-2026-06-11 Render 控制台核查：Web Service `nnz` 目前只有 LLM 相关环境变量，未配置 `DATABASE_URL` / `NNZ_POSTGRES_URL`；项目 Env Groups 为 0。详见 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`。
+2026-06-11 Render 控制台核查：Web Service `nnz` 目前只有 LLM 相关环境变量，未配置 `DATABASE_URL` / `NNZ_POSTGRES_URL`；项目 Env Groups 为 0。已创建 Free Postgres `nnz-mvp-postgres`，region Ohio，Service ID `dpg-d8l271hkh4rs73fmdtn0-a`，2026-07-11 到期；尚未把 Internal Database URL 配到 Web Service。详见 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`。
 
 下一步建议：
 
-1. 在 Render 创建 Postgres 或兼容数据库。
-2. 给 Web Service 配置 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
-3. 验证 `/healthz` 显示 `fixture: "postgres"`。
-4. 注册/创建/聊天后触发 redeploy，确认数据可恢复。
-5. 后续再把 snapshot persistence 演进为逐表 repository，不要绕开 `userId + personaId`。
+1. 打开已创建的 Render Postgres `nnz-mvp-postgres`。
+2. 复制 Internal Database URL。
+3. 给 Web Service `nnz` 配置 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
+4. 保存并 redeploy，验证 `/healthz` 显示 `fixture: "postgres"`。
+5. 注册/创建/聊天后触发 redeploy，确认数据可恢复。
+6. 后续再把 snapshot persistence 演进为逐表 repository，不要绕开 `userId + personaId`。
 
 ### 再次：后台拆分
 

@@ -1030,6 +1030,8 @@ auth user -> private Soul 的首页 H5 验证链路已经落地，并已通过 G
 - 未配置 `DATABASE_URL` / `NNZ_POSTGRES_URL`。
 - 项目级 Environment 里 `Env Groups: 0`，不存在“变量在 Env Group 但未链接”的情况。
 - 因此线上 `/healthz` 仍是 `fixture: "in-memory"` 的原因是 Web Service 没有数据库连接变量。
+- 已创建 Free Postgres `nnz-mvp-postgres`，Service ID `dpg-d8l271hkh4rs73fmdtn0-a`，region Ohio，1 GB，$0/month，2026-07-11 到期。
+- 数据库已 ready，Internal Database URL 已可用；由于 Chrome 自动化通道后续连续超时，尚未把该 URL 配到 Web Service `nnz`。
 
 已增强 `/healthz`，新增不泄露密钥的 `persistence` 诊断字段：
 
@@ -1044,7 +1046,7 @@ auth user -> private Soul 的首页 H5 验证链路已经落地，并已通过 G
 }
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`。下一步仍是：创建/确认 Render Postgres，复制 Internal Database URL 到 Web Service `DATABASE_URL` 或 `NNZ_POSTGRES_URL`，保存并 redeploy，然后验证 `/healthz.fixture === "postgres"`。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`。下一步仍是：从已创建的 Render Postgres `nnz-mvp-postgres` 复制 Internal Database URL 到 Web Service `DATABASE_URL` 或 `NNZ_POSTGRES_URL`，保存并 redeploy，然后验证 `/healthz.fixture === "postgres"`。
 
 ## 17. 给下一位 AI 的工作原则
 

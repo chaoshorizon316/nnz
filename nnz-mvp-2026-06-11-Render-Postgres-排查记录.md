@@ -4,7 +4,7 @@
 
 ## 结论
 
-代码侧 Postgres snapshot persistence 已经合入并通过 CI，但 Render 当前运行中的 Web Service 还没有配置数据库连接变量。
+代码侧 Postgres snapshot persistence 已经合入并通过 CI。Render Postgres 免费实例已创建，但当前运行中的 Web Service 还没有配置数据库连接变量。
 
 当前线上健康检查：
 
@@ -62,6 +62,31 @@ Env Groups: 0
 ```
 
 因此不是“变量在 Env Group 里但没有生效”，而是当前 Web Service 运行环境没有数据库连接变量。
+
+## Postgres 创建状态
+
+2026-06-11 已在 Render 创建免费 Postgres：
+
+```text
+Name: nnz-mvp-postgres
+Service ID: dpg-d8l271hkh4rs73fmdtn0-a
+Project / Environment: My project / Production
+Region: Ohio (US East)
+Instance Type: Free
+Storage: 1 GB
+Monthly Total: $0 / month
+Expiration: July 11, 2026
+```
+
+数据库已进入 ready 状态，`Internal Database URL` 已可用。由于 Chrome 自动化通道后续连续超时，尚未把该 URL 配到 Web Service `nnz`。
+
+当前还缺一步：
+
+```text
+Web Service nnz -> Environment -> add DATABASE_URL = Internal Database URL -> save and redeploy
+```
+
+注意：不要把 Internal Database URL 写进仓库、普通文档或聊天记录。
 
 ## 代码增强
 
@@ -160,10 +185,9 @@ https://render.com/docs/postgresql-creating-connecting
 
 需要用户或有 Render 权限的人完成以下步骤：
 
-1. 在 Render 创建 Postgres 或确认已有兼容数据库。
-2. 数据库与 Web Service 最好同账号、同 region；当前 Web Service region 是 Ohio。
-3. 从数据库 Connect / Info 页面复制 Internal Database URL。
-4. 到 Web Service `nnz` 的 Environment 页面添加：
+1. 打开已创建的数据库 `nnz-mvp-postgres`。
+2. 从数据库 Connect / Info 页面复制 Internal Database URL。
+3. 到 Web Service `nnz` 的 Environment 页面添加：
 
 ```text
 DATABASE_URL=<Internal Database URL>
@@ -175,8 +199,8 @@ DATABASE_URL=<Internal Database URL>
 NNZ_POSTGRES_URL=<Internal Database URL>
 ```
 
-5. 保存时选择 deploy/redeploy，或手动触发 Manual Deploy。
-6. 验证：
+4. 保存时选择 deploy/redeploy，或手动触发 Manual Deploy。
+5. 验证：
 
 ```text
 /healthz fixture === "postgres"
@@ -184,7 +208,7 @@ NNZ_POSTGRES_URL=<Internal Database URL>
 /healthz persistence.postgresEnv === "DATABASE_URL" 或 "NNZ_POSTGRES_URL"
 ```
 
-7. 做持久化验收：
+6. 做持久化验收：
 
 ```text
 注册用户 -> 创建“爸爸” -> 发送一句话 -> 手动 redeploy -> 登录同一账号 -> persona 和聊天记录仍可取回
@@ -196,4 +220,4 @@ NNZ_POSTGRES_URL=<Internal Database URL>
 - 不要把连接串贴进普通文档。
 - 不要为了共享数据库而放宽 `userId + personaId` 作用域。
 - 不要把 `/demo` 或 `/healthz` 的机制字段展示到用户端 H5 / 微信端。
-- 不要擅自创建可能产生费用的 Render 资源，除非用户明确授权。
+- 不要升级 Free Postgres 或创建付费资源，除非用户明确授权。
