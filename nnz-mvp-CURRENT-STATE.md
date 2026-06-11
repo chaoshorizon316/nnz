@@ -16,13 +16,19 @@ https://github.com/chaoshorizon316/nnz
 ```text
 远端 main: 9f67ef9 docs: record render postgres resource
 2026-06-11 新增: Render Postgres 已配置并通过重启持久化 smoke
-2026-06-11 Step 1: 后台测试数据清理 + 独立 /ops Soul Ops 后台雏形已本地实现并验证
+2026-06-11 Step 1: 后台测试数据清理 + 独立 /ops Soul Ops 后台雏形已实现、验证并推送
 ```
 
 当前本地相对远端：
 
 ```text
 main...origin/main
+```
+
+最新 Step 1 提交：
+
+```text
+30685df feat: add protected soul ops console
 ```
 
 6 月 8 日引入 SQLite / 登录注册 / 官网首页后，远端 GitHub Actions 出现 failure。6 月 9 日已修复；6 月 10 日首页 H5 和 Postgres snapshot persistence 已推送：

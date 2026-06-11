@@ -22,7 +22,7 @@ https://github.com/chaoshorizon316/nnz
 ```text
 远端 main: 9f67ef9 docs: record render postgres resource
 2026-06-11 新增: Render Postgres 已配置并通过重启持久化 smoke
-2026-06-11 Step 1: 后台测试数据清理 + 独立 /ops Soul Ops 后台雏形已本地实现并验证
+2026-06-11 Step 1: 后台测试数据清理 + 独立 /ops Soul Ops 后台雏形已实现、验证并推送
 ```
 
 说明：
@@ -41,6 +41,7 @@ https://github.com/chaoshorizon316/nnz
 - `/api/ops/cleanup-test-users` 默认 dry-run；真删除必须传 `dryRun:false` 和 `confirm:"DELETE_TEST_USERS"`；只匹配明确 smoke/test 账号并调用 `deleteUserScopedData(userId)`，不会删除 A/B demo 或普通用户。
 - 本地干净副本验证：`/tmp/nnz-step1-final.MF0YVg` 中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过，10 个测试文件、67 条测试全绿，0 vulnerabilities。
 - 本地 `/ops` browser smoke 通过：输入 `dev-ops-token` 后显示 8 个核心指标、用户表、2 个 Persona 成熟度卡片和测试数据清理面板。
+- Step 1 已推送到 GitHub：`30685df feat: add protected soul ops console`，当前本地与远端同步：`main...origin/main`。
 
 CI 会在 `nnz-mvp` 中执行：
 
