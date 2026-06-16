@@ -329,11 +329,27 @@ POST /api/ops/cleanup-test-users dry-run with token -> 200
 
 cleanup dry-run 识别到 1 个明确 smoke/test 用户候选，`deletedUserIds` 为 0。详细记录见根目录 `nnz-mvp-2026-06-16-SoulOps云端启用记录.md`。
 
+Step 2.1 审计日志（2026-06-16）：
+
+- 新增 `OpsAuditEvent`。
+- `InMemorySoulStore` 新增 `recordOpsAuditEvent()` 和 `listOpsAuditEvents()`。
+- `/api/ops/overview` 成功读取会记录 `OVERVIEW_READ`。
+- `/api/ops/cleanup-test-users` dry-run 会记录 `CLEANUP_DRY_RUN`。
+- 真删除缺确认码会记录 `CLEANUP_DELETE / DENIED`。
+- 真删除成功会记录 `CLEANUP_DELETE / SUCCESS`。
+- 缺 token / 错 token 会记录 `ACCESS_DENIED / DENIED`。
+- `/ops` 页面新增 `Audit Events` 指标和“最近后台操作”面板。
+- 审计事件随 Postgres snapshot 和 SQLite `ops_audit_events` 表持久化。
+- 不记录 `NNZ_OPS_TOKEN` 明文、请求 token、聊天内容或上传资料原文。
+
+详细记录见根目录 `nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`。
+
 后台概览能力：
 
-- 全局 totals：users、personas、memories、pending proposals、nodes、conversations、test users、persistence mode。
+- 全局 totals：users、personas、memories、pending proposals、nodes、conversations、test users、audit events、persistence mode。
 - 用户表：displayName/email、demo/test 标识、persona/memory/proposal/message 计数。
 - Persona 成熟度卡片：score、level、runtimeState、scope 短 ID、六维成熟度、recommendations。
+- 审计面板：最近后台操作、授权拒绝、dry-run、删除尝试。
 - 所有 persona 成熟度仍通过 `store.buildSoulMaturityReport({ userId, personaId })` 得到，不按 `personaId` 单查。
 
 测试数据清理能力：
@@ -1175,7 +1191,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md` 和 `nnz-mvp-2026-06-16-SoulOps云端启用记录.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，而是进入 RBAC、audit log、清理操作删除回执，以及把 snapshot persistence 演进为逐表 repository。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md` 和 `nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log，而是进入 RBAC、清理操作删除回执，以及把 snapshot persistence 演进为逐表 repository。
 
 ## 17. 给下一位 AI 的工作原则
 

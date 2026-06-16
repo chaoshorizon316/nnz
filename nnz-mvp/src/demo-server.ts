@@ -95,10 +95,14 @@ const server = createServer(async (req, res) => {
     }
 
     if (url.pathname.startsWith('/api/ops/')) {
-      const opsAllowed = requireOpsAccess(req, res);
+      const opsAllowed = await requireOpsAccess(req, res);
       if (!opsAllowed) return;
 
       if (req.method === 'GET' && url.pathname === '/api/ops/overview') {
+        await recordOpsAudit('OVERVIEW_READ', 'SUCCESS', {
+          method: req.method ?? 'GET',
+          path: url.pathname,
+        });
         return sendJson(res, buildOpsOverview(fixture.store, getOpsPersistenceInfo()));
       }
 
@@ -106,13 +110,23 @@ const server = createServer(async (req, res) => {
         const body = await readJsonBody<{ dryRun?: boolean; confirm?: string }>(req);
         const dryRun = body.dryRun !== false;
         if (!dryRun && body.confirm !== 'DELETE_TEST_USERS') {
+          const preview = cleanupTestUsers(fixture.store, true);
+          await recordOpsAudit('CLEANUP_DELETE', 'DENIED', {
+            reason: 'missing-confirmation',
+            candidateUsers: preview.plan.totals.users,
+          }, preview.plan.users.map((user) => user.userId));
           return sendJson(res, {
             error: '需要确认码 DELETE_TEST_USERS 才能执行清理。',
-            result: cleanupTestUsers(fixture.store, true),
+            result: preview,
           }, 400);
         }
 
         const result = cleanupTestUsers(fixture.store, dryRun);
+        await recordOpsAudit(dryRun ? 'CLEANUP_DRY_RUN' : 'CLEANUP_DELETE', 'SUCCESS', {
+          dryRun,
+          candidateUsers: result.plan.totals.users,
+          deletedUsers: result.deletedUserIds.length,
+        }, result.plan.users.map((user) => user.userId));
         if (!dryRun) {
           await persistIfEnabled();
         }
@@ -354,7 +368,7 @@ function requireAuth(req: IncomingMessage, res: ServerResponse): { userId: strin
   return authUser;
 }
 
-function requireOpsAccess(req: IncomingMessage, res: ServerResponse): boolean {
+async function requireOpsAccess(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   if (!OPS_TOKEN) {
     sendJson(res, { error: 'Soul Ops 后台未启用。请设置 NNZ_OPS_TOKEN。' }, 404);
     return false;
@@ -362,14 +376,38 @@ function requireOpsAccess(req: IncomingMessage, res: ServerResponse): boolean {
 
   const token = getOpsRequestToken(req);
   if (!token) {
+    await recordOpsAudit('ACCESS_DENIED', 'DENIED', {
+      reason: 'missing-token',
+      path: req.url ?? null,
+    });
     sendJson(res, { error: '缺少 Soul Ops 访问 token。' }, 401);
     return false;
   }
   if (!safeSecretEquals(token, OPS_TOKEN)) {
+    await recordOpsAudit('ACCESS_DENIED', 'DENIED', {
+      reason: 'invalid-token',
+      path: req.url ?? null,
+    });
     sendJson(res, { error: 'Soul Ops 访问 token 无效。' }, 403);
     return false;
   }
   return true;
+}
+
+async function recordOpsAudit(
+  action: Parameters<InMemorySoulStore['recordOpsAuditEvent']>[0]['action'],
+  outcome: Parameters<InMemorySoulStore['recordOpsAuditEvent']>[0]['outcome'],
+  metadata: Parameters<InMemorySoulStore['recordOpsAuditEvent']>[0]['metadata'] = {},
+  targetUserIds: string[] = [],
+): Promise<void> {
+  fixture.store.recordOpsAuditEvent({
+    action,
+    outcome,
+    actor: 'ops-token',
+    targetUserIds,
+    metadata,
+  });
+  await persistIfEnabled();
 }
 
 function getOpsRequestToken(req: IncomingMessage): string | null {
@@ -1315,7 +1353,7 @@ function renderOpsPage(opsEnabled: boolean): string {
       document.getElementById('app').innerHTML =
         '<section class="metrics">' + renderMetrics(data) + '</section>' +
         '<section class="layout">' +
-          '<aside class="panel">' + renderCleanup(data.cleanupPlan) + '</aside>' +
+          '<aside class="panel">' + renderCleanup(data.cleanupPlan) + renderAudit(data.audit) + '</aside>' +
           '<section>' +
             '<div class="panel">' +
               '<h2>用户总览</h2>' +
@@ -1336,6 +1374,7 @@ function renderOpsPage(opsEnabled: boolean): string {
         metric('Nodes', data.totals.nodes),
         metric('Conversations', data.totals.conversations),
         metric('Test Users', data.totals.testUsers),
+        metric('Audit Events', data.totals.opsAuditEvents),
         metric('Persistence', persistence)
       ].join('');
     }
@@ -1363,6 +1402,27 @@ function renderOpsPage(opsEnabled: boolean): string {
           '<input id="cleanupConfirm" placeholder="DELETE_TEST_USERS">' +
           '<button class="danger" onclick="runCleanup(false)">确认清理</button>' +
         '</div>';
+    }
+
+    function renderAudit(audit) {
+      const recent = audit && audit.recent ? audit.recent : [];
+      const items = recent.length
+        ? '<div class="cleanup-list">' + recent.slice(0, 8).map(function(event) {
+            const targets = event.targetUserIds && event.targetUserIds.length
+              ? event.targetUserIds.map(shortId).join(', ')
+              : '-';
+            return '<div class="cleanup-item"><strong>' + escapeHtml(event.action) + '</strong> ' +
+              '<span class="tag">' + escapeHtml(event.outcome) + '</span>' +
+              '<p class="muted">' + formatDate(event.createdAt) + ' · actor ' + escapeHtml(event.actor) + '</p>' +
+              '<p><span class="scope">' + escapeHtml(targets) + '</span></p>' +
+              '<p class="muted">' + escapeHtml(formatMetadata(event.metadata)) + '</p></div>';
+          }).join('') + '</div>'
+        : '<div class="empty">暂无后台操作记录。</div>';
+      return '<hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">' +
+        '<h2>最近后台操作</h2>' +
+        '<p class="muted">记录 overview、dry-run、删除尝试和授权拒绝。</p>' +
+        '<p><span class="tag">累计 ' + escapeHtml(audit ? audit.total : 0) + '</span></p>' +
+        items;
     }
 
     function renderUserTable(users) {
@@ -1449,6 +1509,13 @@ function renderOpsPage(opsEnabled: boolean): string {
       } catch {
         return String(value);
       }
+    }
+
+    function formatMetadata(metadata) {
+      if (!metadata || typeof metadata !== 'object') return '';
+      return Object.keys(metadata).map(function(key) {
+        return key + '=' + metadata[key];
+      }).join(' · ');
     }
 
     function escapeHtml(value) {

@@ -10,6 +10,9 @@ import type {
   MemoryState,
   MemoryType,
   NodeEvent,
+  OpsAuditAction,
+  OpsAuditEvent,
+  OpsAuditOutcome,
   Persona,
   PersonaType,
   RuntimeContext,
@@ -73,6 +76,14 @@ interface AddConversationInput extends UserPersonaScope {
   content: string;
 }
 
+interface RecordOpsAuditEventInput {
+  action: OpsAuditAction;
+  outcome: OpsAuditOutcome;
+  actor?: string;
+  targetUserIds?: string[];
+  metadata?: Record<string, string | number | boolean | null>;
+}
+
 export class InMemorySoulStore {
   private readonly users = new Map<string, User>();
   private readonly personas = new Map<string, Persona>();
@@ -84,6 +95,7 @@ export class InMemorySoulStore {
   private readonly conversationMessages = new Map<string, ConversationMessage>();
   private readonly sessions = new Map<string, RuntimeSession>();
   private readonly credentials = new Map<string, CredentialRecord>();
+  private readonly opsAuditEvents = new Map<string, OpsAuditEvent>();
 
   createUser(displayName: string): User {
     const user: User = {
@@ -499,6 +511,33 @@ export class InMemorySoulStore {
     return undefined;
   }
 
+  // ── Ops audit ──
+
+  recordOpsAuditEvent(input: RecordOpsAuditEventInput): OpsAuditEvent {
+    const event: OpsAuditEvent = {
+      id: this.id('ops_audit'),
+      action: input.action,
+      outcome: input.outcome,
+      actor: input.actor ?? 'ops-token',
+      targetUserIds: [...new Set(input.targetUserIds ?? [])],
+      metadata: cloneValue(input.metadata ?? {}),
+      createdAt: new Date(),
+    };
+    this.opsAuditEvents.set(event.id, event);
+    return event;
+  }
+
+  listOpsAuditEvents(limit?: number): OpsAuditEvent[] {
+    const events = [...this.opsAuditEvents.values()]
+      .map((event, index) => ({ event, index }))
+      .sort(
+        (left, right) =>
+          right.event.createdAt.getTime() - left.event.createdAt.getTime() || right.index - left.index,
+      )
+      .map(({ event }) => event);
+    return limit === undefined ? events : events.slice(0, limit);
+  }
+
   // ── Persistence helpers ──
 
   serialize(): {
@@ -522,6 +561,7 @@ export class InMemorySoulStore {
       lastMessageDate?: string;
     }>;
     credentials: CredentialRecord[];
+    opsAuditEvents: OpsAuditEvent[];
   } {
     return {
       users: [...this.users.values()],
@@ -537,6 +577,7 @@ export class InMemorySoulStore {
         ...session,
       })),
       credentials: [...this.credentials.values()],
+      opsAuditEvents: [...this.opsAuditEvents.values()],
     };
   }
 
@@ -561,6 +602,7 @@ export class InMemorySoulStore {
       lastMessageDate?: string;
     }>;
     credentials: CredentialRecord[];
+    opsAuditEvents?: OpsAuditEvent[];
   }): void {
     this.users.clear();
     this.personas.clear();
@@ -572,6 +614,7 @@ export class InMemorySoulStore {
     this.conversationMessages.clear();
     this.sessions.clear();
     this.credentials.clear();
+    this.opsAuditEvents.clear();
 
     for (const u of data.users) this.users.set(u.id, u);
     for (const p of data.personas) this.personas.set(p.id, p);
@@ -597,6 +640,9 @@ export class InMemorySoulStore {
     }
     for (const c of data.credentials) {
       this.credentials.set(c.userId, c);
+    }
+    for (const event of data.opsAuditEvents ?? []) {
+      this.opsAuditEvents.set(event.id, event);
     }
   }
 

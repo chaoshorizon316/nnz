@@ -4,6 +4,7 @@ import type {
   ConversationMessage,
   MemoryItem,
   NodeEvent,
+  OpsAuditEvent,
   Persona,
   SoulSnapshot,
   SoulUpdateProposal,
@@ -116,6 +117,16 @@ CREATE TABLE IF NOT EXISTS sessions (
   daily_message_count INTEGER,
   last_message_date TEXT
 );
+
+CREATE TABLE IF NOT EXISTS ops_audit_events (
+  id TEXT PRIMARY KEY,
+  action TEXT NOT NULL,
+  outcome TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  target_user_ids TEXT NOT NULL,
+  metadata TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
 `;
 
 export function createDb(dbPath: string): Database.Database {
@@ -129,7 +140,7 @@ export function saveStore(store: InMemorySoulStore, dbPath: string): void {
   const db = createDb(dbPath);
 
   // Clear existing data
-    for (const table of ['users', 'personas', 'soul_versions', 'soul_snapshots', 'memory_items', 'soul_update_proposals', 'node_events', 'conversation_messages', 'sessions', 'credentials']) {
+    for (const table of ['users', 'personas', 'soul_versions', 'soul_snapshots', 'memory_items', 'soul_update_proposals', 'node_events', 'conversation_messages', 'sessions', 'credentials', 'ops_audit_events']) {
       db.prepare(`DELETE FROM ${table}`).run();
     }
 
@@ -169,6 +180,17 @@ export function saveStore(store: InMemorySoulStore, dbPath: string): void {
     for (const c of data.credentials) {
       db.prepare('INSERT INTO credentials VALUES (?,?,?,?)').run(c.userId, c.email, c.passwordHash, c.createdAt);
     }
+    for (const event of data.opsAuditEvents) {
+      db.prepare('INSERT INTO ops_audit_events VALUES (?,?,?,?,?,?,?)').run(
+        event.id,
+        event.action,
+        event.outcome,
+        event.actor,
+        JSON.stringify(event.targetUserIds),
+        JSON.stringify(event.metadata),
+        iso(event.createdAt),
+      );
+    }
   db.close();
 }
 
@@ -194,6 +216,19 @@ export function loadStore(store: InMemorySoulStore, dbPath: string): boolean {
       passwordHash: r.password_hash,
       createdAt: r.created_at,
     }));
+
+    const opsAuditRows = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='ops_audit_events'").all();
+    const opsAuditEvents = opsAuditRows.length
+      ? db.prepare('SELECT * FROM ops_audit_events').all().map((r: any) => ({
+          id: r.id,
+          action: r.action,
+          outcome: r.outcome,
+          actor: r.actor,
+          targetUserIds: JSON.parse(r.target_user_ids),
+          metadata: JSON.parse(r.metadata),
+          createdAt: new Date(r.created_at),
+        })) as OpsAuditEvent[]
+      : [];
 
     store.deserialize({
       users: db.prepare('SELECT * FROM users').all().map((r: any) => ({
@@ -224,6 +259,7 @@ export function loadStore(store: InMemorySoulStore, dbPath: string): boolean {
       sessions: db.prepare('SELECT * FROM sessions').all().map((r: any) => ({
         scopeKey: r.scope_key, userId: r.user_id, personaId: r.persona_id, state: r.state, soulSnapshotId: r.soul_snapshot_id ?? undefined, nodeId: r.node_id ?? undefined, nodeName: r.node_name ?? undefined, dailyMessageCount: r.daily_message_count ?? undefined, lastMessageDate: r.last_message_date ?? undefined,
       })),
+      opsAuditEvents,
     });
 
     db.close();
@@ -263,4 +299,5 @@ export interface StoreSnapshot {
     passwordHash: string;
     createdAt: string;
   }>;
+  opsAuditEvents: OpsAuditEvent[];
 }

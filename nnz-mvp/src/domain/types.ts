@@ -21,6 +21,8 @@ export type ProposalStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
 export type RuntimeState = 'ACTIVE' | 'SEALED' | 'NODE' | 'GRADUATED';
 export type NodeStatus = 'ACTIVE' | 'COMPLETED';
 export type MessageRole = 'USER' | 'ASSISTANT' | 'SYSTEM';
+export type OpsAuditAction = 'ACCESS_DENIED' | 'OVERVIEW_READ' | 'CLEANUP_DRY_RUN' | 'CLEANUP_DELETE';
+export type OpsAuditOutcome = 'SUCCESS' | 'DENIED' | 'FAILED';
 export type SoulMaturityLevel =
   | 'L0_SEED'
   | 'L1_SKETCH'
@@ -138,6 +140,16 @@ export interface RuntimeSession {
   };
   dailyMessageCount?: number;
   lastMessageDate?: string;
+}
+
+export interface OpsAuditEvent {
+  id: string;
+  action: OpsAuditAction;
+  outcome: OpsAuditOutcome;
+  actor: string;
+  targetUserIds: string[];
+  metadata: Record<string, string | number | boolean | null>;
+  createdAt: Date;
 }
 
 export interface RuntimeContext {

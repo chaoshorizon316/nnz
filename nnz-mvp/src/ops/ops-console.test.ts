@@ -97,6 +97,7 @@ describe('Soul Ops console helpers', () => {
 
     expect(overview.totals.users).toBe(3);
     expect(overview.totals.testUsers).toBe(1);
+    expect(overview.totals.opsAuditEvents).toBe(0);
     expect(overview.users.find((user) => user.id === userA.id)).toMatchObject({
       isDemoUser: true,
       isTestUser: false,
@@ -132,6 +133,41 @@ describe('Soul Ops console helpers', () => {
       memoryCount: 1,
       proposalCount: 0,
     });
+  });
+
+  it('includes recent ops audit events without exposing secret values', () => {
+    const { store, smoke } = seedOpsStore();
+    store.recordOpsAuditEvent({
+      action: 'OVERVIEW_READ',
+      outcome: 'SUCCESS',
+      actor: 'ops-token',
+      metadata: { path: '/api/ops/overview' },
+    });
+    store.recordOpsAuditEvent({
+      action: 'CLEANUP_DRY_RUN',
+      outcome: 'SUCCESS',
+      actor: 'ops-token',
+      targetUserIds: [smoke.id],
+      metadata: { candidateUsers: 1, dryRun: true },
+    });
+
+    const overview = buildOpsOverview(store, {
+      mode: 'memory',
+      postgresConfigured: false,
+      postgresEnv: null,
+      sqliteConfigured: false,
+    });
+
+    expect(overview.totals.opsAuditEvents).toBe(2);
+    expect(overview.audit.total).toBe(2);
+    expect(overview.audit.recent).toHaveLength(2);
+    expect(overview.audit.recent[0]).toMatchObject({
+      action: 'CLEANUP_DRY_RUN',
+      outcome: 'SUCCESS',
+      targetUserIds: [smoke.id],
+      metadata: { candidateUsers: 1, dryRun: true },
+    });
+    expect(JSON.stringify(overview.audit)).not.toContain('NNZ_OPS_TOKEN');
   });
 
   it('builds a conservative cleanup plan for explicit smoke accounts only', () => {

@@ -1,5 +1,6 @@
 import { InMemorySoulStore } from '../domain/soul-store';
 import type {
+  OpsAuditEvent,
   Persona,
   RuntimeState,
   SoulMaturityReport,
@@ -21,6 +22,7 @@ export interface OpsOverview {
   persistence: OpsPersistenceInfo;
   totals: OpsTotals;
   cleanupPlan: OpsCleanupPlan;
+  audit: OpsAuditOverview;
   users: OpsUserSummary[];
 }
 
@@ -37,6 +39,12 @@ export interface OpsTotals {
   sessions: number;
   credentials: number;
   testUsers: number;
+  opsAuditEvents: number;
+}
+
+export interface OpsAuditOverview {
+  total: number;
+  recent: OpsAuditEvent[];
 }
 
 export interface OpsUserSummary {
@@ -118,6 +126,7 @@ export interface OpsCleanupResult {
 export function buildOpsOverview(store: InMemorySoulStore, persistence: OpsPersistenceInfo): OpsOverview {
   const snapshot = store.serialize();
   const cleanupPlan = buildTestUserCleanupPlan(store);
+  const recentAuditEvents = store.listOpsAuditEvents(20);
   const users = snapshot.users
     .map((user) => summarizeUser(store, snapshot, user))
     .sort((left, right) => {
@@ -141,8 +150,13 @@ export function buildOpsOverview(store: InMemorySoulStore, persistence: OpsPersi
       sessions: snapshot.sessions.length,
       credentials: snapshot.credentials.length,
       testUsers: cleanupPlan.totals.users,
+      opsAuditEvents: snapshot.opsAuditEvents.length,
     },
     cleanupPlan,
+    audit: {
+      total: snapshot.opsAuditEvents.length,
+      recent: recentAuditEvents,
+    },
     users,
   };
 }

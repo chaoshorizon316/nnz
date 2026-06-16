@@ -24,6 +24,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-11 新增: Render Postgres 已配置并通过重启持久化 smoke
 2026-06-11 Step 1: 后台测试数据清理 + 独立 /ops Soul Ops 后台雏形已实现、验证并推送
 2026-06-16 新增: Render 已配置 NNZ_OPS_TOKEN，云端 /ops 和 cleanup dry-run smoke 通过
+2026-06-16 Step 2.1: Soul Ops 审计日志已实现，本地干净副本 69 tests / build / audit 通过
 ```
 
 说明：
@@ -42,6 +43,8 @@ https://github.com/chaoshorizon316/nnz
 - `/api/ops/cleanup-test-users` 默认 dry-run；真删除必须传 `dryRun:false` 和 `confirm:"DELETE_TEST_USERS"`；只匹配明确 smoke/test 账号并调用 `deleteUserScopedData(userId)`，不会删除 A/B demo 或普通用户。
 - 6 月 16 日已在 Render Web Service `nnz` 配置 `NNZ_OPS_TOKEN` 并触发部署。云端 `/ops` 页面 200；`/api/ops/overview` 缺 token 返回 401，错 token 返回 403，带 token 返回 200；cleanup dry-run 返回 1 个 smoke/test 候选且 `deletedUserIds` 为空。
 - `NNZ_OPS_TOKEN` 是后台 secret，只存在 Render 环境变量中，不写入仓库或文档。
+- 6 月 16 日 Step 2.1 已实现 Soul Ops audit log：记录授权拒绝、overview 查看、cleanup dry-run、cleanup 删除尝试；审计事件随 Postgres snapshot / SQLite 持久化；`/ops` 页面新增 Audit Events 指标和“最近后台操作”面板。
+- 本次验证中 `npm audit` 新报 `esbuild <0.28.1` 高危公告，已通过 `overrides.esbuild="^0.28.1"` 最小修复；干净副本 `npm audit` 为 0 vulnerabilities。
 - 本地干净副本验证：`/tmp/nnz-step1-final.MF0YVg` 中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过，10 个测试文件、67 条测试全绿，0 vulnerabilities。
 - 本地 `/ops` browser smoke 通过：输入 `dev-ops-token` 后显示 8 个核心指标、用户表、2 个 Persona 成熟度卡片和测试数据清理面板。
 - Step 1 已推送到 GitHub：`30685df feat: add protected soul ops console`，当前本地与远端同步：`main...origin/main`。
@@ -81,6 +84,8 @@ npm audit
 2026-06-11 结果：`/tmp/nnz-step1-final.MF0YVg` 干净副本中 10 个测试文件、67 条测试全绿，typecheck / build / audit 通过；首页 H5 桌面/移动浏览器 smoke 通过；API smoke 覆盖 401、403、A/B 同名 persona 隔离；GitHub Actions success；Render H5/Postgres smoke 通过；本地 `/ops` 和清理 API smoke 通过。
 
 2026-06-16 结果：Render 云端 `/ops` 已启用，权限边界和 cleanup dry-run smoke 通过。记录见 `nnz-mvp-2026-06-16-SoulOps云端启用记录.md`。
+
+2026-06-16 Step 2.1 结果：`/tmp/nnz-audit-verify.Pm31Tw` 干净副本中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过；10 个测试文件、69 条测试全绿；本地 `/api/ops` smoke 确认 401/403/overview/cleanup dry-run 均写入 audit。记录见 `nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`。
 
 最新 CI run：
 
@@ -168,6 +173,14 @@ nnz-mvp-2026-06-16-SoulOps云端启用记录.md
 
 这份文档记录了 Render `NNZ_OPS_TOKEN` 配置、云端 `/ops` 权限 smoke、cleanup dry-run 结果和下一步 audit log / RBAC / scoped repository 计划。文档不记录 token 明文。
 
+Soul Ops 审计日志记录在：
+
+```text
+nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md
+```
+
+这份文档记录了 `OpsAuditEvent` 类型、持久化方式、`/ops` 页面变化、验证结果、`esbuild` audit 修复和下一步 RBAC / 删除回执计划。
+
 ## 当前最重要目标
 
 当前 MVP 核心仍是：
@@ -223,6 +236,7 @@ nnz-mvp/src/ops/ops-console.ts
 nnz-mvp/src/ops/ops-console.test.ts
 nnz-mvp/public/index.html
 nnz-mvp/CLAUDE_CODE_HANDOFF.md
+nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md
 nnz-mvp-2026-06-16-SoulOps云端启用记录.md
 nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md
 nnz-mvp-2026-06-10-工作记录.md

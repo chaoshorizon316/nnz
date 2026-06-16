@@ -114,4 +114,33 @@ describe('SQLite persistence', () => {
       passwordHash: 'hash-b',
     });
   });
+
+  it('saves and loads ops audit events', () => {
+    const dbPath = tempDbPath();
+    paths.push(dbPath);
+
+    const store = new InMemorySoulStore();
+    const user = store.createUser('codex-ops-smoke@example.test');
+    store.recordOpsAuditEvent({
+      action: 'CLEANUP_DRY_RUN',
+      outcome: 'SUCCESS',
+      actor: 'ops-token',
+      targetUserIds: [user.id],
+      metadata: { candidateUsers: 1, dryRun: true },
+    });
+
+    saveStore(store, dbPath);
+
+    const store2 = new InMemorySoulStore();
+    expect(loadStore(store2, dbPath)).toBe(true);
+
+    expect(store2.listOpsAuditEvents()).toHaveLength(1);
+    expect(store2.listOpsAuditEvents()[0]).toMatchObject({
+      action: 'CLEANUP_DRY_RUN',
+      outcome: 'SUCCESS',
+      actor: 'ops-token',
+      targetUserIds: [user.id],
+      metadata: { candidateUsers: 1, dryRun: true },
+    });
+  });
 });

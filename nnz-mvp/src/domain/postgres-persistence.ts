@@ -115,5 +115,9 @@ function normalizeSnapshot(snapshot: StoreSnapshot): StoreSnapshot {
     })),
     sessions: snapshot.sessions,
     credentials: snapshot.credentials,
+    opsAuditEvents: (snapshot.opsAuditEvents ?? []).map((event) => ({
+      ...event,
+      createdAt: new Date(event.createdAt),
+    })),
   };
 }

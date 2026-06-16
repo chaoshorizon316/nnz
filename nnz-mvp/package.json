@@ -30,5 +30,8 @@
     "better-sqlite3": "^12.10.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.21.0"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
   }
 }

@@ -39,6 +39,12 @@ describe('Postgres snapshot persistence', () => {
       role: 'USER',
       content: '我要结婚了。',
     });
+    store.recordOpsAuditEvent({
+      action: 'OVERVIEW_READ',
+      outcome: 'SUCCESS',
+      actor: 'ops-token',
+      metadata: { path: '/api/ops/overview' },
+    });
     store.storeCredential(userA.id, 'a@example.com', 'hash-a');
     store.storeCredential(userB.id, 'b@example.com', 'hash-b');
 
@@ -51,6 +57,12 @@ describe('Postgres snapshot persistence', () => {
     expect(loadedStore.listPersonasForUser(userB.id)).toEqual([personaB]);
     expect(loadedStore.listConversations({ userId: userA.id, personaId: personaA.id })).toHaveLength(1);
     expect(loadedStore.listConversations({ userId: userB.id, personaId: personaB.id })).toEqual([]);
+    expect(loadedStore.listOpsAuditEvents()[0]).toMatchObject({
+      action: 'OVERVIEW_READ',
+      outcome: 'SUCCESS',
+      actor: 'ops-token',
+      metadata: { path: '/api/ops/overview' },
+    });
     expect(loadedStore.getCredentialByEmail('a@example.com')?.userId).toBe(userA.id);
     expect(loadedStore.getCredentialByEmail('b@example.com')?.userId).toBe(userB.id);
   });
