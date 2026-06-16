@@ -195,10 +195,12 @@ npm run demo
 
 Current verified suite on 2026-06-11: 67 tests across domain scope, Soul Ops cleanup/overview, SQLite/Postgres persistence, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
+Cloud Soul Ops status on 2026-06-16: Render has `NNZ_OPS_TOKEN` configured. `/ops` returns 200, `/api/ops/overview` returns 401 without token, 403 with a wrong token, and 200 with the configured token. `POST /api/ops/cleanup-test-users` dry-run returns one explicit smoke/test candidate and deletes nothing. The token value is stored only in Render and must not be committed or documented.
+
 If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume the source is broken immediately. This directory has shown flaky `node_modules` behavior. A reliable check is to copy a clean git archive to `/tmp`, apply the worktree diff if needed, run `npm ci`, then run the verification commands there.
 
 ## Current State
 
-The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented locally. Render has Postgres persistence configured and verified. To enable `/ops` in cloud, configure `NNZ_OPS_TOKEN` in Render, redeploy, then verify `/api/ops/overview` and a dry-run cleanup with that token.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying.
 
 Next engineering steps: add real admin auth/RBAC + audit log, make cleanup/audit events durable, then evolve snapshot persistence into scoped repositories.

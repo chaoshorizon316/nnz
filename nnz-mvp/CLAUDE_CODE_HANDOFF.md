@@ -308,6 +308,27 @@ NNZ_OPS_TOKEN=<strong-random-token>
 - token 错误：返回 403。
 - token 可放在 `x-ops-token`，也可放在 `Authorization: Bearer ...`。
 
+云端状态（2026-06-16）：
+
+```text
+Render Web Service: nnz
+Service ID: srv-d8go7pmq1p3s739r12jg
+URL: https://nnz-kego.onrender.com
+NNZ_OPS_TOKEN: 已在 Render 环境变量中配置，文档和仓库不记录明文
+```
+
+云端 smoke：
+
+```text
+GET  /ops                         -> 200
+GET  /api/ops/overview             -> 401
+GET  /api/ops/overview wrong token -> 403
+GET  /api/ops/overview with token  -> 200
+POST /api/ops/cleanup-test-users dry-run with token -> 200
+```
+
+cleanup dry-run 识别到 1 个明确 smoke/test 用户候选，`deletedUserIds` 为 0。详细记录见根目录 `nnz-mvp-2026-06-16-SoulOps云端启用记录.md`。
+
 后台概览能力：
 
 - 全局 totals：users、personas、memories、pending proposals、nodes、conversations、test users、persistence mode。
@@ -1154,7 +1175,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md` 和 `nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`。下一步不是再配置数据库，也不是再拆 `/demo`，而是：给 Render 配置 `NNZ_OPS_TOKEN` 后做云端 `/ops` smoke，然后进入 RBAC、audit log，以及把 snapshot persistence 演进为逐表 repository。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md` 和 `nnz-mvp-2026-06-16-SoulOps云端启用记录.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，而是进入 RBAC、audit log、清理操作删除回执，以及把 snapshot persistence 演进为逐表 repository。
 
 ## 17. 给下一位 AI 的工作原则
 
