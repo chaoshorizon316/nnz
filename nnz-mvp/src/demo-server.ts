@@ -15,6 +15,7 @@ import { InMemorySoulStore } from './domain/soul-store';
 import type {
   MemoryItem,
   NodeEvent,
+  OpsAuditAction,
   Persona,
   RuntimeSession,
   SoulUpdateProposal,
@@ -26,7 +27,7 @@ import { generateLlmReply } from './runtime/llm-reply';
 import { GRADUATED_REPLY, SEALED_REPLY, generateSoulReply } from './runtime/soul-runtime';
 import { extractToken, hashPassword, signToken, verifyPassword, verifyToken } from './auth/auth';
 import { checkDailyLimit, checkMessageSafety, incrementDailyCount } from './runtime/soul-guard';
-import { buildOpsOverview, cleanupTestUsers } from './ops/ops-console';
+import { buildOpsOverview, cleanupTestUsers, queryOpsAuditEvents } from './ops/ops-console';
 import {
   buildOpsPermissions,
   buildOpsTokenEntries,
@@ -119,6 +120,22 @@ const server = createServer(async (req, res) => {
         });
         return sendJson(res, {
           ...buildOpsOverview(fixture.store, getOpsPersistenceInfo()),
+          principal,
+          permissions: buildOpsPermissions(principal.role),
+        });
+      }
+
+      if (req.method === 'GET' && url.pathname === '/api/ops/audit-events') {
+        const query = parseOpsAuditQuery(url);
+        await recordOpsAudit(principal, 'AUDIT_QUERY', 'SUCCESS', {
+          action: query.action ?? null,
+          actor: query.actor ?? null,
+          targetUserId: query.targetUserId ?? null,
+          limit: query.limit ?? null,
+          offset: query.offset ?? null,
+        }, query.targetUserId ? [query.targetUserId] : []);
+        return sendJson(res, {
+          ...queryOpsAuditEvents(fixture.store, query),
           principal,
           permissions: buildOpsPermissions(principal.role),
         });
@@ -405,7 +422,7 @@ function requireAuth(req: IncomingMessage, res: ServerResponse): { userId: strin
 
 async function requireOpsAccess(req: IncomingMessage, res: ServerResponse): Promise<OpsPrincipal | null> {
   if (OPS_TOKEN_ENTRIES.length === 0) {
-    sendJson(res, { error: 'Soul Ops 后台未启用。请设置 NNZ_OPS_TOKEN。' }, 404);
+    sendJson(res, { error: 'Soul Ops 后台未启用。请设置 NNZ_OPS_TOKEN 或角色化 token。' }, 404);
     return null;
   }
 
@@ -474,6 +491,52 @@ function getOpsPersistenceInfo() {
     postgresEnv: POSTGRES_ENV_SOURCE ?? null,
     sqliteConfigured: Boolean(DB_PATH),
   };
+}
+
+function parseOpsAuditQuery(url: URL): {
+  action?: OpsAuditAction;
+  actor?: string;
+  targetUserId?: string;
+  limit?: number;
+  offset?: number;
+} {
+  const query: {
+    action?: OpsAuditAction;
+    actor?: string;
+    targetUserId?: string;
+    limit?: number;
+    offset?: number;
+  } = {};
+  const action = url.searchParams.get('action');
+  if (isOpsAuditAction(action)) query.action = action;
+  const actor = normalizeQueryText(url.searchParams.get('actor'));
+  if (actor) query.actor = actor;
+  const targetUserId = normalizeQueryText(url.searchParams.get('targetUserId'));
+  if (targetUserId) query.targetUserId = targetUserId;
+  const limit = parseIntegerParam(url.searchParams.get('limit'));
+  if (limit !== undefined) query.limit = limit;
+  const offset = parseIntegerParam(url.searchParams.get('offset'));
+  if (offset !== undefined) query.offset = offset;
+  return query;
+}
+
+function isOpsAuditAction(value: string | null): value is OpsAuditAction {
+  return value === 'ACCESS_DENIED'
+    || value === 'OVERVIEW_READ'
+    || value === 'CLEANUP_DRY_RUN'
+    || value === 'CLEANUP_DELETE'
+    || value === 'AUDIT_QUERY';
+}
+
+function normalizeQueryText(value: string | null): string | undefined {
+  const normalized = value?.trim();
+  return normalized ? normalized : undefined;
+}
+
+function parseIntegerParam(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function ensureUserPersonaAccess(res: ServerResponse, userId: string, personaId: string): boolean {
@@ -1240,7 +1303,7 @@ function renderOpsPage(opsEnabled: boolean): string {
     .eyebrow { color:var(--sage); font-weight:800; font-size:12px; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
     .muted { color:var(--muted); }
     .toolbar { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; align-items:center; }
-    input { min-height:40px; border:1px solid var(--line); border-radius:8px; padding:9px 12px; font:inherit; background:#fff; color:var(--ink); }
+    input, select { min-height:40px; border:1px solid var(--line); border-radius:8px; padding:9px 12px; font:inherit; background:#fff; color:var(--ink); }
     input[type="password"] { min-width:260px; }
     button { min-height:40px; border:0; border-radius:8px; background:var(--sage); color:#fff; padding:9px 14px; font-weight:800; cursor:pointer; }
     button.secondary { background:var(--blue); }
@@ -1250,6 +1313,9 @@ function renderOpsPage(opsEnabled: boolean): string {
     .status { border:1px solid var(--line); background:var(--surface); padding:12px 14px; border-radius:8px; margin:0 0 18px; }
     .status.error { border-color:#E3B4AA; background:#FFF4F1; color:#8E332F; }
     .status.ok { border-color:#BFD5C4; background:#F1F7F2; color:#315B3F; }
+    .tabs { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 18px; }
+    .tab-button { background:#fff; color:var(--sage); border:1px solid var(--line); }
+    .tab-button.active { background:var(--sage); color:#fff; border-color:var(--sage); }
     .layout { display:grid; grid-template-columns:320px minmax(0,1fr); gap:18px; align-items:start; }
     .panel { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:18px; }
     .metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
@@ -1260,6 +1326,11 @@ function renderOpsPage(opsEnabled: boolean): string {
     .cleanup-item { border:1px solid var(--line); border-radius:8px; padding:10px; background:#FCFBF7; }
     .cleanup-item code, .scope { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; background:#EEF3EE; border-radius:6px; padding:2px 6px; }
     .confirm-row { display:grid; gap:8px; margin-top:12px; }
+    .filter-grid { display:grid; grid-template-columns:1.2fr 1.2fr 1.5fr .8fr auto auto; gap:10px; margin:12px 0; align-items:end; }
+    .audit-head { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:10px; }
+    .audit-pager { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end; margin-top:12px; }
+    .audit-meta { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .metadata { max-width:360px; overflow-wrap:anywhere; }
     table { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
     th, td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; font-size:13px; }
     th { background:#F0EEE7; color:#555D55; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
@@ -1291,7 +1362,7 @@ function renderOpsPage(opsEnabled: boolean): string {
       header, .toolbar { display:block; }
       .toolbar { margin-top:14px; }
       .toolbar input, .toolbar button { width:100%; margin-bottom:8px; }
-      .layout, .personas { grid-template-columns:1fr; }
+      .layout, .personas, .filter-grid { grid-template-columns:1fr; }
       .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .bar-row { grid-template-columns:1fr; }
       table { display:block; overflow-x:auto; }
@@ -1307,7 +1378,7 @@ function renderOpsPage(opsEnabled: boolean): string {
         <p class="muted">内部视图：用户、Persona、成熟度、提案队列、节点与测试数据清理。</p>
       </div>
       <div class="toolbar">
-        <input id="opsToken" type="password" placeholder="NNZ_OPS_TOKEN">
+        <input id="opsToken" type="password" placeholder="Soul Ops token">
         <button onclick="saveToken()">连接</button>
         <button class="ghost" onclick="clearToken()">清除</button>
         <button class="secondary" onclick="loadOverview()">刷新</button>
@@ -1318,13 +1389,22 @@ function renderOpsPage(opsEnabled: boolean): string {
   </main>
   <script>
     const OPS_ENABLED = ${opsEnabled ? 'true' : 'false'};
+    const AUDIT_ACTIONS = ['ACCESS_DENIED', 'OVERVIEW_READ', 'CLEANUP_DRY_RUN', 'CLEANUP_DELETE', 'AUDIT_QUERY'];
     let overview = null;
+    let activeTab = 'dashboard';
+    const auditState = {
+      action: '',
+      actor: '',
+      targetUserId: '',
+      limit: 20,
+      offset: 0
+    };
 
     const savedToken = sessionStorage.getItem('nnz_ops_token') || '';
     document.getElementById('opsToken').value = savedToken;
 
     if (!OPS_ENABLED) {
-      setStatus('error', '后台未启用：需要在服务端设置 NNZ_OPS_TOKEN。');
+      setStatus('error', '后台未启用：需要在服务端设置 NNZ_OPS_TOKEN 或角色化 token。');
       document.getElementById('app').innerHTML = '<div class="empty">当前实例没有开启 Soul Ops API。配置环境变量后重新部署即可访问。</div>';
     } else if (savedToken) {
       loadOverview();
@@ -1344,6 +1424,7 @@ function renderOpsPage(opsEnabled: boolean): string {
       sessionStorage.removeItem('nnz_ops_token');
       document.getElementById('opsToken').value = '';
       overview = null;
+      activeTab = 'dashboard';
       setStatus('', '已清除本页 token。');
       document.getElementById('app').innerHTML = '';
     }
@@ -1393,16 +1474,167 @@ function renderOpsPage(opsEnabled: boolean): string {
     function renderApp(data) {
       document.getElementById('app').innerHTML =
         '<section class="metrics">' + renderMetrics(data) + '</section>' +
+        renderTabs() +
+        '<section id="opsView"></section>';
+      renderActiveTab();
+    }
+
+    function renderTabs() {
+      return '<nav class="tabs" aria-label="Soul Ops sections">' +
+        '<button class="tab-button' + (activeTab === 'dashboard' ? ' active' : '') + '" onclick="switchTab(\\'dashboard\\')">Dashboard</button>' +
+        '<button class="tab-button' + (activeTab === 'audit' ? ' active' : '') + '" onclick="switchTab(\\'audit\\')">Audit</button>' +
+      '</nav>';
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      if (!overview) return;
+      renderApp(overview);
+    }
+
+    function renderActiveTab() {
+      const view = document.getElementById('opsView');
+      if (!view || !overview) return;
+      if (activeTab === 'audit') {
+        view.innerHTML = renderAuditPanel();
+        syncAuditControls();
+        loadAuditEvents();
+        return;
+      }
+      view.innerHTML =
         '<section class="layout">' +
-          '<aside class="panel">' + renderPrincipal(data.principal, data.permissions) + renderCleanup(data.cleanupPlan, data.permissions) + renderAudit(data.audit) + '</aside>' +
+          '<aside class="panel">' + renderPrincipal(overview.principal, overview.permissions) + renderCleanup(overview.cleanupPlan, overview.permissions) + renderRecentAudit(overview.audit) + '</aside>' +
           '<section>' +
             '<div class="panel">' +
               '<h2>用户总览</h2>' +
-              renderUserTable(data.users) +
+              renderUserTable(overview.users) +
             '</div>' +
-            '<div class="personas">' + renderPersonas(data.users) + '</div>' +
+            '<div class="personas">' + renderPersonas(overview.users) + '</div>' +
           '</section>' +
         '</section>';
+    }
+
+    function renderAuditPanel() {
+      return '<section class="panel">' +
+        '<div class="audit-head"><div><h2>Audit Events</h2>' +
+        '<p class="muted">内部审计视图：按动作、操作者和目标用户查询后台访问、清理与拒绝记录。</p></div>' +
+        '<div class="audit-meta"><span class="tag">' + escapeHtml(overview.principal.role) + '</span><span class="scope">' + escapeHtml(overview.principal.actor) + '</span></div></div>' +
+        '<div class="filter-grid">' +
+          '<label><span class="muted">Action</span><select id="auditAction"><option value="">全部动作</option>' +
+            AUDIT_ACTIONS.map(function(action) { return '<option value="' + action + '">' + action + '</option>'; }).join('') +
+          '</select></label>' +
+          '<label><span class="muted">Actor</span><input id="auditActor" placeholder="ops:admin"></label>' +
+          '<label><span class="muted">Target userId</span><input id="auditTargetUserId" placeholder="user_..."></label>' +
+          '<label><span class="muted">Limit</span><select id="auditLimit"><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></label>' +
+          '<button onclick="applyAuditFilters()">查询</button>' +
+          '<button class="ghost" onclick="resetAuditFilters()">重置</button>' +
+        '</div>' +
+        '<div id="auditStatus" class="muted">准备读取审计事件。</div>' +
+        '<div id="auditResults" style="margin-top:12px;"></div>' +
+      '</section>';
+    }
+
+    function syncAuditControls() {
+      setControlValue('auditAction', auditState.action);
+      setControlValue('auditActor', auditState.actor);
+      setControlValue('auditTargetUserId', auditState.targetUserId);
+      setControlValue('auditLimit', String(auditState.limit));
+    }
+
+    function setControlValue(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.value = value;
+    }
+
+    function getOpsToken() {
+      return document.getElementById('opsToken').value.trim() || sessionStorage.getItem('nnz_ops_token') || '';
+    }
+
+    async function loadAuditEvents(offset) {
+      if (!OPS_ENABLED || !overview || activeTab !== 'audit') return;
+      if (typeof offset === 'number') auditState.offset = Math.max(0, offset);
+      const token = getOpsToken();
+      if (!token) {
+        setAuditStatus('请输入后台访问 token。');
+        return;
+      }
+      const params = new URLSearchParams();
+      if (auditState.action) params.set('action', auditState.action);
+      if (auditState.actor) params.set('actor', auditState.actor);
+      if (auditState.targetUserId) params.set('targetUserId', auditState.targetUserId);
+      params.set('limit', String(auditState.limit));
+      params.set('offset', String(auditState.offset));
+      setAuditStatus('正在读取审计事件...');
+      const res = await fetch('/api/ops/audit-events?' + params.toString(), { headers: { 'x-ops-token': token } });
+      const data = await res.json();
+      if (!res.ok) {
+        setAuditStatus(data.error || '读取审计事件失败。');
+        return;
+      }
+      renderAuditResults(data);
+    }
+
+    function applyAuditFilters() {
+      auditState.action = getControlValue('auditAction');
+      auditState.actor = getControlValue('auditActor').trim();
+      auditState.targetUserId = getControlValue('auditTargetUserId').trim();
+      auditState.limit = Number(getControlValue('auditLimit')) || 20;
+      auditState.offset = 0;
+      loadAuditEvents();
+    }
+
+    function resetAuditFilters() {
+      auditState.action = '';
+      auditState.actor = '';
+      auditState.targetUserId = '';
+      auditState.limit = 20;
+      auditState.offset = 0;
+      syncAuditControls();
+      loadAuditEvents();
+    }
+
+    function getControlValue(id) {
+      const el = document.getElementById(id);
+      return el ? el.value : '';
+    }
+
+    function setAuditStatus(text) {
+      const el = document.getElementById('auditStatus');
+      if (el) el.textContent = text;
+    }
+
+    function renderAuditResults(data) {
+      const page = data.pagination;
+      auditState.limit = page.limit;
+      auditState.offset = page.offset;
+      setAuditStatus('共 ' + page.total + ' 条，当前显示 ' + page.returned + ' 条。生成时间：' + formatDate(data.generatedAt));
+      const resultEl = document.getElementById('auditResults');
+      if (!resultEl) return;
+      const rows = data.events.length
+        ? data.events.map(function(event) {
+            const targets = event.targetUserIds && event.targetUserIds.length
+              ? event.targetUserIds.map(shortId).join(', ')
+              : '-';
+            return '<tr><td><strong>' + escapeHtml(event.action) + '</strong><br><span class="tag">' + escapeHtml(event.outcome) + '</span></td>' +
+              '<td>' + escapeHtml(event.actor) + '</td>' +
+              '<td><span class="scope">' + escapeHtml(targets) + '</span></td>' +
+              '<td class="metadata">' + escapeHtml(formatMetadata(event.metadata)) + '</td>' +
+              '<td>' + formatDate(event.createdAt) + '</td></tr>';
+          }).join('')
+        : '';
+      resultEl.innerHTML = rows
+        ? '<table><thead><tr><th>Action</th><th>Actor</th><th>Targets</th><th>Metadata</th><th>Created</th></tr></thead><tbody>' + rows + '</tbody></table>' + renderAuditPager(page)
+        : '<div class="empty">没有匹配的审计事件。</div>' + renderAuditPager(page);
+    }
+
+    function renderAuditPager(page) {
+      const prevOffset = Math.max(0, page.offset - page.limit);
+      const nextOffset = page.offset + page.limit;
+      return '<div class="audit-pager">' +
+        '<span class="muted">offset ' + page.offset + ' / limit ' + page.limit + '</span>' +
+        '<button class="ghost" onclick="loadAuditEvents(' + prevOffset + ')"' + (page.offset <= 0 ? ' disabled' : '') + '>上一页</button>' +
+        '<button class="ghost" onclick="loadAuditEvents(' + nextOffset + ')"' + (page.hasMore ? '' : ' disabled') + '>下一页</button>' +
+      '</div>';
     }
 
     function renderMetrics(data) {
@@ -1458,7 +1690,7 @@ function renderOpsPage(opsEnabled: boolean): string {
         '</div>';
     }
 
-    function renderAudit(audit) {
+    function renderRecentAudit(audit) {
       const recent = audit && audit.recent ? audit.recent : [];
       const items = recent.length
         ? '<div class="cleanup-list">' + recent.slice(0, 8).map(function(event) {

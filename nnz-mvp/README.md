@@ -79,6 +79,7 @@ The admin console is split from the user/demo surfaces and is available at:
 ```text
 GET /ops
 GET /api/ops/overview
+GET /api/ops/audit-events
 POST /api/ops/cleanup-test-users
 ```
 
@@ -92,7 +93,7 @@ Set `NNZ_OPS_TOKEN` before enabling it. Without this env var, `/ops` renders a d
 
 Roles:
 
-- `viewer`: overview only
+- `viewer`: overview and audit query only
 - `operator`: overview plus cleanup dry-run
 - `admin`: overview, dry-run, and confirmed cleanup deletion
 
@@ -107,6 +108,16 @@ The overview is still scoped by `userId + personaId` for every persona and summa
 - memory, proposal, snapshot, node, and runtime state counts
 - backend recommendations such as `ASK_MORE_MEMORY`, `REVIEW_PROPOSAL`, `SUGGEST_SEAL`, and `READY_FOR_NODE`
 - recent ops audit events for overview reads, access denials, cleanup dry-runs, and cleanup deletion attempts
+
+`GET /api/ops/audit-events` supports audit query filters:
+
+- `action=ACCESS_DENIED|OVERVIEW_READ|CLEANUP_DRY_RUN|CLEANUP_DELETE|AUDIT_QUERY`
+- `actor=ops:viewer|ops:operator|ops:admin|ops:legacy-admin`
+- `targetUserId=user_...`
+- `limit=20`
+- `offset=0`
+
+Audit queries are themselves recorded as `AUDIT_QUERY` events. The `/ops` page has a dedicated `Audit` tab for these filters and pagination.
 
 `POST /api/ops/cleanup-test-users` defaults to dry-run. Actual deletion requires `dryRun:false` and `confirm:"DELETE_TEST_USERS"`. The cleanup matcher is intentionally conservative and only targets explicit smoke/test accounts such as `@example.test`, `codex-postgres-smoke-*`, `codex-ops-smoke-*`, and `nnz-smoke-*`. It deletes via `store.deleteUserScopedData(userId)`, so one user's Soul, Memory, Node, Conversation, Credential, and Session are removed without crossing into other users.
 
@@ -210,14 +221,16 @@ npm run build:demo
 npm run demo
 ```
 
-Current verified suite on 2026-06-17: 72 tests across domain scope, Soul Ops cleanup/overview/audit/RBAC, SQLite/Postgres persistence, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+Current verified suite on 2026-06-17: 73 tests across domain scope, Soul Ops cleanup/overview/audit query/RBAC, SQLite/Postgres persistence, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
 Cloud Soul Ops status on 2026-06-16: Render has `NNZ_OPS_TOKEN` configured. `/ops` returns 200, `/api/ops/overview` returns 401 without token, 403 with a wrong token, and 200 with the configured token. `POST /api/ops/cleanup-test-users` dry-run returns one explicit smoke/test candidate and deletes nothing. The token value is stored only in Render and must not be committed or documented.
+
+Local Step 2.3 status on 2026-06-17: `/api/ops/audit-events` and the `/ops` Audit tab are implemented. Clean `/tmp` verification passed with 11 test files and 73 tests. Cloud role-specific token smoke is the next verification step after Render has `NNZ_OPS_VIEWER_TOKEN`, `NNZ_OPS_OPERATOR_TOKEN`, and `NNZ_OPS_ADMIN_TOKEN` configured.
 
 If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume the source is broken immediately. This directory has shown flaky `node_modules` behavior. A reliable check is to copy a clean git archive to `/tmp`, apply the worktree diff if needed, run `npm ci`, then run the verification commands there.
 
 ## Current State
 
-The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, and Step 2.3 audit query UI/API are implemented locally.
 
-Next engineering steps: add audit query/search UI, configure optional role-specific tokens in Render, then evolve snapshot persistence into scoped repositories.
+Next engineering steps: verify optional role-specific tokens in Render, then evolve snapshot persistence into scoped repositories.

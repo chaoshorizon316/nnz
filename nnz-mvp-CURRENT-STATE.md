@@ -1,9 +1,9 @@
 # nnz-mvp 当前状态与交接指南
 
-> 更新：2026-06-16
+> 更新：2026-06-17
 > 覆盖：Soul 作用域、Covenant 状态机、Memory 分层、Soul Ops、安全护栏、Render demo、LLM 对话、自动化提取管线、SQLite 持久化、登录注册、官网首页
 
-## 2026-06-16 GitHub / CI / 本地状态
+## 2026-06-17 GitHub / CI / 本地状态
 
 GitHub 仓库已经建立：
 
@@ -20,6 +20,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-16 新增: Render 已配置 NNZ_OPS_TOKEN，云端 /ops 和 cleanup dry-run smoke 通过
 2026-06-16 Step 2.1: Soul Ops 审计日志已实现，下一步进入 RBAC / 删除回执
 2026-06-17 Step 2.2: Soul Ops RBAC + 删除回执已实现，下一步进入审计查询与云端角色化配置
+2026-06-17 Step 2.3: Soul Ops Audit 查询接口 + /ops Audit tab 已实现，下一步进入云端角色 token smoke 与 scoped repository
 ```
 
 当前本地相对远端：
@@ -40,6 +41,7 @@ main...origin/main
 nnz-mvp-2026-06-16-SoulOps云端启用记录.md
 nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md
 nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md
+nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md
 ```
 
 6 月 8 日引入 SQLite / 登录注册 / 官网首页后，远端 GitHub Actions 出现 failure。6 月 9 日已修复；6 月 10 日首页 H5 和 Postgres snapshot persistence 已推送：
@@ -367,20 +369,28 @@ persistedAfterRestart = true
 - `/ops` 页面显示当前角色、actor、权限，并按权限禁用危险按钮。
 - `tsconfig.demo.json` 已包含 `src/ops/**/*.ts`，避免 Render build 找不到 `ops-auth`。
 
+2026-06-17 Step 2.3 已完成 Soul Ops Audit 查询：
+
+- 新增 `GET /api/ops/audit-events`。
+- 新增 `AUDIT_QUERY` 审计动作，查询审计本身也会被记录。
+- `queryOpsAuditEvents()` 支持按 action / actor / targetUserId 过滤，支持 limit / offset 分页。
+- `/ops` 页面拆成 `Dashboard` / `Audit` tab。
+- Audit tab 支持 action 下拉、actor 输入、target userId 输入、limit 选择和上一页/下一页。
+- 本地 API smoke 已确认 admin/viewer 都能查询 audit；viewer 仍不能执行 cleanup 删除。
+
 本地验证：
 
 ```text
-/tmp/nnz-step1-final.MF0YVg
+/tmp/nnz-step23-verify.iLBxJh
 npm ci
+npm test         # 11 files, 73 tests passed
 npm run typecheck
-npm test         # 10 files, 67 tests passed
 npm run build:demo
-npm audit        # 0 vulnerabilities
 ```
 
-浏览器 smoke：`/ops` 输入 `dev-ops-token` 后显示 Users / Personas / Memories / Pending Proposals / Nodes / Conversations / Test Users / Persistence 指标、用户表、Persona 成熟度卡片和测试数据清理面板。
+本地 API smoke：`/ops` 返回 200；`/api/ops/audit-events?action=AUDIT_QUERY&actor=ops:admin&limit=2&offset=0` 返回 200；viewer token 查询 audit 返回 200 且 `canDeleteCleanup=false`。
 
-下一步：进入 Soul Ops 审计查询与云端角色化配置。优先增加 audit 查询接口和 Audit tab，再在 Render 配置可选角色 token 做云端 smoke。
+下一步：进入 Step 2.4。优先在 Render 验证可选角色 token（viewer/operator/admin）的云端权限边界，然后开始把 Postgres snapshot persistence 演进为强作用域 repository。token 明文不得写入仓库或文档。
 
 ### 后续：微信 / H5 用户端雏形
 
@@ -492,4 +502,4 @@ npm run build:demo
 npm audit        # 0 vulnerabilities
 ```
 
-当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。2026-06-16 已完成 Render `NNZ_OPS_TOKEN` 配置和云端 `/ops` smoke，并完成 Step 2.1 Soul Ops 审计日志。2026-06-17 已完成 Step 2.2 Soul Ops RBAC 与删除回执。下一步进入审计查询 / 云端角色化配置 / scoped repository。
+当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。2026-06-16 已完成 Render `NNZ_OPS_TOKEN` 配置和云端 `/ops` smoke，并完成 Step 2.1 Soul Ops 审计日志。2026-06-17 已完成 Step 2.2 Soul Ops RBAC 与删除回执；同日 Step 2.3 已完成 Audit 查询接口和 `/ops` Audit tab。下一步进入云端角色 token smoke / scoped repository。

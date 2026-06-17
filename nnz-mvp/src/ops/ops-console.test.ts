@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { InMemorySoulStore } from '../domain/soul-store';
-import { buildOpsOverview, buildTestUserCleanupPlan, cleanupTestUsers } from './ops-console';
+import { buildOpsOverview, buildTestUserCleanupPlan, cleanupTestUsers, queryOpsAuditEvents } from './ops-console';
 
 function seedOpsStore() {
   const store = new InMemorySoulStore();
@@ -168,6 +168,79 @@ describe('Soul Ops console helpers', () => {
       metadata: { candidateUsers: 1, dryRun: true },
     });
     expect(JSON.stringify(overview.audit)).not.toContain('NNZ_OPS_TOKEN');
+  });
+
+  it('queries ops audit events by action, actor, target user, and pagination', () => {
+    const { store, smoke, normal } = seedOpsStore();
+    store.recordOpsAuditEvent({
+      action: 'OVERVIEW_READ',
+      outcome: 'SUCCESS',
+      actor: 'ops:viewer',
+      metadata: { path: '/api/ops/overview' },
+    });
+    store.recordOpsAuditEvent({
+      action: 'CLEANUP_DRY_RUN',
+      outcome: 'SUCCESS',
+      actor: 'ops:operator',
+      targetUserIds: [smoke.id],
+      metadata: { candidateUsers: 1, dryRun: true },
+    });
+    store.recordOpsAuditEvent({
+      action: 'AUDIT_QUERY',
+      outcome: 'SUCCESS',
+      actor: 'ops:admin',
+      targetUserIds: [normal.id],
+      metadata: { action: 'CLEANUP_DELETE', actorRole: 'admin' },
+    });
+
+    const auditQueries = queryOpsAuditEvents(store, { action: 'AUDIT_QUERY' });
+    expect(auditQueries.events).toHaveLength(1);
+    expect(auditQueries.events[0]).toMatchObject({
+      action: 'AUDIT_QUERY',
+      actor: 'ops:admin',
+      targetUserIds: [normal.id],
+    });
+    expect(auditQueries.filters).toEqual({
+      action: 'AUDIT_QUERY',
+      actor: null,
+      targetUserId: null,
+    });
+
+    const operatorEvents = queryOpsAuditEvents(store, { actor: 'ops:operator' });
+    expect(operatorEvents.events).toHaveLength(1);
+    expect(operatorEvents.events[0]?.action).toBe('CLEANUP_DRY_RUN');
+
+    const smokeEvents = queryOpsAuditEvents(store, { targetUserId: smoke.id });
+    expect(smokeEvents.events).toHaveLength(1);
+    expect(smokeEvents.events[0]).toMatchObject({
+      action: 'CLEANUP_DRY_RUN',
+      targetUserIds: [smoke.id],
+    });
+
+    const firstPage = queryOpsAuditEvents(store, { limit: 2, offset: 0 });
+    expect(firstPage.pagination).toMatchObject({
+      limit: 2,
+      offset: 0,
+      total: 3,
+      returned: 2,
+      hasMore: true,
+    });
+    expect(firstPage.events.map((event) => event.action)).toEqual(['AUDIT_QUERY', 'CLEANUP_DRY_RUN']);
+
+    const secondPage = queryOpsAuditEvents(store, { limit: 2, offset: 2 });
+    expect(secondPage.pagination).toMatchObject({
+      limit: 2,
+      offset: 2,
+      total: 3,
+      returned: 1,
+      hasMore: false,
+    });
+    expect(secondPage.events[0]?.action).toBe('OVERVIEW_READ');
+
+    const clamped = queryOpsAuditEvents(store, { limit: 999, offset: -12 });
+    expect(clamped.pagination.limit).toBe(100);
+    expect(clamped.pagination.offset).toBe(0);
+    expect(JSON.stringify(clamped)).not.toContain('token');
   });
 
   it('builds a conservative cleanup plan for explicit smoke accounts only', () => {

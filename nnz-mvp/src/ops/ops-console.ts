@@ -1,5 +1,6 @@
 import { InMemorySoulStore } from '../domain/soul-store';
 import type {
+  OpsAuditAction,
   OpsAuditEvent,
   Persona,
   RuntimeState,
@@ -45,6 +46,31 @@ export interface OpsTotals {
 export interface OpsAuditOverview {
   total: number;
   recent: OpsAuditEvent[];
+}
+
+export interface OpsAuditQuery {
+  action?: OpsAuditAction | undefined;
+  actor?: string | undefined;
+  targetUserId?: string | undefined;
+  limit?: number | undefined;
+  offset?: number | undefined;
+}
+
+export interface OpsAuditQueryResult {
+  generatedAt: string;
+  filters: {
+    action: OpsAuditAction | null;
+    actor: string | null;
+    targetUserId: string | null;
+  };
+  pagination: {
+    limit: number;
+    offset: number;
+    total: number;
+    returned: number;
+    hasMore: boolean;
+  };
+  events: OpsAuditEvent[];
 }
 
 export interface OpsUserSummary {
@@ -169,6 +195,37 @@ export function buildOpsOverview(store: InMemorySoulStore, persistence: OpsPersi
       recent: recentAuditEvents,
     },
     users,
+  };
+}
+
+export function queryOpsAuditEvents(store: InMemorySoulStore, query: OpsAuditQuery = {}): OpsAuditQueryResult {
+  const limit = clampInteger(query.limit, 20, 1, 100);
+  const offset = clampInteger(query.offset, 0, 0, Number.MAX_SAFE_INTEGER);
+  const actor = normalizeFilter(query.actor);
+  const targetUserId = normalizeFilter(query.targetUserId);
+  const events = store.listOpsAuditEvents().filter((event) => {
+    if (query.action && event.action !== query.action) return false;
+    if (actor && event.actor !== actor) return false;
+    if (targetUserId && !event.targetUserIds.includes(targetUserId)) return false;
+    return true;
+  });
+  const page = events.slice(offset, offset + limit);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    filters: {
+      action: query.action ?? null,
+      actor: actor ?? null,
+      targetUserId: targetUserId ?? null,
+    },
+    pagination: {
+      limit,
+      offset,
+      total: events.length,
+      returned: page.length,
+      hasMore: offset + page.length < events.length,
+    },
+    events: page,
   };
 }
 
@@ -357,4 +414,14 @@ function sumCleanupTotals(users: OpsCleanupUser[]): OpsCleanupPlan['totals'] {
       credentials: 0,
     },
   );
+}
+
+function clampInteger(value: number | undefined, fallback: number, min: number, max: number): number {
+  if (!Number.isFinite(value) || value === undefined) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(value)));
+}
+
+function normalizeFilter(value: string | undefined): string | undefined {
+  const normalized = value?.trim();
+  return normalized ? normalized : undefined;
 }
