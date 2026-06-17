@@ -27,6 +27,14 @@ import { GRADUATED_REPLY, SEALED_REPLY, generateSoulReply } from './runtime/soul
 import { extractToken, hashPassword, signToken, verifyPassword, verifyToken } from './auth/auth';
 import { checkDailyLimit, checkMessageSafety, incrementDailyCount } from './runtime/soul-guard';
 import { buildOpsOverview, cleanupTestUsers } from './ops/ops-console';
+import {
+  buildOpsPermissions,
+  buildOpsTokenEntries,
+  resolveOpsPrincipal,
+  roleAllows,
+  type OpsPrincipal,
+  type OpsRole,
+} from './ops/ops-auth';
 
 interface DemoFixture {
   store: InMemorySoulStore;
@@ -47,6 +55,12 @@ const DB_PATH = readNonEmptyEnv('NNZ_DB_PATH');
 const POSTGRES_ENV_SOURCE = readFirstConfiguredEnvKey(['NNZ_POSTGRES_URL', 'DATABASE_URL']);
 const POSTGRES_URL = POSTGRES_ENV_SOURCE ? readNonEmptyEnv(POSTGRES_ENV_SOURCE) : undefined;
 const OPS_TOKEN = readNonEmptyEnv('NNZ_OPS_TOKEN');
+const OPS_TOKEN_ENTRIES = buildOpsTokenEntries({
+  legacyAdminToken: OPS_TOKEN,
+  viewerToken: readNonEmptyEnv('NNZ_OPS_VIEWER_TOKEN'),
+  operatorToken: readNonEmptyEnv('NNZ_OPS_OPERATOR_TOKEN'),
+  adminToken: readNonEmptyEnv('NNZ_OPS_ADMIN_TOKEN'),
+});
 let postgresPersistence: PostgresPersistence | undefined;
 let persistenceMode: 'memory' | 'sqlite' | 'postgres' = 'memory';
 
@@ -91,27 +105,47 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && url.pathname === '/ops') {
-      return sendHtml(res, renderOpsPage(Boolean(OPS_TOKEN)));
+      return sendHtml(res, renderOpsPage(OPS_TOKEN_ENTRIES.length > 0));
     }
 
     if (url.pathname.startsWith('/api/ops/')) {
-      const opsAllowed = await requireOpsAccess(req, res);
-      if (!opsAllowed) return;
+      const principal = await requireOpsAccess(req, res);
+      if (!principal) return;
 
       if (req.method === 'GET' && url.pathname === '/api/ops/overview') {
-        await recordOpsAudit('OVERVIEW_READ', 'SUCCESS', {
+        await recordOpsAudit(principal, 'OVERVIEW_READ', 'SUCCESS', {
           method: req.method ?? 'GET',
           path: url.pathname,
         });
-        return sendJson(res, buildOpsOverview(fixture.store, getOpsPersistenceInfo()));
+        return sendJson(res, {
+          ...buildOpsOverview(fixture.store, getOpsPersistenceInfo()),
+          principal,
+          permissions: buildOpsPermissions(principal.role),
+        });
       }
 
       if (req.method === 'POST' && url.pathname === '/api/ops/cleanup-test-users') {
         const body = await readJsonBody<{ dryRun?: boolean; confirm?: string }>(req);
         const dryRun = body.dryRun !== false;
+        const requiredRole: OpsRole = dryRun ? 'operator' : 'admin';
+        if (!roleAllows(principal.role, requiredRole)) {
+          const preview = cleanupTestUsers(fixture.store, true);
+          await recordOpsAudit(principal, dryRun ? 'CLEANUP_DRY_RUN' : 'CLEANUP_DELETE', 'DENIED', {
+            reason: 'insufficient-role',
+            requiredRole,
+            actorRole: principal.role,
+            candidateUsers: preview.plan.totals.users,
+          }, preview.plan.users.map((user) => user.userId));
+          return sendJson(res, {
+            error: dryRun ? '当前后台角色不能执行 dry-run。' : '当前后台角色不能执行删除。',
+            requiredRole,
+            principal,
+          }, 403);
+        }
+
         if (!dryRun && body.confirm !== 'DELETE_TEST_USERS') {
           const preview = cleanupTestUsers(fixture.store, true);
-          await recordOpsAudit('CLEANUP_DELETE', 'DENIED', {
+          await recordOpsAudit(principal, 'CLEANUP_DELETE', 'DENIED', {
             reason: 'missing-confirmation',
             candidateUsers: preview.plan.totals.users,
           }, preview.plan.users.map((user) => user.userId));
@@ -122,10 +156,11 @@ const server = createServer(async (req, res) => {
         }
 
         const result = cleanupTestUsers(fixture.store, dryRun);
-        await recordOpsAudit(dryRun ? 'CLEANUP_DRY_RUN' : 'CLEANUP_DELETE', 'SUCCESS', {
+        await recordOpsAudit(principal, dryRun ? 'CLEANUP_DRY_RUN' : 'CLEANUP_DELETE', 'SUCCESS', {
           dryRun,
           candidateUsers: result.plan.totals.users,
           deletedUsers: result.deletedUserIds.length,
+          receipts: result.receipts.length,
         }, result.plan.users.map((user) => user.userId));
         if (!dryRun) {
           await persistIfEnabled();
@@ -368,33 +403,36 @@ function requireAuth(req: IncomingMessage, res: ServerResponse): { userId: strin
   return authUser;
 }
 
-async function requireOpsAccess(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
-  if (!OPS_TOKEN) {
+async function requireOpsAccess(req: IncomingMessage, res: ServerResponse): Promise<OpsPrincipal | null> {
+  if (OPS_TOKEN_ENTRIES.length === 0) {
     sendJson(res, { error: 'Soul Ops 后台未启用。请设置 NNZ_OPS_TOKEN。' }, 404);
-    return false;
+    return null;
   }
 
   const token = getOpsRequestToken(req);
   if (!token) {
-    await recordOpsAudit('ACCESS_DENIED', 'DENIED', {
+    await recordOpsAudit(null, 'ACCESS_DENIED', 'DENIED', {
       reason: 'missing-token',
       path: req.url ?? null,
     });
     sendJson(res, { error: '缺少 Soul Ops 访问 token。' }, 401);
-    return false;
+    return null;
   }
-  if (!safeSecretEquals(token, OPS_TOKEN)) {
-    await recordOpsAudit('ACCESS_DENIED', 'DENIED', {
+
+  const principal = resolveOpsPrincipal(token, OPS_TOKEN_ENTRIES, safeSecretEquals);
+  if (!principal) {
+    await recordOpsAudit(null, 'ACCESS_DENIED', 'DENIED', {
       reason: 'invalid-token',
       path: req.url ?? null,
     });
     sendJson(res, { error: 'Soul Ops 访问 token 无效。' }, 403);
-    return false;
+    return null;
   }
-  return true;
+  return principal;
 }
 
 async function recordOpsAudit(
+  principal: OpsPrincipal | null,
   action: Parameters<InMemorySoulStore['recordOpsAuditEvent']>[0]['action'],
   outcome: Parameters<InMemorySoulStore['recordOpsAuditEvent']>[0]['outcome'],
   metadata: Parameters<InMemorySoulStore['recordOpsAuditEvent']>[0]['metadata'] = {},
@@ -403,9 +441,12 @@ async function recordOpsAudit(
   fixture.store.recordOpsAuditEvent({
     action,
     outcome,
-    actor: 'ops-token',
+    actor: principal?.actor ?? 'ops:anonymous',
     targetUserIds,
-    metadata,
+    metadata: {
+      ...metadata,
+      actorRole: principal?.role ?? 'anonymous',
+    },
   });
   await persistIfEnabled();
 }
@@ -1323,7 +1364,7 @@ function renderOpsPage(opsEnabled: boolean): string {
       }
       sessionStorage.setItem('nnz_ops_token', token);
       overview = data;
-      setStatus('ok', '已连接。数据生成时间：' + formatDate(data.generatedAt));
+      setStatus('ok', '已连接：' + data.principal.role + '。数据生成时间：' + formatDate(data.generatedAt));
       renderApp(data);
     }
 
@@ -1345,7 +1386,7 @@ function renderOpsPage(opsEnabled: boolean): string {
       const result = data.result;
       setStatus('ok', dryRun
         ? 'Dry-run 完成：发现 ' + result.plan.totals.users + ' 个测试用户。'
-        : '清理完成：删除 ' + result.deletedUserIds.length + ' 个测试用户。');
+        : '清理完成：删除 ' + result.deletedUserIds.length + ' 个测试用户，生成 ' + result.receipts.length + ' 条回执。');
       await loadOverview();
     }
 
@@ -1353,7 +1394,7 @@ function renderOpsPage(opsEnabled: boolean): string {
       document.getElementById('app').innerHTML =
         '<section class="metrics">' + renderMetrics(data) + '</section>' +
         '<section class="layout">' +
-          '<aside class="panel">' + renderCleanup(data.cleanupPlan) + renderAudit(data.audit) + '</aside>' +
+          '<aside class="panel">' + renderPrincipal(data.principal, data.permissions) + renderCleanup(data.cleanupPlan, data.permissions) + renderAudit(data.audit) + '</aside>' +
           '<section>' +
             '<div class="panel">' +
               '<h2>用户总览</h2>' +
@@ -1383,7 +1424,20 @@ function renderOpsPage(opsEnabled: boolean): string {
       return '<article class="metric"><span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong></article>';
     }
 
-    function renderCleanup(plan) {
+    function renderPrincipal(principal, permissions) {
+      return '<h2>访问角色</h2>' +
+        '<p><span class="tag active">' + escapeHtml(principal.role) + '</span></p>' +
+        '<p class="muted">actor：' + escapeHtml(principal.actor) + '</p>' +
+        '<div class="mini-grid">' +
+          mini('Overview', permissions.canReadOverview ? 'YES' : 'NO') +
+          mini('Dry-run', permissions.canDryRunCleanup ? 'YES' : 'NO') +
+          mini('Delete', permissions.canDeleteCleanup ? 'YES' : 'NO') +
+          mini('Audit', 'YES') +
+        '</div>' +
+        '<hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">';
+    }
+
+    function renderCleanup(plan, permissions) {
       const items = plan.users.length
         ? '<div class="cleanup-list">' + plan.users.map(function(user) {
             return '<div class="cleanup-item"><strong>' + escapeHtml(user.email || user.displayName) + '</strong>' +
@@ -1398,9 +1452,9 @@ function renderOpsPage(opsEnabled: boolean): string {
         '<p><span class="tag test">可清理 ' + plan.totals.users + '</span></p>' +
         items +
         '<div class="confirm-row">' +
-          '<button class="ghost" onclick="runCleanup(true)">Dry-run</button>' +
+          '<button class="ghost" onclick="runCleanup(true)"' + (permissions.canDryRunCleanup ? '' : ' disabled') + '>Dry-run</button>' +
           '<input id="cleanupConfirm" placeholder="DELETE_TEST_USERS">' +
-          '<button class="danger" onclick="runCleanup(false)">确认清理</button>' +
+          '<button class="danger" onclick="runCleanup(false)"' + (permissions.canDeleteCleanup ? '' : ' disabled') + '>确认清理</button>' +
         '</div>';
     }
 

@@ -84,6 +84,18 @@ POST /api/ops/cleanup-test-users
 
 Set `NNZ_OPS_TOKEN` before enabling it. Without this env var, `/ops` renders a disabled state and `/api/ops/*` returns 404. With it configured, API calls must include either `x-ops-token: <token>` or `Authorization: Bearer <token>`.
 
+`NNZ_OPS_TOKEN` is backward-compatible and maps to the `admin` role. Optional role-specific tokens can be configured:
+
+- `NNZ_OPS_VIEWER_TOKEN`
+- `NNZ_OPS_OPERATOR_TOKEN`
+- `NNZ_OPS_ADMIN_TOKEN`
+
+Roles:
+
+- `viewer`: overview only
+- `operator`: overview plus cleanup dry-run
+- `admin`: overview, dry-run, and confirmed cleanup deletion
+
 Store helper:
 
 - `buildSoulMaturityReport(scope)`
@@ -99,6 +111,8 @@ The overview is still scoped by `userId + personaId` for every persona and summa
 `POST /api/ops/cleanup-test-users` defaults to dry-run. Actual deletion requires `dryRun:false` and `confirm:"DELETE_TEST_USERS"`. The cleanup matcher is intentionally conservative and only targets explicit smoke/test accounts such as `@example.test`, `codex-postgres-smoke-*`, `codex-ops-smoke-*`, and `nnz-smoke-*`. It deletes via `store.deleteUserScopedData(userId)`, so one user's Soul, Memory, Node, Conversation, Credential, and Session are removed without crossing into other users.
 
 Ops audit events are admin-only objects. They are persisted with the current store snapshot, rendered only in `/ops`, and must not include token values, chat content, or uploaded memory source text.
+
+Confirmed cleanup deletion returns `receipts` with the deleted user's id, display name/email, cleanup reason, pre-delete counts, deletion timestamp, and status.
 
 This console is intentionally admin-facing. The user-facing app, WeChat flow, and `/demo` validation page should not expose Soul internals such as `SoulVersion`, `SoulSnapshot`, `SoulUpdateProposal`, evidence chains, or scope ids.
 
@@ -196,7 +210,7 @@ npm run build:demo
 npm run demo
 ```
 
-Current verified suite on 2026-06-16: 69 tests across domain scope, Soul Ops cleanup/overview/audit, SQLite/Postgres persistence, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+Current verified suite on 2026-06-17: 72 tests across domain scope, Soul Ops cleanup/overview/audit/RBAC, SQLite/Postgres persistence, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
 Cloud Soul Ops status on 2026-06-16: Render has `NNZ_OPS_TOKEN` configured. `/ops` returns 200, `/api/ops/overview` returns 401 without token, 403 with a wrong token, and 200 with the configured token. `POST /api/ops/cleanup-test-users` dry-run returns one explicit smoke/test candidate and deletes nothing. The token value is stored only in Render and must not be committed or documented.
 
@@ -206,4 +220,4 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying.
 
-Next engineering steps: add real admin auth/RBAC, add cleanup deletion receipts, then evolve snapshot persistence into scoped repositories.
+Next engineering steps: add audit query/search UI, configure optional role-specific tokens in Render, then evolve snapshot persistence into scoped repositories.

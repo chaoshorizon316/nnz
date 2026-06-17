@@ -25,6 +25,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-11 Step 1: 后台测试数据清理 + 独立 /ops Soul Ops 后台雏形已实现、验证并推送
 2026-06-16 新增: Render 已配置 NNZ_OPS_TOKEN，云端 /ops 和 cleanup dry-run smoke 通过
 2026-06-16 Step 2.1: Soul Ops 审计日志已实现，本地干净副本 69 tests / build / audit 通过
+2026-06-17 Step 2.2: Soul Ops RBAC + 删除回执已实现，本地干净副本 72 tests / build / audit 通过
 ```
 
 说明：
@@ -45,6 +46,8 @@ https://github.com/chaoshorizon316/nnz
 - `NNZ_OPS_TOKEN` 是后台 secret，只存在 Render 环境变量中，不写入仓库或文档。
 - 6 月 16 日 Step 2.1 已实现 Soul Ops audit log：记录授权拒绝、overview 查看、cleanup dry-run、cleanup 删除尝试；审计事件随 Postgres snapshot / SQLite 持久化；`/ops` 页面新增 Audit Events 指标和“最近后台操作”面板。
 - 本次验证中 `npm audit` 新报 `esbuild <0.28.1` 高危公告，已通过 `overrides.esbuild="^0.28.1"` 最小修复；干净副本 `npm audit` 为 0 vulnerabilities。
+- 6 月 17 日 Step 2.2 已实现 Soul Ops RBAC：旧 `NNZ_OPS_TOKEN` 继续作为 admin；新增可选 `NNZ_OPS_VIEWER_TOKEN` / `NNZ_OPS_OPERATOR_TOKEN` / `NNZ_OPS_ADMIN_TOKEN`；viewer 只能读 overview，operator 可 dry-run，admin 可真删除。
+- cleanup 真删除现在返回 `receipts` 删除回执；`/ops` 页面新增访问角色面板，并按权限禁用 Dry-run / 确认清理按钮。
 - 本地干净副本验证：`/tmp/nnz-step1-final.MF0YVg` 中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过，10 个测试文件、67 条测试全绿，0 vulnerabilities。
 - 本地 `/ops` browser smoke 通过：输入 `dev-ops-token` 后显示 8 个核心指标、用户表、2 个 Persona 成熟度卡片和测试数据清理面板。
 - Step 1 已推送到 GitHub：`30685df feat: add protected soul ops console`，当前本地与远端同步：`main...origin/main`。
@@ -86,6 +89,8 @@ npm audit
 2026-06-16 结果：Render 云端 `/ops` 已启用，权限边界和 cleanup dry-run smoke 通过。记录见 `nnz-mvp-2026-06-16-SoulOps云端启用记录.md`。
 
 2026-06-16 Step 2.1 结果：`/tmp/nnz-audit-verify.Pm31Tw` 干净副本中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过；10 个测试文件、69 条测试全绿；本地 `/api/ops` smoke 确认 401/403/overview/cleanup dry-run 均写入 audit。记录见 `nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`。
+
+2026-06-17 Step 2.2 结果：`/tmp/nnz-step22-verify.jyhpib` 干净副本中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过；11 个测试文件、72 条测试全绿；本地 API smoke 确认 viewer/operator/admin 权限边界和删除回执。记录见 `nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`。
 
 最新 CI run：
 
@@ -181,6 +186,14 @@ nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md
 
 这份文档记录了 `OpsAuditEvent` 类型、持久化方式、`/ops` 页面变化、验证结果、`esbuild` audit 修复和下一步 RBAC / 删除回执计划。
 
+Soul Ops RBAC 与删除回执记录在：
+
+```text
+nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md
+```
+
+这份文档记录了 viewer/operator/admin 角色、向后兼容旧 `NNZ_OPS_TOKEN`、删除回执、API smoke、干净副本验证和下一步云端角色化配置计划。
+
 ## 当前最重要目标
 
 当前 MVP 核心仍是：
@@ -236,6 +249,7 @@ nnz-mvp/src/ops/ops-console.ts
 nnz-mvp/src/ops/ops-console.test.ts
 nnz-mvp/public/index.html
 nnz-mvp/CLAUDE_CODE_HANDOFF.md
+nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md
 nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md
 nnz-mvp-2026-06-16-SoulOps云端启用记录.md
 nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md

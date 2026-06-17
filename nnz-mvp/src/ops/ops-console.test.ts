@@ -200,11 +200,27 @@ describe('Soul Ops console helpers', () => {
 
     const dryRun = cleanupTestUsers(store, true);
     expect(dryRun.deletedUserIds).toEqual([]);
+    expect(dryRun.receipts).toEqual([]);
     expect(store.getCredentialByEmail('codex-ops-smoke-20260611@example.test')?.userId).toBe(smoke.id);
     expect(store.listPersonasForUser(normal.id)).toEqual([normalPersona]);
 
     const result = cleanupTestUsers(store, false);
     expect(result.deletedUserIds).toEqual([smoke.id]);
+    expect(result.receipts).toHaveLength(1);
+    expect(result.receipts[0]).toMatchObject({
+      userId: smoke.id,
+      email: 'codex-ops-smoke-20260611@example.test',
+      status: 'DELETED',
+      counts: {
+        users: 1,
+        personas: 1,
+        memories: 1,
+        proposals: 1,
+        nodes: 1,
+        conversations: 1,
+        credentials: 1,
+      },
+    });
     expect(store.getCredentialByEmail('codex-ops-smoke-20260611@example.test')).toBeUndefined();
     expect(() => store.listPersonasForUser(smoke.id)).toThrow();
     expect(() => store.getLatestSoulVersion({ userId: smoke.id, personaId: smokePersona.id })).toThrow();

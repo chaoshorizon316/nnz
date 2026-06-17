@@ -121,6 +121,17 @@ export interface OpsCleanupResult {
   dryRun: boolean;
   plan: OpsCleanupPlan;
   deletedUserIds: string[];
+  receipts: OpsCleanupReceipt[];
+}
+
+export interface OpsCleanupReceipt {
+  userId: string;
+  displayName: string;
+  email: string | null;
+  reason: string;
+  counts: OpsCleanupPlan['totals'];
+  deletedAt: string;
+  status: 'DELETED';
 }
 
 export function buildOpsOverview(store: InMemorySoulStore, persistence: OpsPersistenceInfo): OpsOverview {
@@ -182,16 +193,27 @@ export function buildTestUserCleanupPlan(store: InMemorySoulStore): OpsCleanupPl
 export function cleanupTestUsers(store: InMemorySoulStore, dryRun = true): OpsCleanupResult {
   const plan = buildTestUserCleanupPlan(store);
   if (dryRun) {
-    return { dryRun: true, plan, deletedUserIds: [] };
+    return { dryRun: true, plan, deletedUserIds: [], receipts: [] };
   }
 
   const deletedUserIds: string[] = [];
+  const deletedAt = new Date().toISOString();
+  const receipts: OpsCleanupReceipt[] = [];
   for (const user of plan.users) {
     store.deleteUserScopedData(user.userId);
     deletedUserIds.push(user.userId);
+    receipts.push({
+      userId: user.userId,
+      displayName: user.displayName,
+      email: user.email,
+      reason: user.reason,
+      counts: user.counts,
+      deletedAt,
+      status: 'DELETED',
+    });
   }
 
-  return { dryRun: false, plan, deletedUserIds };
+  return { dryRun: false, plan, deletedUserIds, receipts };
 }
 
 function summarizeUser(store: InMemorySoulStore, snapshot: StoreSnapshot, user: User): OpsUserSummary {

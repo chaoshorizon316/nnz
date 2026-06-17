@@ -344,12 +344,30 @@ Step 2.1 审计日志（2026-06-16）：
 
 详细记录见根目录 `nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`。
 
+Step 2.2 RBAC 与删除回执（2026-06-17）：
+
+- 新增 `src/ops/ops-auth.ts` / `src/ops/ops-auth.test.ts`。
+- 旧 `NNZ_OPS_TOKEN` 保持可用，映射为 `admin`，actor 为 `ops:legacy-admin`。
+- 新增可选角色 token：
+  - `NNZ_OPS_VIEWER_TOKEN`
+  - `NNZ_OPS_OPERATOR_TOKEN`
+  - `NNZ_OPS_ADMIN_TOKEN`
+- viewer 只能读取 overview。
+- operator 可以读取 overview 和执行 cleanup dry-run。
+- admin 可以读取 overview、dry-run，并在 `DELETE_TEST_USERS` 确认码正确时执行真删除。
+- cleanup 真删除返回 `receipts` 删除回执。
+- `/ops` 页面显示当前 role、actor、权限，并按权限禁用 Dry-run / 确认清理按钮。
+- `tsconfig.demo.json` 已补 `src/ops/**/*.ts`，确保 Render `build:demo` 包含 `ops-auth`。
+
+详细记录见根目录 `nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`。
+
 后台概览能力：
 
 - 全局 totals：users、personas、memories、pending proposals、nodes、conversations、test users、audit events、persistence mode。
 - 用户表：displayName/email、demo/test 标识、persona/memory/proposal/message 计数。
 - Persona 成熟度卡片：score、level、runtimeState、scope 短 ID、六维成熟度、recommendations。
 - 审计面板：最近后台操作、授权拒绝、dry-run、删除尝试。
+- 访问角色面板：role、actor、Overview / Dry-run / Delete / Audit 权限。
 - 所有 persona 成熟度仍通过 `store.buildSoulMaturityReport({ userId, personaId })` 得到，不按 `personaId` 单查。
 
 测试数据清理能力：
@@ -1191,7 +1209,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md` 和 `nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log，而是进入 RBAC、清理操作删除回执，以及把 snapshot persistence 演进为逐表 repository。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md` 和 `nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，而是进入 audit 查询接口、Audit tab、云端角色 token 配置，以及把 snapshot persistence 演进为逐表 repository。
 
 ## 17. 给下一位 AI 的工作原则
 
