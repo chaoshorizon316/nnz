@@ -225,12 +225,12 @@ Current verified suite on 2026-06-17: 73 tests across domain scope, Soul Ops cle
 
 Cloud Soul Ops status on 2026-06-16: Render has `NNZ_OPS_TOKEN` configured. `/ops` returns 200, `/api/ops/overview` returns 401 without token, 403 with a wrong token, and 200 with the configured token. `POST /api/ops/cleanup-test-users` dry-run returns one explicit smoke/test candidate and deletes nothing. The token value is stored only in Render and must not be committed or documented.
 
-Local Step 2.3 status on 2026-06-17: `/api/ops/audit-events` and the `/ops` Audit tab are implemented. Clean `/tmp` verification passed with 11 test files and 73 tests. Cloud role-specific token smoke is the next verification step after Render has `NNZ_OPS_VIEWER_TOKEN`, `NNZ_OPS_OPERATOR_TOKEN`, and `NNZ_OPS_ADMIN_TOKEN` configured.
+Step 2.3 cloud status on 2026-06-17: `/api/ops/audit-events` and the `/ops` Audit tab are implemented and pushed. GitHub Actions run `27677337466` passed. Render `/healthz` reports Postgres persistence, `/ops` returns 200 and includes the Audit tab, `/api/ops/audit-events` returns 401 without a token and 403 with a wrong token. Cloud role-specific token smoke is the next verification step after Render has `NNZ_OPS_VIEWER_TOKEN`, `NNZ_OPS_OPERATOR_TOKEN`, and `NNZ_OPS_ADMIN_TOKEN` configured.
 
 If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume the source is broken immediately. This directory has shown flaky `node_modules` behavior. A reliable check is to copy a clean git archive to `/tmp`, apply the worktree diff if needed, run `npm ci`, then run the verification commands there.
 
 ## Current State
 
-The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, and Step 2.3 audit query UI/API are implemented locally.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, and Step 2.3 audit query UI/API are implemented and deployed.
 
 Next engineering steps: verify optional role-specific tokens in Render, then evolve snapshot persistence into scoped repositories.

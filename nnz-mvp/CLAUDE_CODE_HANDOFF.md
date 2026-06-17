@@ -361,6 +361,25 @@ Step 2.2 RBAC 与删除回执（2026-06-17）：
 
 详细记录见根目录 `nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`。
 
+Step 2.3 Audit 查询接口与 Audit tab（2026-06-17）：
+
+- 新增 `GET /api/ops/audit-events`。
+- 新增 `AUDIT_QUERY` 审计动作，查询审计本身也会被记录。
+- `queryOpsAuditEvents()` 支持按 action / actor / targetUserId 过滤，支持 limit / offset 分页。
+- `/ops` 页面拆成 `Dashboard` / `Audit` tab。
+- Audit tab 支持 action 下拉、actor 输入、target userId 输入、limit 选择和上一页/下一页。
+- 本地干净副本 `/tmp/nnz-step23-verify.iLBxJh` 中 `npm ci`、`npm test`、`npm run typecheck`、`npm run build:demo` 全部通过；11 个测试文件、73 条测试全绿。
+- 已推送 `a9735a5 feat: add soul ops audit query`。
+- GitHub Actions run `27677337466` success。
+- Render `/healthz` 返回 `fixture:"postgres"`；`/ops` 页面包含 Audit tab；`/api/ops/audit-events` 无 token 401、错 token 403。
+
+详细记录见根目录：
+
+```text
+nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md
+nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md
+```
+
 后台概览能力：
 
 - 全局 totals：users、personas、memories、pending proposals、nodes、conversations、test users、audit events、persistence mode。
@@ -1209,7 +1228,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md` 和 `nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，而是进入 audit 查询接口、Audit tab、云端角色 token 配置，以及把 snapshot persistence 演进为逐表 repository。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md` 和 `nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，并开始把 snapshot persistence 演进为逐表 repository。
 
 ## 17. 给下一位 AI 的工作原则
 

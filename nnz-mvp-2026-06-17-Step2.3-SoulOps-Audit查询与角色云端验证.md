@@ -299,8 +299,8 @@ queries ops audit events by action, actor, target user, and pagination
 
 建议下一步进入 Step 2.4：
 
-1. 推送 Step 2.3 后等待 GitHub Actions。
-2. 如果用户已在 Render 添加角色化 token，做云端 smoke：
+1. Step 2.3 已推送，GitHub Actions run `27677337466` 已 success，Render 基础 smoke 已通过。详情见 `nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`。
+2. 如果用户已在 Render 添加角色化 token，继续补完整云端 role smoke：
    - `/api/ops/audit-events` 401 / 403 / viewer 200。
    - viewer 不能 cleanup。
    - operator 能 dry-run 但不能 delete。
@@ -313,4 +313,3 @@ queries ops audit events by action, actor, target user, and pagination
    - 支持按时间范围导出。
    - 支持只导出 metadata，不导出用户内容。
    - 支持后台安全巡检。
-

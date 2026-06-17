@@ -21,6 +21,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-16 Step 2.1: Soul Ops 审计日志已实现，下一步进入 RBAC / 删除回执
 2026-06-17 Step 2.2: Soul Ops RBAC + 删除回执已实现，下一步进入审计查询与云端角色化配置
 2026-06-17 Step 2.3: Soul Ops Audit 查询接口 + /ops Audit tab 已实现，下一步进入云端角色 token smoke 与 scoped repository
+2026-06-17 Step 2.3 push 后云端验收: GitHub Actions success，Render /ops Audit tab 与 audit-events 401/403 通过
 ```
 
 当前本地相对远端：
@@ -29,10 +30,10 @@ https://github.com/chaoshorizon316/nnz
 main...origin/main
 ```
 
-最新 Step 1 提交：
+最新提交：
 
 ```text
-30685df feat: add protected soul ops console
+a9735a5 feat: add soul ops audit query
 ```
 
 最新云端 Soul Ops 记录：
@@ -42,6 +43,7 @@ nnz-mvp-2026-06-16-SoulOps云端启用记录.md
 nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md
 nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md
 nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md
+nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md
 ```
 
 6 月 8 日引入 SQLite / 登录注册 / 官网首页后，远端 GitHub Actions 出现 failure。6 月 9 日已修复；6 月 10 日首页 H5 和 Postgres snapshot persistence 已推送：
@@ -390,6 +392,8 @@ npm run build:demo
 
 本地 API smoke：`/ops` 返回 200；`/api/ops/audit-events?action=AUDIT_QUERY&actor=ops:admin&limit=2&offset=0` 返回 200；viewer token 查询 audit 返回 200 且 `canDeleteCleanup=false`。
 
+云端基础 smoke：GitHub Actions run `27677337466` success；Render `/healthz` 返回 `fixture:"postgres"`；`/ops` 页面包含 Audit tab；`/api/ops/audit-events` 无 token 返回 401，错 token 返回 403。
+
 下一步：进入 Step 2.4。优先在 Render 验证可选角色 token（viewer/operator/admin）的云端权限边界，然后开始把 Postgres snapshot persistence 演进为强作用域 repository。token 明文不得写入仓库或文档。
 
 ### 后续：微信 / H5 用户端雏形
@@ -502,4 +506,4 @@ npm run build:demo
 npm audit        # 0 vulnerabilities
 ```
 
-当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。2026-06-16 已完成 Render `NNZ_OPS_TOKEN` 配置和云端 `/ops` smoke，并完成 Step 2.1 Soul Ops 审计日志。2026-06-17 已完成 Step 2.2 Soul Ops RBAC 与删除回执；同日 Step 2.3 已完成 Audit 查询接口和 `/ops` Audit tab。下一步进入云端角色 token smoke / scoped repository。
+当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。2026-06-16 已完成 Render `NNZ_OPS_TOKEN` 配置和云端 `/ops` smoke，并完成 Step 2.1 Soul Ops 审计日志。2026-06-17 已完成 Step 2.2 Soul Ops RBAC 与删除回执；同日 Step 2.3 已完成 Audit 查询接口和 `/ops` Audit tab，并已推送通过 GitHub Actions / Render 基础 smoke。下一步进入云端角色 token smoke / scoped repository。
