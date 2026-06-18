@@ -94,8 +94,26 @@
   </div>
 </section>
 
-<!-- ===== H5 EXPERIENCE ===== -->
-<section id="demo" class="py-16 bg-cream">
+<!-- ===== MODAL OVERLAY ===== -->
+<div id="experienceModal" class="modal-overlay" onclick="if(event.target===this)closeExperience()">
+  <div class="modal-content">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closeExperience()">&times;</button>
+      <div style="padding:40px 32px">
+
+<!-- ===== H5 EXPERIENCE (wrapped in modal) ===== -->
+<section id="demo">
+
+<script>
+function openExperience() {
+  document.getElementById('experienceModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeExperience() {
+  document.getElementById('experienceModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+</script>
   <div class="max-w-6xl mx-auto px-6">
     <div class="text-center mb-10">
       <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">在线体验</span>
