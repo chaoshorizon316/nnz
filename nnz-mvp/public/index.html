@@ -95,7 +95,7 @@
 </section>
 
 <!-- ===== MODAL OVERLAY ===== -->
-<div id="experienceModal" class="modal-overlay" onclick="if(event.target===this)closeExperience()">
+<div id="experienceModal" style="position:fixed;inset:0;z-index:99;display:none;background:rgba(61,44,30,.6);backdrop-filter:blur(4px);overflow-y:auto;" onclick="if(event.target===this)closeExperience()">
   <div class="modal-content">
     <div class="modal-card">
       <button class="modal-close" onclick="closeExperience()">&times;</button>
@@ -106,11 +106,11 @@
 
 <script>
 function openExperience() {
-  document.getElementById('experienceModal').classList.add('open');
+  var m=document.getElementById('experienceModal');m.style.display='block';
   document.body.style.overflow = 'hidden';
 }
 function closeExperience() {
-  document.getElementById('experienceModal').classList.remove('open');
+  document.getElementById('experienceModal').style.display='none';
   document.body.style.overflow = '';
 }
 </script>
