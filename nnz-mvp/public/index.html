@@ -1020,6 +1020,7 @@
 // ===== H5 PRIVATE CHAT LOGIC =====
 let h5Token = localStorage.getItem('nnz_h5_token') || '';
 let h5CurrentPersonaId = localStorage.getItem('nnz_h5_persona_id') || '';
+let h5IsSending = false;
 let h5CurrentEmail = '';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1232,6 +1233,7 @@ async function h5CovenantAction(url, body) {
 }
 
 async function h5SendMessage() {
+  if (h5IsSending) return;
   const input = document.getElementById('h5ChatInput');
   const message = input.value.trim();
   if (!h5Token) {
@@ -1290,13 +1292,14 @@ function h5RemoveLoading() {
   if (loading) loading.remove();
 }
 
-function h5BubbleHtml(role, content) {
+function h5BubbleHtml(role, content, time) {
   const isUser = role === 'USER';
   const wrap = isUser ? 'flex gap-3 justify-end' : 'flex gap-3';
   const bubble = isUser
-    ? 'bg-warm-50 rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm border border-warm-200'
+    ? 'bg-warm-600 text-white rounded-2xl rounded-br-sm px-4 py-3 shadow-sm'
     : 'bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100';
-  return '<div class="' + wrap + '"><div class="max-w-[80%]"><div class="' + bubble + '"><p class="text-sm text-warm-700 leading-relaxed whitespace-pre-line">' + escapeHtml(content) + '</p></div></div></div>';
+  const timeHtml = time ? '<span class="text-[10px] opacity-50 ml-2">' + time + '</span>' : '';
+  return '<div class="' + wrap + '"><div class="max-w-[85%]"><div class="' + bubble + '"><p class="text-sm leading-relaxed whitespace-pre-line">' + escapeHtml(content) + timeHtml + '</p></div></div></div>';
 }
 
 async function h5Request(path, options = {}) {
