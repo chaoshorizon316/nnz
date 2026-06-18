@@ -2,7 +2,10 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>念念在 — 让爱有处安放，让告别有期</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -46,7 +49,7 @@
       <a href="#stories" class="hover:text-warm-800 transition-colors">用户故事</a>
       <a href="#faq" class="hover:text-warm-800 transition-colors">常见问题</a>
     </div>
-    <button onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})" class="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors shadow-sm cursor-pointer">
+    <button onclick="openExperience()({behavior:'smooth'})" class="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors shadow-sm cursor-pointer">
       开始创建
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
     </button>
@@ -67,7 +70,7 @@
       为你心里那个从未离开的人，在微信里重建一个<br class="hidden md:block">有温度、有边界、有仪式感的记忆伙伴。
     </p>
     <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
-      <button onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})" class="group inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white text-lg font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 hover:shadow-xl hover:shadow-warm-600/30 cursor-pointer">
+      <button onclick="openExperience()({behavior:'smooth'})" class="group inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white text-lg font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 hover:shadow-xl hover:shadow-warm-600/30 cursor-pointer">
         开始创建
         <svg class="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
       </button>
@@ -94,128 +97,140 @@
   </div>
 </section>
 
-<!-- ===== H5 EXPERIENCE ===== -->
-<section id="demo" class="py-16 bg-cream">
-  <div class="max-w-6xl mx-auto px-6">
-    <div class="text-center mb-10">
-      <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">在线体验</span>
-      <h2 class="font-serif text-3xl md:text-4xl font-semibold text-warm-900 mt-4 mb-4">先在网页里试着说一句</h2>
-      <p class="text-warm-500 max-w-xl mx-auto leading-relaxed">不用改微信客户端。你可以先注册、创建一位记忆中的人，然后在这里完成一次私密对话。</p>
-    </div>
+<!-- ===== EXPERIENCE MODAL ===== -->
+<div id="experienceModal" class="fixed inset-0 z-50 hidden overflow-y-auto" style="background:rgba(61,44,30,.6);backdrop-filter:blur(4px);">
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-cream rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto relative">
+      <button onclick="closeExperience()" class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white shadow flex items-center justify-center hover:bg-warm-50 transition-colors">
+        <svg class="w-5 h-5 text-warm-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <div class="p-6 md:p-10">
+        <div class="text-center mb-8">
+          <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">在线体验</span>
+          <h2 class="font-serif text-2xl md:text-3xl font-semibold text-warm-900 mt-3 mb-2">先在网页里试着说一句</h2>
+          <p class="text-warm-500 max-w-lg mx-auto leading-relaxed text-sm">注册、创建一位记忆中的人，然后完成一次私密对话。也可以跳过注册直接体验。</p>
+        </div>
 
-    <div class="grid md:grid-cols-2 gap-4 md:gap-8">
-      <div class="bg-white/80 rounded-2xl border border-warm-200/50 shadow-lg overflow-hidden">
-        <div class="px-6 py-4 border-b border-warm-100 bg-warm-50/80">
-          <p class="text-xs text-sage-600 font-medium tracking-widest uppercase">Step 1</p>
-          <h3 class="font-serif text-xl font-semibold text-warm-800 mt-1">注册/登录 或 直接体验</h3>
-        </div>
-        <div class="p-6 space-y-3">
-          <div id="h5AuthSignedOut" class="space-y-3">
-            <input id="h5Email" type="email" autocomplete="email" placeholder="邮箱" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
-            <input id="h5Password" type="password" autocomplete="current-password" placeholder="密码，至少 6 位" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
-            <div class="flex gap-3">
-              <button onclick="h5Login()" class="flex-1 py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">登录</button>
-              <button onclick="h5Register()" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">注册</button>
+        <div class="grid md:grid-cols-2 gap-4 md:gap-6">
+          <!-- Step 1: Auth -->
+          <div class="bg-white/80 rounded-2xl border border-warm-200/50 shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-warm-100 bg-warm-50/80">
+              <p class="text-xs text-sage-600 font-medium tracking-widest uppercase">Step 1</p>
+              <h3 class="font-serif text-lg font-semibold text-warm-800 mt-1">注册/登录 或 直接体验</h3>
             </div>
-            <div class="pt-1 border-t border-warm-100">
-              <p class="text-xs text-warm-400 text-center mb-2">或</p>
-              <button onclick="h5GuestMode()" class="w-full py-3 border border-dashed border-warm-300 text-warm-500 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">跳过注册，直接体验</button>
-              <p class="text-xs text-warm-400 text-center mt-2">体验模式下数据不会保存</p>
+            <div class="p-5 space-y-3">
+              <div id="h5AuthSignedOut" class="space-y-3">
+                <input id="h5Email" type="email" autocomplete="email" placeholder="邮箱" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+                <input id="h5Password" type="password" autocomplete="current-password" placeholder="密码，至少 6 位" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+                <div class="flex gap-3">
+                  <button onclick="h5Login()" class="flex-1 py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">登录</button>
+                  <button onclick="h5Register()" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">注册</button>
+                </div>
+                <div class="pt-1 border-t border-warm-100">
+                  <p class="text-xs text-warm-400 text-center mb-2">或</p>
+                  <button onclick="h5GuestMode()" class="w-full py-3 border border-dashed border-warm-300 text-warm-500 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">跳过注册，直接体验</button>
+                  <p class="text-xs text-warm-400 text-center mt-2">体验模式下数据不会保存</p>
+                </div>
+              </div>
+              <div id="h5AuthSignedIn" class="hidden">
+                <p class="text-sm text-warm-600">已登录：<span id="h5UserEmail" class="font-medium text-warm-800"></span></p>
+                <button onclick="h5Logout()" class="mt-3 px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">退出</button>
+              </div>
+              <p id="h5AuthStatus" class="text-xs text-sage-600 h-4"></p>
             </div>
           </div>
-          <div id="h5AuthSignedIn" class="hidden">
-            <p class="text-sm text-warm-600">已登录：<span id="h5UserEmail" class="font-medium text-warm-800"></span></p>
-            <button onclick="h5Logout()" class="mt-3 px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">退出</button>
-          </div>
-          <p id="h5AuthStatus" class="text-xs text-sage-600 h-4"></p>
-        </div>
-      </div>
 
-      <div class="bg-white/80 rounded-2xl border border-warm-200/50 shadow-lg overflow-hidden">
-        <div class="px-6 py-4 border-b border-warm-100 bg-warm-50/80 flex items-center justify-between">
-          <div>
-            <p class="text-xs text-sage-600 font-medium tracking-widest uppercase">Step 2</p>
-            <h3 class="font-serif text-xl font-semibold text-warm-800 mt-1">创建你想念的人</h3>
-          </div>
-          <span id="h5StepIndicator" class="text-xs text-warm-400">1/3</span>
-        </div>
-        <div class="p-6 space-y-4">
-          <!-- Page 1: Basics -->
-          <div id="h5CreatePage1" class="space-y-3">
-            <input id="h5PersonaName" type="text" placeholder="称呼，例如：爸爸" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
-            <div class="mt-3 grid grid-cols-2 gap-2" id="h5QuickNames"></div>
-            <input id="h5Relationship" type="text" placeholder="你们的关系，例如：女儿心中的父亲" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
-            <input id="h5PetPhrase" type="text" placeholder="TA常说的一句话，可选" class="mt-3 w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
-            <button onclick="h5NextPage(2)" class="mt-3 w-full py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">下一步 →</button>
-          </div>
-          <!-- Page 2: Personality -->
-          <div id="h5CreatePage2" class="hidden space-y-4">
-            <p class="text-sm text-warm-600">勾选你记得的特征（可多选，不确定就跳过）</p>
-            <div class="space-y-4" id="h5Traits"></div>
-            <div class="flex gap-3">
-              <button onclick="h5NextPage(1)" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">← 上一步</button>
-              <button onclick="h5NextPage(3)" class="flex-1 py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">下一步 →</button>
+          <!-- Step 2: Persona -->
+          <div class="bg-white/80 rounded-2xl border border-warm-200/50 shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-warm-100 bg-warm-50/80 flex items-center justify-between">
+              <div>
+                <p class="text-xs text-sage-600 font-medium tracking-widest uppercase">Step 2</p>
+                <h3 class="font-serif text-lg font-semibold text-warm-800 mt-1">创建你想念的人</h3>
+              </div>
+              <span id="h5StepIndicator" class="text-xs text-warm-400">1/3</span>
+            </div>
+            <div class="p-5 space-y-3">
+              <div id="h5CreatePage1" class="space-y-3">
+                <input id="h5PersonaName" type="text" placeholder="称呼，例如：爸爸" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+                <div class="grid grid-cols-2 gap-2" id="h5QuickNames"></div>
+                <input id="h5Relationship" type="text" placeholder="你们的关系，例如：女儿心中的父亲" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+                <input id="h5PetPhrase" type="text" placeholder="TA常说的一句话，可选" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+                <button onclick="h5NextPage(2)" class="w-full py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">下一步 →</button>
+              </div>
+              <div id="h5CreatePage2" class="hidden space-y-3">
+                <p class="text-sm text-warm-600">勾选你记得的特征（可多选，不确定就跳过）</p>
+                <div class="space-y-4" id="h5Traits"></div>
+                <div class="flex gap-3">
+                  <button onclick="h5NextPage(1)" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">← 上一步</button>
+                  <button onclick="h5NextPage(3)" class="flex-1 py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">下一步 →</button>
+                </div>
+              </div>
+              <div id="h5CreatePage3" class="hidden space-y-3">
+                <p class="text-sm text-warm-600">还有什么想补充的？（可选）</p>
+                <textarea id="h5Description" rows="3" placeholder="性格、说话方式、小习惯……" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors resize-none bg-warm-50/50"></textarea>
+                <div class="flex gap-3">
+                  <button onclick="h5NextPage(2)" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">← 上一步</button>
+                  <button onclick="h5CreatePersona()" class="flex-1 py-3 bg-sage-500 text-white text-sm font-medium rounded-full hover:bg-sage-600 transition-colors">创建并开始对话</button>
+                </div>
+              </div>
+              <p id="h5PersonaStatus" class="text-xs text-sage-600 h-4"></p>
             </div>
           </div>
-          <!-- Page 3: Free description -->
-          <div id="h5CreatePage3" class="hidden space-y-3">
-            <p class="text-sm text-warm-600">还有什么想补充的？（可选）</p>
-            <textarea id="h5Description" rows="4" placeholder="性格、说话方式、小习惯……" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors resize-none bg-warm-50/50"></textarea>
-            <div class="flex gap-3">
-              <button onclick="h5NextPage(2)" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">← 上一步</button>
-              <button onclick="h5CreatePersona()" class="flex-1 py-3 bg-sage-500 text-white text-sm font-medium rounded-full hover:bg-sage-600 transition-colors">创建并开始对话</button>
-            </div>
-          </div>
-          <p id="h5PersonaStatus" class="text-xs text-sage-600 h-4"></p>
         </div>
-      </div>
-    </div>
 
-    <div class="mt-8 bg-white rounded-2xl border border-warm-200/50 shadow-lg overflow-hidden">
-      <div class="px-4 md:px-6 py-3 md:py-4 border-b border-warm-100 bg-warm-50 flex items-center justify-between gap-3 md:gap-4 flex-wrap">
-        <div class="flex items-center gap-3">
-          <div>
-            <div class="flex items-center gap-2">
-              <p id="h5ChatTitle" class="font-serif text-lg font-semibold text-warm-800">等待创建</p>
-              <select id="h5PersonaSwitcher" class="hidden text-sm border border-warm-200 rounded-full px-3 py-1 bg-white text-warm-700 outline-none cursor-pointer" onchange="h5SwitchPersona(this.value)"></select>
+        <!-- Chat -->
+        <div class="mt-6 bg-white rounded-2xl border border-warm-200/50 shadow-sm overflow-hidden">
+          <div class="px-5 py-3 border-b border-warm-100 bg-warm-50 flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <p id="h5ChatTitle" class="font-serif text-base font-semibold text-warm-800">等待创建</p>
+                  <select id="h5PersonaSwitcher" class="hidden text-sm border border-warm-200 rounded-full px-3 py-1 bg-white text-warm-700 outline-none cursor-pointer" onchange="h5SwitchPersona(this.value)"></select>
+                </div>
+                <p id="h5ChatSubtitle" class="text-xs text-sage-500 mt-0.5">完成登录和创建后，就可以说第一句话。</p>
+              </div>
             </div>
-            <p id="h5ChatSubtitle" class="text-xs text-sage-500 mt-1">完成登录和创建后，就可以说第一句话。</p>
+            <button id="h5NewPersonaBtn" class="hidden text-xs text-sage-600 border border-sage-200 rounded-full px-3 py-1 hover:bg-sage-50 transition-colors" onclick="h5ShowCreatePanel()">+ 新建</button>
           </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <button id="h5NewPersonaBtn" class="hidden text-xs text-sage-600 border border-sage-200 rounded-full px-3 py-1 hover:bg-sage-50 transition-colors" onclick="h5ShowCreatePanel()">+ 新建</button>
-        </div>
-      </div>
-      <div id="h5CovenantBar" class="hidden px-6 py-3 border-b border-warm-100 bg-warm-50 flex items-center justify-between gap-3 flex-wrap">
-        <div class="flex items-center gap-3">
-          <span id="h5CovenantBadge" class="text-xs font-bold px-3 py-1 rounded-full"></span>
-          <span id="h5CovenantHint" class="text-xs text-warm-500"></span>
-        </div>
-        <div id="h5CovenantActions" class="flex gap-2 flex-wrap"></div>
-      </div>
-      <div id="h5Messages" class="h5-chat-full overflow-y-auto px-6 py-6 space-y-4 md:space-y-5 bg-warm-50/30">
-        <div class="flex gap-3">
-          <div class="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center flex-shrink-0">
-            <svg class="w-4 h-4 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+          <div id="h5CovenantBar" class="hidden px-5 py-3 border-b border-warm-100 bg-warm-50 flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-3">
+              <span id="h5CovenantBadge" class="text-xs font-bold px-3 py-1 rounded-full"></span>
+              <span id="h5CovenantHint" class="text-xs text-warm-500"></span>
+            </div>
+            <div id="h5CovenantActions" class="flex gap-2 flex-wrap"></div>
           </div>
-          <div class="max-w-[80%]">
-            <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100">
-              <p class="text-sm text-warm-700 leading-relaxed">这里会显示你和记忆伙伴的对话。内容只属于当前登录账号。</p>
+          <div id="h5Messages" class="h-80 overflow-y-auto px-5 py-4 space-y-4 bg-warm-50/30">
+            <div class="flex gap-3">
+              <div class="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+              </div>
+              <div class="max-w-[80%]">
+                <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100">
+                  <p class="text-sm text-warm-700 leading-relaxed">这里会显示你和记忆伙伴的对话。内容只属于当前登录账号。</p>
+                </div>
+              </div>
             </div>
           </div>
+          <div class="px-5 py-4 border-t border-warm-100 bg-white flex gap-3">
+            <input id="h5ChatInput" type="text" placeholder="想对他说什么？" class="flex-1 px-4 py-2.5 text-sm border border-warm-200 rounded-full outline-none focus:border-warm-400 transition-colors" onkeydown="if(event.key=='Enter')h5SendMessage()">
+            <button onclick="h5SendMessage()" class="px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors flex-shrink-0">发送</button>
+          </div>
         </div>
-      </div>
-      <div class="h5-sticky-input px-6 py-4 border-t border-warm-100 bg-white flex gap-3">
-        <input id="h5ChatInput" type="text" placeholder="想对他说什么？" class="flex-1 px-4 py-2.5 text-sm border border-warm-200 rounded-full outline-none focus:border-warm-400 transition-colors" onkeydown="if(event.key==='Enter')h5SendMessage()">
-        <button onclick="h5SendMessage()" class="px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors flex-shrink-0">发送</button>
-      </div>
-      <div class="px-6 pb-5 text-center">
-        <p class="text-xs text-warm-400">这里先用于网页体验；后续可以在微信里继续同样的对话方式。</p>
       </div>
     </div>
   </div>
-</section>
+</div>
 
+<script>
+function openExperience() {
+  document.getElementById('experienceModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeExperience() {
+  document.getElementById('experienceModal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+</script>
 
 <!-- ===== CORE VALUE (Screen 2) ===== -->
 <section id="value" class="py-24 md:py-32 gradient-warm-bottom">
@@ -291,7 +306,7 @@
       </div>
     </div>
     <div class="text-center mt-12">
-      <button onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})" class="inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 cursor-pointer">
+      <button onclick="openExperience()({behavior:'smooth'})" class="inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 cursor-pointer">
         开始创建
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
       </button>
