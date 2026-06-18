@@ -130,17 +130,25 @@
 
     <div class="mt-8 bg-white rounded-2xl border border-warm-200/50 shadow-lg overflow-hidden">
       <div class="px-6 py-4 border-b border-warm-100 bg-warm-50 flex items-center justify-between gap-4">
-        <div>
-          <p id="h5ChatTitle" class="font-serif text-lg font-semibold text-warm-800">等待创建</p>
-          <p id="h5ChatSubtitle" class="text-xs text-sage-500 mt-1">完成登录和创建后，就可以说第一句话。</p>
-        </div>
-        <div id="h5CovenantBar" class="hidden px-6 py-3 border-b border-warm-100 bg-warm-50 flex items-center justify-between gap-3 flex-wrap">
-          <div class="flex items-center gap-3">
-            <span id="h5CovenantBadge" class="text-xs font-bold px-3 py-1 rounded-full"></span>
-            <span id="h5CovenantHint" class="text-xs text-warm-500"></span>
+        <div class="flex items-center gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <p id="h5ChatTitle" class="font-serif text-lg font-semibold text-warm-800">等待创建</p>
+              <select id="h5PersonaSwitcher" class="hidden text-sm border border-warm-200 rounded-full px-3 py-1 bg-white text-warm-700 outline-none cursor-pointer" onchange="h5SwitchPersona(this.value)"></select>
+            </div>
+            <p id="h5ChatSubtitle" class="text-xs text-sage-500 mt-1">完成登录和创建后，就可以说第一句话。</p>
           </div>
-          <div id="h5CovenantActions" class="flex gap-2 flex-wrap"></div>
         </div>
+        <div class="flex items-center gap-2">
+          <button id="h5NewPersonaBtn" class="hidden text-xs text-sage-600 border border-sage-200 rounded-full px-3 py-1 hover:bg-sage-50 transition-colors" onclick="h5ShowCreatePanel()">+ 新建</button>
+        </div>
+      </div>
+      <div id="h5CovenantBar" class="hidden px-6 py-3 border-b border-warm-100 bg-warm-50 flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-3">
+          <span id="h5CovenantBadge" class="text-xs font-bold px-3 py-1 rounded-full"></span>
+          <span id="h5CovenantHint" class="text-xs text-warm-500"></span>
+        </div>
+        <div id="h5CovenantActions" class="flex gap-2 flex-wrap"></div>
       </div>
       <div id="h5Messages" class="h-96 overflow-y-auto px-6 py-6 space-y-5 bg-warm-50/30">
         <div class="flex gap-3">
@@ -1014,10 +1022,14 @@ async function h5Bootstrap() {
     h5CurrentEmail = data.email || '';
     h5RenderAuth();
     if (data.personas && data.personas.length) {
+      h5UpdatePersonaList(data.personas);
       const selected = data.personas.find((persona) => persona.id === h5CurrentPersonaId) || data.personas[0];
       h5CurrentPersonaId = selected.id;
       localStorage.setItem('nnz_h5_persona_id', selected.id);
+      h5PersonaSwitcher.value = selected.id;
       await h5LoadConversation();
+    } else {
+      h5UpdatePersonaList([]);
     }
   } catch (error) {
     h5SetStatus('h5AuthStatus', error.message || '登录已失效，请重新登录。');
@@ -1067,6 +1079,36 @@ function h5Logout(reload = true) {
   localStorage.removeItem('nnz_h5_token');
   localStorage.removeItem('nnz_h5_persona_id');
   if (reload) location.reload();
+}
+
+function h5UpdatePersonaList(personas) {
+  const sel = document.getElementById('h5PersonaSwitcher');
+  const btn = document.getElementById('h5NewPersonaBtn');
+  if (personas.length <= 1) {
+    sel.classList.add('hidden');
+    btn.classList.toggle('hidden', personas.length === 0);
+  } else {
+    sel.classList.remove('hidden');
+    btn.classList.remove('hidden');
+  }
+  sel.innerHTML = personas.map(p =>
+    '<option value="' + p.id + '">' + p.displayName + '（' + p.relationship + '）</option>'
+  ).join('');
+  sel.value = h5CurrentPersonaId;
+}
+
+async function h5SwitchPersona(personaId) {
+  h5CurrentPersonaId = personaId;
+  localStorage.setItem('nnz_h5_persona_id', personaId);
+  await h5LoadConversation();
+}
+
+function h5ShowCreatePanel() {
+  document.getElementById('h5PersonaName').value = '';
+  document.getElementById('h5Relationship').value = '';
+  document.getElementById('h5PetPhrase').value = '';
+  document.getElementById('h5Description').value = '';
+  document.getElementById('h5PersonaName').focus();
 }
 
 async function h5CreatePersona() {
