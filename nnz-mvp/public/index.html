@@ -107,7 +107,7 @@
       <div class="bg-white/80 rounded-2xl border border-warm-200/50 shadow-lg overflow-hidden">
         <div class="px-6 py-4 border-b border-warm-100 bg-warm-50/80">
           <p class="text-xs text-sage-600 font-medium tracking-widest uppercase">Step 1</p>
-          <h3 class="font-serif text-xl font-semibold text-warm-800 mt-1">登录或注册</h3>
+          <h3 class="font-serif text-xl font-semibold text-warm-800 mt-1">注册/登录 或 直接体验</h3>
         </div>
         <div class="p-6 space-y-3">
           <div id="h5AuthSignedOut" class="space-y-3">
@@ -116,6 +116,11 @@
             <div class="flex gap-3">
               <button onclick="h5Login()" class="flex-1 py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">登录</button>
               <button onclick="h5Register()" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">注册</button>
+            </div>
+            <div class="pt-1 border-t border-warm-100">
+              <p class="text-xs text-warm-400 text-center mb-2">或</p>
+              <button onclick="h5GuestMode()" class="w-full py-3 border border-dashed border-warm-300 text-warm-500 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">跳过注册，直接体验</button>
+              <p class="text-xs text-warm-400 text-center mt-2">体验模式下数据不会保存</p>
             </div>
           </div>
           <div id="h5AuthSignedIn" class="hidden">
@@ -136,12 +141,12 @@
         </div>
         <div class="p-6 space-y-4">
           <!-- Page 1: Basics -->
-          <div id="h5CreatePage1">
+          <div id="h5CreatePage1" class="space-y-3">
             <input id="h5PersonaName" type="text" placeholder="称呼，例如：爸爸" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
             <div class="mt-3 grid grid-cols-2 gap-2" id="h5QuickNames"></div>
-            <input id="h5Relationship" type="text" placeholder="你们的关系，例如：女儿心中的父亲" class="mt-3 w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+            <input id="h5Relationship" type="text" placeholder="你们的关系，例如：女儿心中的父亲" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
             <input id="h5PetPhrase" type="text" placeholder="TA常说的一句话，可选" class="mt-3 w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
-            <button onclick="h5NextPage(2)" class="mt-4 w-full py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">下一步 →</button>
+            <button onclick="h5NextPage(2)" class="mt-3 w-full py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">下一步 →</button>
           </div>
           <!-- Page 2: Personality -->
           <div id="h5CreatePage2" class="hidden space-y-4">
@@ -1085,6 +1090,32 @@ function h5RenderAuth() {
 
 async function h5Register() {
   await h5Auth('/api/register', '注册成功，可以开始创建。');
+}
+
+async function h5GuestMode() {
+  const guestEmail = 'guest_' + Date.now() + '@nnz.demo';
+  const password = 'guest123';
+  try {
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: guestEmail, password })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      h5Token = data.token;
+      h5CurrentEmail = guestEmail;
+      localStorage.setItem('nnz_h5_token', h5Token);
+      document.getElementById('h5AuthSignedOut').classList.add('hidden');
+      document.getElementById('h5AuthSignedIn').classList.remove('hidden');
+      document.getElementById('h5UserEmail').textContent = '体验模式（数据不保存）';
+      h5NextPage(1);
+    } else {
+      h5SetStatus('h5AuthStatus', data.error || '体验模式暂不可用');
+    }
+  } catch (e) {
+    h5SetStatus('h5AuthStatus', '网络错误，请重试');
+  }
 }
 
 async function h5Login() {
