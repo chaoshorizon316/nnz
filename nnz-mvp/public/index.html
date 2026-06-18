@@ -127,16 +127,40 @@
       </div>
 
       <div class="bg-white/80 rounded-2xl border border-warm-200/50 shadow-lg overflow-hidden">
-        <div class="px-6 py-4 border-b border-warm-100 bg-warm-50/80">
-          <p class="text-xs text-sage-600 font-medium tracking-widest uppercase">Step 2</p>
-          <h3 class="font-serif text-xl font-semibold text-warm-800 mt-1">创建你想念的人</h3>
+        <div class="px-6 py-4 border-b border-warm-100 bg-warm-50/80 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-sage-600 font-medium tracking-widest uppercase">Step 2</p>
+            <h3 class="font-serif text-xl font-semibold text-warm-800 mt-1">创建你想念的人</h3>
+          </div>
+          <span id="h5StepIndicator" class="text-xs text-warm-400">1/3</span>
         </div>
-        <div class="p-6 space-y-3">
-          <input id="h5PersonaName" type="text" placeholder="称呼，例如：爸爸" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
-          <input id="h5Relationship" type="text" placeholder="你们的关系，例如：女儿心中的父亲" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
-          <input id="h5PetPhrase" type="text" placeholder="一句常说的话，可选" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
-          <textarea id="h5Description" rows="4" placeholder="写一点你记得的样子：性格、说话方式、小习惯……" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors resize-none bg-warm-50/50"></textarea>
-          <button onclick="h5CreatePersona()" class="w-full py-3 bg-sage-500 text-white text-sm font-medium rounded-full hover:bg-sage-600 transition-colors">创建并开始对话</button>
+        <div class="p-6 space-y-4">
+          <!-- Page 1: Basics -->
+          <div id="h5CreatePage1">
+            <input id="h5PersonaName" type="text" placeholder="称呼，例如：爸爸" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+            <div class="mt-3 grid grid-cols-2 gap-2" id="h5QuickNames"></div>
+            <input id="h5Relationship" type="text" placeholder="你们的关系，例如：女儿心中的父亲" class="mt-3 w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+            <input id="h5PetPhrase" type="text" placeholder="TA常说的一句话，可选" class="mt-3 w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
+            <button onclick="h5NextPage(2)" class="mt-4 w-full py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">下一步 →</button>
+          </div>
+          <!-- Page 2: Personality -->
+          <div id="h5CreatePage2" class="hidden space-y-4">
+            <p class="text-sm text-warm-600">勾选你记得的特征（可多选，不确定就跳过）</p>
+            <div class="space-y-4" id="h5Traits"></div>
+            <div class="flex gap-3">
+              <button onclick="h5NextPage(1)" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">← 上一步</button>
+              <button onclick="h5NextPage(3)" class="flex-1 py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">下一步 →</button>
+            </div>
+          </div>
+          <!-- Page 3: Free description -->
+          <div id="h5CreatePage3" class="hidden space-y-3">
+            <p class="text-sm text-warm-600">还有什么想补充的？（可选）</p>
+            <textarea id="h5Description" rows="4" placeholder="性格、说话方式、小习惯……" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors resize-none bg-warm-50/50"></textarea>
+            <div class="flex gap-3">
+              <button onclick="h5NextPage(2)" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">← 上一步</button>
+              <button onclick="h5CreatePersona()" class="flex-1 py-3 bg-sage-500 text-white text-sm font-medium rounded-full hover:bg-sage-600 transition-colors">创建并开始对话</button>
+            </div>
+          </div>
           <p id="h5PersonaStatus" class="text-xs text-sage-600 h-4"></p>
         </div>
       </div>
@@ -1124,7 +1148,89 @@ function h5ShowCreatePanel() {
   document.getElementById('h5PetPhrase').value = '';
   document.getElementById('h5Description').value = '';
   document.getElementById('h5PersonaName').focus();
+  h5SelectedTraits = {};
+  h5NextPage(1);
 }
+
+const PERSONALITY_TRAITS = [
+  { group: '关爱方式', field: 'careStyle', key: 'care_style', opts: [
+    { label: '言语鼓励', value: 'verbal', desc: '常说暖心的话' },
+    { label: '行动表达', value: 'action', desc: '用做事来表达关心' },
+    { label: '物质给予', value: 'material', desc: '买东西、给零花钱' },
+    { label: '沉默陪伴', value: 'silent', desc: '话不多，但一直在' }
+  ]},
+  { group: '情绪表达', field: 'emotionalExpressiveness', key: 'emotional_expressiveness', opts: [
+    { label: '内敛克制', value: 'reserved', desc: '不太表露情绪' },
+    { label: '温和适中', value: 'moderate', desc: '该说的时候会说' },
+    { label: '外放直率', value: 'expressive', desc: '喜怒哀乐都在脸上' }
+  ]},
+  { group: '幽默感', field: 'humorLevel', key: 'humorLevel', opts: [
+    { label: '几乎不', value: 'low', desc: '说话比较严肃' },
+    { label: '偶尔', value: 'medium', desc: '偶尔开个玩笑' },
+    { label: '很幽默', value: 'high', desc: '经常逗人笑' }
+  ]},
+  { group: '面对困难', field: 'adversityResponse', key: 'adversity_response', opts: [
+    { label: '自己扛', value: 'self_blame', desc: '有事先怪自己' },
+    { label: '找外因', value: 'externalize', desc: '会分析外部原因' },
+    { label: '冷静分析', value: 'analyze', desc: '先想清楚再行动' },
+    { label: '先放一放', value: 'avoid', desc: '不喜欢面对冲突' }
+  ]},
+];
+
+const QUICK_NAMES = ['爸爸','妈妈','爷爷','奶奶','外公','外婆','老公','老婆','哥哥','姐姐','挚友','老师'];
+
+let h5PersonaPage = 1;
+let h5SelectedTraits = {};
+
+function h5InitQuickNames() {
+  const container = document.getElementById('h5QuickNames');
+  container.innerHTML = QUICK_NAMES.map(n =>
+    '<span class="quick-name" onclick="h5QuickSelect(\'' + n + '\')">' + n + '</span>'
+  ).join('');
+}
+
+function h5QuickSelect(name) {
+  document.getElementById('h5PersonaName').value = name;
+  document.querySelectorAll('#h5QuickNames .quick-name').forEach(el => {
+    el.classList.toggle('active', el.textContent === name);
+  });
+}
+
+function h5InitTraits() {
+  const container = document.getElementById('h5Traits');
+  container.innerHTML = PERSONALITY_TRAITS.map(group => {
+    const chips = group.opts.map(opt => {
+      const sel = h5SelectedTraits[group.field] === opt.value ? ' selected' : '';
+      return '<span class="trait-chip' + sel + '" data-field="' + group.field + '" data-value="' + opt.value + '" data-desc="' + opt.desc + '" onclick="h5ToggleTrait(this)">' + opt.label + '</span>';
+    }).join('');
+    return '<div><p class="trait-group-title">' + group.group + '</p><div class="flex flex-wrap gap-2">' + chips + '</div></div>';
+  }).join('');
+}
+
+function h5ToggleTrait(el) {
+  const field = el.dataset.field;
+  const value = el.dataset.value;
+  if (h5SelectedTraits[field] === value) {
+    delete h5SelectedTraits[field];
+    el.classList.remove('selected');
+  } else {
+    // Deselect siblings
+    el.parentElement.querySelectorAll('.trait-chip').forEach(c => c.classList.remove('selected'));
+    h5SelectedTraits[field] = value;
+    el.classList.add('selected');
+  }
+}
+
+function h5NextPage(page) {
+  h5PersonaPage = page;
+  document.getElementById('h5StepIndicator').textContent = page + '/3';
+  document.getElementById('h5CreatePage1').classList.toggle('hidden', page !== 1);
+  document.getElementById('h5CreatePage2').classList.toggle('hidden', page !== 2);
+  document.getElementById('h5CreatePage3').classList.toggle('hidden', page !== 3);
+  if (page === 2) h5InitTraits();
+}
+
+h5InitQuickNames();
 
 async function h5CreatePersona() {
   if (!h5Token) {
@@ -1139,12 +1245,26 @@ async function h5CreatePersona() {
     h5SetStatus('h5PersonaStatus', '请填写称呼和关系。');
     return;
   }
+  // Build traits description from selections
+  const traitLines = [];
+  for (const group of PERSONALITY_TRAITS) {
+    const val = h5SelectedTraits[group.field];
+    if (val) {
+      const opt = group.opts.find(o => o.value === val);
+      if (opt) traitLines.push(group.group + '：' + opt.desc);
+    }
+  }
+  const traitDesc = traitLines.length > 0 ? traitLines.join('；') + '。' : '';
+  const fullDescription = [traitDesc, description].filter(Boolean).join('\n');
   try {
     const data = await h5Request('/api/me/persona', {
       method: 'POST',
-      body: { displayName, relationship, petPhrase, description },
+      body: { displayName, relationship, petPhrase, description: fullDescription, traits: h5SelectedTraits },
     });
     h5CurrentPersonaId = data.persona.id;
+    h5SelectedTraits = {};
+    h5PersonaPage = 1;
+    document.getElementById('h5StepIndicator').textContent = '1/3';
     localStorage.setItem('nnz_h5_persona_id', h5CurrentPersonaId);
     h5SetStatus('h5PersonaStatus', '已创建，可以开始说话。');
     h5RenderConversation(data.persona, data.messages || []);

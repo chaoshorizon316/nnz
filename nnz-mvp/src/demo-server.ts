@@ -216,6 +216,7 @@ const server = createServer(async (req, res) => {
         relationship?: string;
         description?: string;
         petPhrase?: string;
+        traits?: Record<string, string>;
       }>(req);
       if (!normalizeVisibleText(body.displayName, 24) || !normalizeVisibleText(body.relationship, 24)) {
         return sendJson(res, { error: '请填写称呼和关系。' }, 400);
@@ -974,7 +975,7 @@ function listUserPersonaSummaries(userId: string): UserPersonaSummary[] {
 
 async function createUserPersona(
   userId: string,
-  input: { displayName?: string; relationship?: string; description?: string; petPhrase?: string },
+  input: { displayName?: string; relationship?: string; description?: string; petPhrase?: string; traits?: Record<string, string> },
 ): Promise<{ persona: UserPersonaSummary; messages: ReturnType<typeof serializeUserMessages> }> {
   const displayName = normalizeVisibleText(input.displayName, 24);
   const relationship = normalizeVisibleText(input.relationship, 24);
@@ -1000,7 +1001,7 @@ async function createUserPersona(
         relationship,
       },
       affectModel: {
-        humorLevel: 'medium',
+        humorLevel: (input.traits?.humorLevel === 'high' ? 'high' : input.traits?.humorLevel === 'low' ? 'low' : 'medium'),
       },
       languageModel: {
         petPhrases: petPhrase ? [petPhrase] : [],
