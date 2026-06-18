@@ -74,7 +74,9 @@ Shared Memorial Space
 src/domain/types.ts
 src/domain/errors.ts
 src/domain/soul-store.ts
+src/domain/scoped-soul-repository.ts
 src/domain/soul-scope.test.ts
+src/domain/scoped-soul-repository.test.ts
 ```
 
 关键类型：
@@ -111,6 +113,14 @@ InMemorySoulStore
 - `requireScope()` 要求 `userId + personaId` 同时存在。
 - `requirePersonaOwnership()` 防止拿 A 的 `userId` 访问 B 的 `personaId`。
 - `requireNodeOwnership()` 防止跨 scope 写入节点对话。
+
+新增 `ScopedSoulRepository`：
+
+```ts
+const repo = bindSoulRepository(store, { userId, personaId });
+```
+
+它在绑定时验证完整 scope 和 persona ownership。绑定后，调用方通过 repo 执行 Soul / Memory / Snapshot / Proposal / Node / Conversation / Covenant / Runtime / Maturity 操作，不需要在每次调用时重新传 scope。即使调用方用 `as never` 传入其他 `userId/personaId`，repo 也会以绑定 scope 为准。这是后续从全量 snapshot persistence 演进到 Postgres scoped repositories 的适配层。
 
 ### 4.2 Soul Runtime
 

@@ -40,12 +40,12 @@ interface CreatePersonaInput {
   type: PersonaType;
 }
 
-interface CreateSoulVersionInput extends UserPersonaScope {
+export interface CreateSoulVersionInput extends UserPersonaScope {
   kernelJson: Record<string, unknown>;
   status?: SoulStatus;
 }
 
-interface AddMemoryInput extends UserPersonaScope {
+export interface AddMemoryInput extends UserPersonaScope {
   type: MemoryType;
   source?: MemorySource;
   content: string;
@@ -59,18 +59,18 @@ interface AddMemoryInput extends UserPersonaScope {
   state?: MemoryState;
 }
 
-interface CreateSoulUpdateProposalInput extends UserPersonaScope {
+export interface CreateSoulUpdateProposalInput extends UserPersonaScope {
   fieldPath: string;
   newValue: unknown;
   evidenceIds: string[];
 }
 
-interface CreateNodeInput extends UserPersonaScope {
+export interface CreateNodeInput extends UserPersonaScope {
   name: string;
   durationDays?: number;
 }
 
-interface AddConversationInput extends UserPersonaScope {
+export interface AddConversationInput extends UserPersonaScope {
   nodeId?: string;
   role: ConversationMessage['role'];
   content: string;

@@ -18,6 +18,8 @@ There is no global `DeceasedSoul`, no cross-user merge, and no automatic family 
 
 Every Soul, Memory, Snapshot, Node, and Conversation access path must provide both `userId` and `personaId`. Access with only `personaId` is rejected.
 
+`ScopedSoulRepository` is the current bridge toward scoped persistence repositories. It binds a complete `{ userId, personaId }` once through `bindSoulRepository(store, scope)` and then exposes only scope-private Soul, Memory, Snapshot, Proposal, Node, Conversation, Covenant, Runtime, and Maturity operations. This keeps the MVP store behavior unchanged while giving the next Postgres repository split a safer call shape.
+
 ## Covenant Lifecycle
 
 The current demo supports this user-scoped runtime flow:

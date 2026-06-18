@@ -134,6 +134,13 @@
           <p id="h5ChatTitle" class="font-serif text-lg font-semibold text-warm-800">等待创建</p>
           <p id="h5ChatSubtitle" class="text-xs text-sage-500 mt-1">完成登录和创建后，就可以说第一句话。</p>
         </div>
+        <div id="h5CovenantBar" class="hidden px-6 py-3 border-b border-warm-100 bg-warm-50 flex items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-center gap-3">
+            <span id="h5CovenantBadge" class="text-xs font-bold px-3 py-1 rounded-full"></span>
+            <span id="h5CovenantHint" class="text-xs text-warm-500"></span>
+          </div>
+          <div id="h5CovenantActions" class="flex gap-2 flex-wrap"></div>
+        </div>
       </div>
       <div id="h5Messages" class="h-96 overflow-y-auto px-6 py-6 space-y-5 bg-warm-50/30">
         <div class="flex gap-3">
@@ -1095,6 +1102,79 @@ async function h5LoadConversation() {
   h5RenderConversation(data.persona, data.messages || []);
 }
 
+async function h5RefreshCovenantState() {
+  if (!h5Token || !h5CurrentPersonaId) return;
+  try {
+    const res = await fetch('/api/me/covenant-state?personaId=' + h5CurrentPersonaId, {
+      headers: h5AuthHeaders()
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const bar = document.getElementById('h5CovenantBar');
+    const badge = document.getElementById('h5CovenantBadge');
+    const hint = document.getElementById('h5CovenantHint');
+    const actions = document.getElementById('h5CovenantActions');
+    const state = data.state;
+    bar.classList.remove('hidden');
+    badge.className = 'text-xs font-bold px-3 py-1 rounded-full';
+    const labels = { ACTIVE: '活跃中', SEALED: '已封存', NODE: '节点中', GRADUATED: '已毕业' };
+    const cssMap = { ACTIVE: 'covenant-active', SEALED: 'covenant-sealed', NODE: 'covenant-node', GRADUATED: 'covenant-graduated' };
+    badge.textContent = labels[state] || state;
+    badge.classList.add(cssMap[state] || '');
+    actions.innerHTML = '';
+
+    if (state === 'ACTIVE') {
+      hint.textContent = '「封存」后，AI 会暂时休息，直到下一个重要时刻。';
+      actions.innerHTML = '<button class="covenant-btn covenant-btn-seal" onclick="h5SealSoul()">封存</button>';
+    } else if (state === 'SEALED') {
+      hint.textContent = '等待下一个节点。输入节点名称重启 3 天互动。';
+      actions.innerHTML = '<input id="h5NodeName" type="text" placeholder="例如：婚礼" style="padding:6px 12px;border:1px solid #E8D5C4;border-radius:999px;font-size:13px;width:100px">' +
+        '<button class="covenant-btn covenant-btn-node" onclick="h5ActivateNode()">节点重启</button>' +
+        '<button class="covenant-btn covenant-btn-graduate" onclick="h5Graduate()">毕业</button>';
+    } else if (state === 'NODE') {
+      const nodeName = data.nodeContext ? data.nodeContext.nodeName : '当前节点';
+      hint.textContent = '节点「' + nodeName + '」进行中。完成后将回到封存状态。';
+      actions.innerHTML = '<button class="covenant-btn covenant-btn-done" onclick="h5CompleteNode()">完成节点</button>';
+    } else if (state === 'GRADUATED') {
+      hint.textContent = '这段思念已安静落幕。感谢你曾经认真说过这些话。';
+      bar.classList.add('hidden');
+    }
+  } catch (e) { /* ignore */ }
+}
+
+async function h5SealSoul() {
+  await h5CovenantAction('/api/me/seal', { personaId: h5CurrentPersonaId });
+}
+async function h5ActivateNode() {
+  const nodeName = document.getElementById('h5NodeName')?.value || '重要时刻';
+  await h5CovenantAction('/api/me/activate-node', { personaId: h5CurrentPersonaId, nodeName });
+}
+async function h5CompleteNode() {
+  await h5CovenantAction('/api/me/complete-node', { personaId: h5CurrentPersonaId });
+}
+async function h5Graduate() {
+  if (!confirm('毕业意味着这段对话将永久封存。确定要继续吗？')) return;
+  await h5CovenantAction('/api/me/graduate', { personaId: h5CurrentPersonaId });
+}
+async function h5CovenantAction(url, body) {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { ...h5AuthHeaders(), 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (res.ok) {
+      await h5RefreshCovenantState();
+      await h5LoadChatHistory();
+    } else {
+      alert(data.error || '操作失败');
+    }
+  } catch (e) {
+    alert('网络错误');
+  }
+}
+
 async function h5SendMessage() {
   const input = document.getElementById('h5ChatInput');
   const message = input.value.trim();
@@ -1125,6 +1205,7 @@ async function h5SendMessage() {
 function h5RenderConversation(persona, messages) {
   document.getElementById('h5ChatTitle').textContent = persona ? '和「' + persona.displayName + '」说说话' : '等待创建';
   document.getElementById('h5ChatSubtitle').textContent = persona
+  h5RefreshCovenantState();
     ? persona.relationship + ' · 已保存 ' + (persona.messageCount || messages.length || 0) + ' 条对话'
     : '完成登录和创建后，就可以说第一句话。';
   const container = document.getElementById('h5Messages');

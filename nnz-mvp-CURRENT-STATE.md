@@ -1,9 +1,9 @@
 # nnz-mvp 当前状态与交接指南
 
-> 更新：2026-06-17
+> 更新：2026-06-18
 > 覆盖：Soul 作用域、Covenant 状态机、Memory 分层、Soul Ops、安全护栏、Render demo、LLM 对话、自动化提取管线、SQLite 持久化、登录注册、官网首页
 
-## 2026-06-17 GitHub / CI / 本地状态
+## 2026-06-18 GitHub / CI / 本地状态
 
 GitHub 仓库已经建立：
 
@@ -22,6 +22,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-17 Step 2.2: Soul Ops RBAC + 删除回执已实现，下一步进入审计查询与云端角色化配置
 2026-06-17 Step 2.3: Soul Ops Audit 查询接口 + /ops Audit tab 已实现，下一步进入云端角色 token smoke 与 scoped repository
 2026-06-17 Step 2.3 push 后云端验收: GitHub Actions success，Render /ops Audit tab 与 audit-events 401/403 通过
+2026-06-18 Step 2.4: ScopedSoulRepository 作用域绑定仓储适配层已实现，本地 typecheck / domain scope tests / build 通过
 ```
 
 当前本地相对远端：
@@ -44,6 +45,7 @@ nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md
 nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md
 nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md
 nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md
+nnz-mvp-2026-06-18-Step2.4-ScopedSoulRepository作用域仓储.md
 ```
 
 6 月 8 日引入 SQLite / 登录注册 / 官网首页后，远端 GitHub Actions 出现 failure。6 月 9 日已修复；6 月 10 日首页 H5 和 Postgres snapshot persistence 已推送：
@@ -137,8 +139,10 @@ src/
 │   ├── types.ts          — 全部类型定义（User, Soul, Memory, Session, Maturity…）
 │   ├── errors.ts         — ScopeValidationError, NotFoundError, OwnershipError, CovenantStateError
 │   ├── soul-store.ts     — InMemorySoulStore：作用域隔离 + covenant 状态机 + memory 分层 + maturity
+│   ├── scoped-soul-repository.ts — 绑定 userId + personaId 的作用域仓储适配层
 │   ├── persistence.ts    — SQLite save/load for demo persistence
 │   ├── soul-scope.test.ts
+│   ├── scoped-soul-repository.test.ts
 │   ├── persistence.test.ts
 │   └── index.ts          — re-export barrel
 ├── runtime/
@@ -173,6 +177,7 @@ src/
 |:---|:---|:---|:---|
 | `types.ts` | ~170 行 | 所有类型 | SoulVersion, MemoryItem（13字段）, RuntimeSession, SoulMaturityReport |
 | `soul-store.ts` | ~850 行 | 核心引擎 | sealSoul, activateNode, completeNode, graduateSoul, getRuntimeContext, buildSoulMaturityReport, listRuntimeMemory, listSoulUpdateMemory |
+| `scoped-soul-repository.ts` | ~150 行 | 作用域绑定适配层 | bindSoulRepository, ScopedSoulRepository |
 | `soul-runtime.ts` | ~150 行 | 回复生成 | generateSoulReply(soul, memories, message) → SoulReply |
 | `soul-guard.ts` | ~120 行 | 安全护栏 | checkMessageSafety, checkDailyLimit, incrementDailyCount |
 | `demo-server.ts` | ~850 行 | 演示服务 | 14 个 API 端点 + 完整 HTML UI |

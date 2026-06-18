@@ -254,6 +254,96 @@ const server = createServer(async (req, res) => {
       return sendJson(res, reply);
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/me/covenant-state') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      const personaId = url.searchParams.get('personaId');
+      if (!personaId) {
+        return sendJson(res, { error: '请提供 personaId。' }, 400);
+      }
+      if (!ensureUserPersonaAccess(res, authUser.userId, personaId)) return;
+      const scope = { userId: authUser.userId, personaId };
+      const session = fixture.store.getRuntimeSession(scope);
+      return sendJson(res, { state: session.state, nodeContext: session.nodeContext ?? null });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/me/seal') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      const body = await readJsonBody<{ personaId?: string }>(req);
+      if (!body.personaId) return sendJson(res, { error: '请提供 personaId。' }, 400);
+      if (!ensureUserPersonaAccess(res, authUser.userId, body.personaId)) return;
+      const scope = { userId: authUser.userId, personaId: body.personaId };
+      try {
+        const { session } = fixture.store.sealSoul(scope);
+        await persistIfEnabled();
+        return sendJson(res, { state: session.state });
+      } catch (error) {
+        if (error instanceof CovenantStateError) {
+          return sendJson(res, { error: '当前状态不允许封存。' }, 409);
+        }
+        throw error;
+      }
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/me/activate-node') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      const body = await readJsonBody<{ personaId?: string; nodeName?: string }>(req);
+      if (!body.personaId) return sendJson(res, { error: '请提供 personaId。' }, 400);
+      const nodeName = normalizeVisibleText(body.nodeName, 20) || '重要时刻';
+      if (!ensureUserPersonaAccess(res, authUser.userId, body.personaId)) return;
+      const scope = { userId: authUser.userId, personaId: body.personaId };
+      try {
+        const { session } = fixture.store.activateNode(scope, nodeName);
+        await persistIfEnabled();
+        return sendJson(res, { state: session.state, nodeName: session.nodeContext?.nodeName });
+      } catch (error) {
+        if (error instanceof CovenantStateError) {
+          return sendJson(res, { error: '当前状态不允许节点重启。请先封存。' }, 409);
+        }
+        throw error;
+      }
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/me/complete-node') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      const body = await readJsonBody<{ personaId?: string }>(req);
+      if (!body.personaId) return sendJson(res, { error: '请提供 personaId。' }, 400);
+      if (!ensureUserPersonaAccess(res, authUser.userId, body.personaId)) return;
+      const scope = { userId: authUser.userId, personaId: body.personaId };
+      try {
+        const session = fixture.store.completeNode(scope);
+        await persistIfEnabled();
+        return sendJson(res, { state: session.state });
+      } catch (error) {
+        if (error instanceof CovenantStateError) {
+          return sendJson(res, { error: '当前状态不允许完成节点。' }, 409);
+        }
+        throw error;
+      }
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/me/graduate') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      const body = await readJsonBody<{ personaId?: string }>(req);
+      if (!body.personaId) return sendJson(res, { error: '请提供 personaId。' }, 400);
+      if (!ensureUserPersonaAccess(res, authUser.userId, body.personaId)) return;
+      const scope = { userId: authUser.userId, personaId: body.personaId };
+      try {
+        const session = fixture.store.graduateSoul(scope);
+        await persistIfEnabled();
+        return sendJson(res, { state: session.state });
+      } catch (error) {
+        if (error instanceof CovenantStateError) {
+          return sendJson(res, { error: '当前状态不允许毕业。' }, 409);
+        }
+        throw error;
+      }
+    }
+
     if (req.method === 'GET' && url.pathname === '/healthz') {
       return sendJson(res, {
         ok: true,

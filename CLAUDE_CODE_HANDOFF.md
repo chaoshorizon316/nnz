@@ -9,7 +9,7 @@ https://nnz-kego.onrender.com
 
 免费版无请求 15 分钟会休眠，首次访问需等 30–60 秒唤醒。部署细节见 `nnz-mvp-2026-06-04-云托管完成交接.md`。
 
-## 最新 GitHub / CI / 本地状态（2026-06-17）
+## 最新 GitHub / CI / 本地状态（2026-06-18）
 
 GitHub 仓库：
 
@@ -28,6 +28,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-17 Step 2.2: Soul Ops RBAC + 删除回执已实现，本地干净副本 72 tests / build / audit 通过
 2026-06-17 Step 2.3: Soul Ops Audit 查询接口 + /ops Audit tab 已实现，本地干净副本 73 tests / build 通过
 2026-06-17 Step 2.3 push 后云端验收: GitHub Actions success，Render /ops Audit tab 与 audit-events 401/403 通过
+2026-06-18 Step 2.4: ScopedSoulRepository 作用域绑定仓储适配层已实现，本地 typecheck / domain scope tests / build 通过
 ```
 
 说明：
@@ -54,6 +55,8 @@ https://github.com/chaoshorizon316/nnz
 - Step 2.3 本地 API smoke 通过：`GET /ops -> 200`；admin 查询 `AUDIT_QUERY` 返回 200；viewer 查询 audit 返回 200 且仍无 cleanup 删除权限。
 - Step 2.3 已推送并完成基础云端验收：GitHub Actions run `27677337466` success；Render `/healthz` 为 Postgres；`/ops` HTML 已包含 Audit tab；`/api/ops/audit-events` 无 token 返回 401、错 token 返回 403。
 - Step 2.3 云端角色 token 仍待验证：Render 旧 `NNZ_OPS_TOKEN` 兼容 admin；如已添加 `NNZ_OPS_VIEWER_TOKEN` / `NNZ_OPS_OPERATOR_TOKEN` / `NNZ_OPS_ADMIN_TOKEN`，下一步应做 viewer/operator/admin smoke。不要记录 token 明文。
+- 6 月 18 日 Step 2.4 已实现 `ScopedSoulRepository`：通过 `bindSoulRepository(store, { userId, personaId })` 绑定完整 scope 后再执行 Soul / Memory / Snapshot / Proposal / Node / Conversation / Runtime / Maturity 操作，为后续 Postgres scoped repositories 拆分打基础。
+- Step 2.4 本地验证：清理旧 `node_modules` 后重新 `npm ci`，`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过；全量测试为 12 个测试文件、79 tests。
 - 本地干净副本验证：`/tmp/nnz-step1-final.MF0YVg` 中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过，10 个测试文件、67 条测试全绿，0 vulnerabilities。
 - 本地 `/ops` browser smoke 通过：输入 `dev-ops-token` 后显示 8 个核心指标、用户表、2 个 Persona 成熟度卡片和测试数据清理面板。
 - Step 1 已推送到 GitHub：`30685df feat: add protected soul ops console`，当前本地与远端同步：`main...origin/main`。
@@ -101,6 +104,8 @@ npm audit
 2026-06-17 Step 2.3 结果：`/tmp/nnz-step23-verify.iLBxJh` 干净副本中 `npm ci`、`npm test`、`npm run typecheck`、`npm run build:demo` 全部通过；11 个测试文件、73 条测试全绿；本地 API smoke 确认 `/api/ops/audit-events`、Audit tab HTML、viewer/admin 审计查询。记录见 `nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`。
 
 2026-06-17 Step 2.3 push 后云端验收：GitHub Actions success；Render `GET /healthz` 返回 `fixture:"postgres"`；`GET /ops` 返回 200 且包含 Audit tab；`GET /api/ops/audit-events` 无 token 401、错 token 403。记录见 `nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`。
+
+2026-06-18 Step 2.4 结果：新增 `src/domain/scoped-soul-repository.ts` / `src/domain/scoped-soul-repository.test.ts`，绑定 `userId + personaId` 后提供作用域内 Soul / Memory / Proposal / Node / Conversation / Covenant / Runtime / Maturity 操作；本地 `npm ci`、typecheck、全量测试、build:demo 和 audit 通过。记录见 `nnz-mvp-2026-06-18-Step2.4-ScopedSoulRepository作用域仓储.md`。
 
 最新 CI run：
 
