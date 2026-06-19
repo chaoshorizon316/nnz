@@ -104,16 +104,7 @@
 <!-- ===== H5 EXPERIENCE (wrapped in modal) ===== -->
 <section id="demo">
 
-<script>
-function openExperience() {
-  var m=document.getElementById('experienceModal');m.style.display='block';
-  document.body.style.overflow = 'hidden';
-}
-function closeExperience() {
-  document.getElementById('experienceModal').style.display='none';
-  document.body.style.overflow = '';
-}
-</script>
+
   <div class="max-w-6xl mx-auto px-6">
     <div class="text-center mb-10">
       <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">在线体验</span>
@@ -1272,11 +1263,15 @@ function h5ToggleTrait(el) {
 
 function h5NextPage(page) {
   h5PersonaPage = page;
-  document.getElementById('h5StepIndicator').textContent = page + '/3';
-  document.getElementById('h5CreatePage1').classList.toggle('hidden', page !== 1);
-  document.getElementById('h5CreatePage2').classList.toggle('hidden', page !== 2);
-  document.getElementById('h5CreatePage3').classList.toggle('hidden', page !== 3);
-  if (page === 2) h5InitTraits();
+  var ind = document.getElementById('h5StepIndicator');
+  if (ind) ind.textContent = page + '/3';
+  var p1 = document.getElementById('h5CreatePage1');
+  var p2 = document.getElementById('h5CreatePage2');
+  var p3 = document.getElementById('h5CreatePage3');
+  if (p1) p1.classList.toggle('hidden', page !== 1);
+  if (p2) p2.classList.toggle('hidden', page !== 2);
+  if (p3) p3.classList.toggle('hidden', page !== 3);
+  if (page === 2 && typeof h5InitTraits === 'function') h5InitTraits();
 }
 
 h5InitQuickNames();
