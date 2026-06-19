@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- v3 modal 2026-06-19 -->
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -46,7 +46,7 @@
       <a href="#stories" class="hover:text-warm-800 transition-colors">用户故事</a>
       <a href="#faq" class="hover:text-warm-800 transition-colors">常见问题</a>
     </div>
-    <button onclick="openExperience()" class="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors shadow-sm cursor-pointer">
+    <button onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})" class="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors shadow-sm cursor-pointer">
       开始创建
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
     </button>
@@ -67,7 +67,7 @@
       为你心里那个从未离开的人，在微信里重建一个<br class="hidden md:block">有温度、有边界、有仪式感的记忆伙伴。
     </p>
     <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
-      <button onclick="openExperience()" class="group inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white text-lg font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 hover:shadow-xl hover:shadow-warm-600/30 cursor-pointer">
+      <button onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})" class="group inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white text-lg font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 hover:shadow-xl hover:shadow-warm-600/30 cursor-pointer">
         开始创建
         <svg class="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
       </button>
@@ -94,17 +94,8 @@
   </div>
 </section>
 
-<!-- ===== MODAL OVERLAY ===== -->
-<div id="experienceModal" style="position:fixed;inset:0;z-index:99;display:none;background:rgba(61,44,30,.6);backdrop-filter:blur(4px);overflow-y:auto;" onclick="if(event.target===this)closeExperience()">
-  <div class="modal-content">
-    <div class="modal-card">
-      <button class="modal-close" onclick="closeExperience()">&times;</button>
-      <div style="padding:40px 32px">
-
-<!-- ===== H5 EXPERIENCE (wrapped in modal) ===== -->
-<section id="demo">
-
-
+<!-- ===== H5 EXPERIENCE ===== -->
+<section id="demo" class="py-16 bg-cream">
   <div class="max-w-6xl mx-auto px-6">
     <div class="text-center mb-10">
       <span class="text-xs font-medium text-sage-600 tracking-widest uppercase">在线体验</span>
@@ -300,7 +291,7 @@
       </div>
     </div>
     <div class="text-center mt-12">
-      <button onclick="openExperience()" class="inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 cursor-pointer">
+      <button onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})" class="inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 cursor-pointer">
         开始创建
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
       </button>
@@ -1263,15 +1254,11 @@ function h5ToggleTrait(el) {
 
 function h5NextPage(page) {
   h5PersonaPage = page;
-  var ind = document.getElementById('h5StepIndicator');
-  if (ind) ind.textContent = page + '/3';
-  var p1 = document.getElementById('h5CreatePage1');
-  var p2 = document.getElementById('h5CreatePage2');
-  var p3 = document.getElementById('h5CreatePage3');
-  if (p1) p1.classList.toggle('hidden', page !== 1);
-  if (p2) p2.classList.toggle('hidden', page !== 2);
-  if (p3) p3.classList.toggle('hidden', page !== 3);
-  if (page === 2 && typeof h5InitTraits === 'function') h5InitTraits();
+  document.getElementById('h5StepIndicator').textContent = page + '/3';
+  document.getElementById('h5CreatePage1').classList.toggle('hidden', page !== 1);
+  document.getElementById('h5CreatePage2').classList.toggle('hidden', page !== 2);
+  document.getElementById('h5CreatePage3').classList.toggle('hidden', page !== 3);
+  if (page === 2) h5InitTraits();
 }
 
 h5InitQuickNames();
