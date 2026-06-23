@@ -1,9 +1,9 @@
 # nnz-mvp 当前状态与交接指南
 
-> 更新：2026-06-18
+> 更新：2026-06-23
 > 覆盖：Soul 作用域、Covenant 状态机、Memory 分层、Soul Ops、安全护栏、Render demo、LLM 对话、自动化提取管线、SQLite 持久化、登录注册、官网首页
 
-## 2026-06-18 GitHub / CI / 本地状态
+## 2026-06-22 GitHub / CI / 本地状态
 
 GitHub 仓库已经建立：
 
@@ -23,6 +23,10 @@ https://github.com/chaoshorizon316/nnz
 2026-06-17 Step 2.3: Soul Ops Audit 查询接口 + /ops Audit tab 已实现，下一步进入云端角色 token smoke 与 scoped repository
 2026-06-17 Step 2.3 push 后云端验收: GitHub Actions success，Render /ops Audit tab 与 audit-events 401/403 通过
 2026-06-18 Step 2.4: ScopedSoulRepository 作用域绑定仓储适配层已实现，本地 typecheck / domain scope tests / build 通过
+2026-06-18~21 H5 首页/弹窗方向多轮尝试，最终 main 回退到 modal 前稳定版
+2026-06-22 线上与工作区核查：Render healthz/Postgres 正常，Ops audit 无 token 401 正常；当前 Codex 默认 workspace 是空壳副本，完整副本在 `黑曜石知识库 2/Personal/我还在`
+2026-06-22 H5 修复：`public/index.html` 已把 CTA 改回打开 H5 体验 modal，并修复 h5RenderConversation / h5AuthHeaders / h5LoadChatHistory 遗留断点；本地 npm ci、typecheck、12 个测试文件 79 tests、build:demo 通过
+2026-06-23 H5 创建体验优化：`public/index.html` 已把 Step 2 Page 1 改为输入区 + 常用称呼左右结构，常用称呼选中态更明显；特征选择改为复选框式真多选，并保持后端 traits 字符串 payload 兼容；本地 typecheck、12 个测试文件 79 tests、build:demo 通过
 ```
 
 当前本地相对远端：
@@ -34,7 +38,7 @@ main...origin/main
 最新提交：
 
 ```text
-a9735a5 feat: add soul ops audit query
+560520f fix: revert index.html to stable version before modal
 ```
 
 最新云端 Soul Ops 记录：
@@ -46,7 +50,34 @@ nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md
 nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md
 nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md
 nnz-mvp-2026-06-18-Step2.4-ScopedSoulRepository作用域仓储.md
+nnz-mvp-2026-06-22-线上与工作区核查记录.md
+nnz-mvp-2026-06-22-H5体验弹窗与CTA修复记录.md
+nnz-mvp-2026-06-23-H5创建体验选项交互优化.md
 ```
+
+## 2026-06-22 工作区注意
+
+当前 Codex 环境默认给出的路径：
+
+```text
+/Users/will/Library/Mobile Documents/iCloud~md~obsidian/Documents/黑曜石知识库/Personal/我还在
+```
+
+核查时发现这是异常空壳副本：`.git` 不完整，`nnz-mvp` 基本只剩 `node_modules`。
+
+当前完整副本是：
+
+```text
+/Users/will/Library/Mobile Documents/iCloud~md~obsidian/Documents/黑曜石知识库 2/Personal/我还在
+```
+
+这份副本 `git status -sb` 为：
+
+```text
+## main...origin/main
+```
+
+后续修改代码、记录日志、运行验证前，应先确认工作目录指向完整副本，避免在空壳目录误操作。
 
 6 月 8 日引入 SQLite / 登录注册 / 官网首页后，远端 GitHub Actions 出现 failure。6 月 9 日已修复；6 月 10 日首页 H5 和 Postgres snapshot persistence 已推送：
 

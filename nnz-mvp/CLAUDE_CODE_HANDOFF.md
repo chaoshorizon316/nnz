@@ -7,10 +7,10 @@
 工作目录：
 
 ```bash
-/Users/will/Library/Mobile Documents/iCloud~md~obsidian/Documents/黑曜石知识库/Personal/我还在/nnz-mvp
+/Users/will/Library/Mobile Documents/iCloud~md~obsidian/Documents/黑曜石知识库 2/Personal/我还在/nnz-mvp
 ```
 
-根目录还有一个早期静态原型 `index.html`，但当前可运行的 Soul 作用域 MVP 在 `nnz-mvp/` 下。
+注意：2026-06-22 核查时发现无后缀的 `黑曜石知识库/Personal/我还在` 是异常空壳副本，`.git` 不完整且源码/文档缺失。当前完整副本在 `黑曜石知识库 2/Personal/我还在`。根目录还有一个早期静态原型 `index.html`，但当前可运行的 Soul 作用域 MVP 在 `nnz-mvp/` 下。
 
 ## 2. 产品意图
 
@@ -65,6 +65,36 @@ Shared Memorial Space
 3. LLM Adapter：OpenAI-compatible 对话生成，支持 DeepSeek 等兼容服务。
 4. Extraction Pipeline：从用户私有对话中提取候选记忆，并生成可审核 proposal。
 5. Demo Server：同时提供首页 H5 用户端验证流、`/demo` 的“两用户并排聊天”开发者验证页，以及受 `NNZ_OPS_TOKEN` 保护的独立 `/ops` Soul Ops 后台雏形。
+
+### 4.0 最新 H5 状态（2026-06-23）
+
+`public/index.html` 当前首页 H5 体验是 modal 打开方式，不是页面内重复 demo。
+
+已修复：
+
+- 导航和首页 CTA 会调用 `openExperience(event)` 打开同一个 H5 modal。
+- `h5RenderConversation()`、`h5AuthHeaders()`、`h5CovenantAction()` 的历史断点已修复。
+- 「创建你想念的人」Page 1 已改为左右结构：左侧输入称呼、关系、口头禅，右侧展示常用称呼快速选择。
+- 常用称呼选中态已强化为实底、白字、边框和阴影，并支持键盘焦点态。
+- 「勾选你记得的特征」已改为复选框式真多选；同一组可多选，取消一个不会清掉其他选择。
+- 创建人格描述会保留全部多选特征；提交给后端的 `traits` 仍保持当前字符串兼容形态，避免影响 `humorLevel` 等既有逻辑。
+
+2026-06-23 验证：
+
+```text
+node inline script / DOM smoke: passed
+git diff --check: passed
+npm run typecheck: passed
+npm test: passed, 12 test files / 79 tests
+npm run build:demo: passed
+H5 multi-select behavior smoke: passed
+```
+
+记录见根目录：
+
+```text
+nnz-mvp-2026-06-23-H5创建体验选项交互优化.md
+```
 
 ### 4.1 Domain Store
 
@@ -1239,6 +1269,45 @@ LLM adapter initialized for extraction pipeline.
 ```
 
 接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md` 和 `nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，并开始把 snapshot persistence 演进为逐表 repository。
+
+## 16.3 2026-06-22 H5 modal / CTA 修复
+
+接手前，另一位 AI 在 2026-06-18 到 2026-06-21 主要围绕 `public/index.html` 反复修 H5 modal / CTA，最后 `main` 回退到：
+
+```text
+560520f fix: revert index.html to stable version before modal
+```
+
+回退后线上可用但不是 modal：CTA 只滚动到内嵌 `#demo` H5。
+
+本次已在完整工作区修复：
+
+- CTA 改为 `openExperience(event)`。
+- 原唯一 `#demo` H5 DOM 改为 modal overlay，没有复制 H5 节点，避免重复 id 和事件错绑。
+- 新增 `closeExperience()`、Escape 关闭、遮罩关闭、body 滚动锁定、焦点恢复。
+- 修复 `h5RenderConversation()` 三元表达式被 `h5RefreshCovenantState()` 打断的问题。
+- 补齐 `h5AuthHeaders()`。
+- `h5CovenantAction()` 成功后改为调用已存在的 `h5LoadConversation()`。
+
+验证：
+
+```text
+npm ci: 通过，0 vulnerabilities
+better-sqlite3: Mach-O 64-bit bundle arm64
+npm run typecheck: 通过
+npm test: 12 个测试文件、79 tests passed
+npm run build:demo: 通过
+local /healthz: 通过
+modal JS smoke: modal-smoke-ok
+```
+
+记录见：
+
+```text
+../nnz-mvp-2026-06-22-H5体验弹窗与CTA修复记录.md
+```
+
+注意：本次修复尚未提交 / 推送。线上 Render 仍是 `560520f`，需要提交推送后等 GitHub Actions 与 Render 部署完成，再做线上首页 smoke。
 
 ## 17. 给下一位 AI 的工作原则
 
