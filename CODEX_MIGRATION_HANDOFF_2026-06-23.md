@@ -190,22 +190,21 @@ NNZ_DB_PATH=/tmp/nnz-h5-ui-local.db npm run dev
 https://nnz-kego.onrender.com
 ```
 
-截至这些本地修改完成时：
+截至 2026-06-23 16:48：
 
-- 线上仍是 GitHub `main` 最新已部署版本附近，HEAD 参考为 `560520f fix: revert index.html to stable version before modal`。
-- 本地 H5 modal / CTA / 创建体验优化尚未提交、推送、部署。
-- 因此线上还看不到 2026-06-22 / 2026-06-23 的本地修复。
+- H5 modal / CTA / 创建体验优化已提交并推送到 GitHub `main`。
+- 最新代码提交为 `5e0df09 fix: restore h5 experience modal`。
+- GitHub Actions `NNZ MVP CI` run `28012032867` 已完成，结论为 success。
+- Render `/healthz` 返回 200，`fixture:"postgres"`。
+- Render 首页 HTML 已返回 `openExperience(event)`、`.nnz-experience-modal[hidden]`、`trait-check` 和 `h5-trait-options`，说明 H5 modal 与创建体验优化已部署到线上。
 
-后续上线需要：
+本次上线已完成：
 
 ```text
-1. 在新 Codex 项目中确认工作区路径正确。
-2. 查看 git diff。
-3. 重新跑 typecheck / test / build:demo / audit。
-4. 提交 commit。
-5. push 到 GitHub。
-6. 等 GitHub Actions / Render 部署完成。
-7. 做线上 smoke：/healthz、首页 CTA、modal 初始隐藏、创建体验 Page 1/2。
+commit: 5e0df09 fix: restore h5 experience modal
+GitHub Actions: https://github.com/chaoshorizon316/nnz/actions/runs/28012032867
+Render healthz: passed, postgres fixture
+Render homepage smoke: confirmed modal hidden guard, CTA openExperience, checkbox trait UI
 ```
 
 ## 10. 下一个 Codex 对话的第一步建议
@@ -228,9 +227,9 @@ git diff --stat
 
 ```text
 1. 检查本交接包。
-2. 检查当前未提交 diff。
-3. 若用户同意，提交并推送 H5 修复与文档。
-4. 推送后做线上验收。
+2. 确认当前主库仍是 `黑曜石知识库 2/Personal/我还在`。
+3. 继续从 Step 2.5：Postgres scoped repository 设计与最小落地。
+4. 若继续改 H5，先以线上 `5e0df09` 为最新稳定基线。
 ```
 
 ## 11. 用户偏好与重要约定

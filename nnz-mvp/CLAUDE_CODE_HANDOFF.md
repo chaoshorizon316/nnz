@@ -88,6 +88,9 @@ npm run typecheck: passed
 npm test: passed, 12 test files / 79 tests
 npm run build:demo: passed
 H5 multi-select behavior smoke: passed
+GitHub Actions run 28012032867: success
+Render /healthz: passed, postgres fixture
+Render homepage HTML smoke: confirmed modal hidden guard, openExperience CTA, trait-check checkbox UI
 ```
 
 记录见根目录：
@@ -1307,7 +1310,7 @@ modal JS smoke: modal-smoke-ok
 ../nnz-mvp-2026-06-22-H5体验弹窗与CTA修复记录.md
 ```
 
-注意：本次修复尚未提交 / 推送。线上 Render 仍是 `560520f`，需要提交推送后等 GitHub Actions 与 Render 部署完成，再做线上首页 smoke。
+上线状态：本次修复已通过提交 `5e0df09 fix: restore h5 experience modal` 推送到 GitHub `main`；GitHub Actions run `28012032867` success；Render 首页已返回 H5 modal / CTA / checkbox 多选版本。记录见 `../nnz-mvp-2026-06-23-H5修复上线验收记录.md`。
 
 ## 17. 给下一位 AI 的工作原则
 

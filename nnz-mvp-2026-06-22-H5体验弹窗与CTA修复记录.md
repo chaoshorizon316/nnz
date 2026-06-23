@@ -242,11 +242,10 @@ modal-hidden-smoke-ok
 - 本次没有改动 Soul / Memory / Snapshot / Node / Conversation 的作用域模型。
 - 本次没有改动 Soul Ops token、RBAC、审计日志、删除回执或云端 Postgres 配置。
 - 用户端仍不暴露 `userId`、`personaId`、`SoulVersion`、`MemoryItem`、`SoulUpdateProposal` 等后台机制词。
-- 线上 Render 当前仍是提交 `560520f` 的版本；本次本地修复尚未提交 / 推送。
+- 2026-06-23 已通过提交 `5e0df09 fix: restore h5 experience modal` 推送到 GitHub `main`，GitHub Actions run `28012032867` success，Render 首页已返回 modal 版本。
 
 ## Next Steps
 
-1. 完成真实浏览器点击 smoke：打开 `http://127.0.0.1:3062`，点击首页 CTA，确认 H5 modal 可见、关闭按钮和 Escape 正常。
-2. 如浏览器 smoke 通过，提交本次 `index.html` 修复和知识库记录。
-3. 推送后等待 GitHub Actions，并复核 Render 首页是否从内嵌 H5 切为 modal H5。
-4. H5 修复完成后，工程主线继续回到 Step 2.5：Postgres scoped repository 设计与最小落地。
+1. H5 修复已提交、推送并完成线上 smoke。
+2. 若后续继续改 H5，先以线上 `5e0df09` 为稳定基线。
+3. 工程主线继续回到 Step 2.5：Postgres scoped repository 设计与最小落地。

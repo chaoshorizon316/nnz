@@ -27,6 +27,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-22 线上与工作区核查：Render healthz/Postgres 正常，Ops audit 无 token 401 正常；当前 Codex 默认 workspace 是空壳副本，完整副本在 `黑曜石知识库 2/Personal/我还在`
 2026-06-22 H5 修复：`public/index.html` 已把 CTA 改回打开 H5 体验 modal，并修复 h5RenderConversation / h5AuthHeaders / h5LoadChatHistory 遗留断点；本地 npm ci、typecheck、12 个测试文件 79 tests、build:demo 通过
 2026-06-23 H5 创建体验优化：`public/index.html` 已把 Step 2 Page 1 改为输入区 + 常用称呼左右结构，常用称呼选中态更明显；特征选择改为复选框式真多选，并保持后端 traits 字符串 payload 兼容；本地 typecheck、12 个测试文件 79 tests、build:demo 通过
+2026-06-23 H5 修复上线：`5e0df09 fix: restore h5 experience modal` 已推送到 GitHub `main`；GitHub Actions run `28012032867` success；Render `/healthz` 与首页 H5 modal HTML smoke 通过
 ```
 
 当前本地相对远端：
@@ -38,7 +39,7 @@ main...origin/main
 最新提交：
 
 ```text
-560520f fix: revert index.html to stable version before modal
+5e0df09 fix: restore h5 experience modal
 ```
 
 最新云端 Soul Ops 记录：
@@ -53,6 +54,7 @@ nnz-mvp-2026-06-18-Step2.4-ScopedSoulRepository作用域仓储.md
 nnz-mvp-2026-06-22-线上与工作区核查记录.md
 nnz-mvp-2026-06-22-H5体验弹窗与CTA修复记录.md
 nnz-mvp-2026-06-23-H5创建体验选项交互优化.md
+nnz-mvp-2026-06-23-H5修复上线验收记录.md
 ```
 
 ## 2026-06-22 工作区注意

@@ -33,6 +33,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-22 线上与工作区核查：Render healthz/Postgres 正常，Ops audit 无 token 401 正常；当前完整副本在 `黑曜石知识库 2/Personal/我还在`
 2026-06-22 H5 修复：`public/index.html` 已把首页 CTA 改回打开 H5 体验 modal，并修复 h5RenderConversation / h5AuthHeaders / h5LoadChatHistory 遗留断点；本地 typecheck、全量测试、build:demo 通过
 2026-06-23 H5 创建体验优化：`public/index.html` 已把创建表单 Page 1 改为输入区 + 常用称呼左右结构，强化常用称呼选中态；Page 2 特征项改为复选框式真多选，并保持后端 traits payload 兼容；本地 typecheck、全量测试、build:demo 通过
+2026-06-23 H5 修复上线：提交 `5e0df09 fix: restore h5 experience modal` 已推送到 GitHub `main`；GitHub Actions run `28012032867` success；Render `/healthz` 和首页 H5 modal HTML smoke 通过
 ```
 
 说明：
@@ -67,6 +68,7 @@ https://github.com/chaoshorizon316/nnz
 - 6 月 22 日已补充核查记录：`nnz-mvp-2026-06-22-线上与工作区核查记录.md`。
 - 6 月 22 日已接手并修复 H5 modal / CTA：导航和首屏 CTA 调用 `openExperience(event)`；原 `#demo` 唯一 H5 DOM 改为 modal overlay，避免重复 id；补齐 `h5AuthHeaders()`，修复 `h5RenderConversation()` 三元表达式断点和 `h5LoadChatHistory()` 误调用；验证记录见 `nnz-mvp-2026-06-22-H5体验弹窗与CTA修复记录.md`。
 - 6 月 23 日已优化 H5 创建体验：Page 1 改为左右结构并强化常用称呼选中态；Page 2 改为 checkbox 真多选，选中态包含勾选框、底色、边框和阴影；创建人格描述保留全部多选特征，提交给后端的 `traits` 仍保持当前字符串兼容。验证记录见 `nnz-mvp-2026-06-23-H5创建体验选项交互优化.md`。
+- 6 月 23 日 H5 修复已上线：提交 `5e0df09 fix: restore h5 experience modal` 已推送；GitHub Actions run `28012032867` success；Render `/healthz` 为 Postgres；线上首页 HTML 已包含 `openExperience(event)`、`.nnz-experience-modal[hidden]`、`trait-check` 和 `h5-trait-options`。
 - 本地干净副本验证：`/tmp/nnz-step1-final.MF0YVg` 中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过，10 个测试文件、67 条测试全绿，0 vulnerabilities。
 - 本地 `/ops` browser smoke 通过：输入 `dev-ops-token` 后显示 8 个核心指标、用户表、2 个 Persona 成熟度卡片和测试数据清理面板。
 - Step 1 已推送到 GitHub：`30685df feat: add protected soul ops console`，当前本地与远端同步：`main...origin/main`。
@@ -119,14 +121,14 @@ npm audit
 
 2026-06-22 结果：完成线上与本地工作区核查。线上 Render healthz/Postgres 正常，Soul Ops audit 无 token 401 正常；GitHub `main` 最新为 `560520f` 且 CI 成功；另一个 AI 主要做 H5 modal/CTA 多轮尝试后回退稳定版；当前 Codex 默认 workspace 是空壳副本，完整工作区在 `黑曜石知识库 2/Personal/我还在`。记录见 `nnz-mvp-2026-06-22-线上与工作区核查记录.md`。
 
-2026-06-22 H5 修复结果：完整工作区中已执行 `npm ci` 干净重装，`better-sqlite3` 确认为 arm64；`npm run typecheck`、`npm test`、`npm run build:demo` 全部通过，全量测试为 12 个测试文件、79 tests；本地 demo healthz 通过，modal JS 冒烟通过。记录见 `nnz-mvp-2026-06-22-H5体验弹窗与CTA修复记录.md`。注意：本次本地修复尚未提交 / 推送，线上 Render 仍是 `560520f`。
+2026-06-22 H5 修复结果：完整工作区中已执行 `npm ci` 干净重装，`better-sqlite3` 确认为 arm64；`npm run typecheck`、`npm test`、`npm run build:demo` 全部通过，全量测试为 12 个测试文件、79 tests；本地 demo healthz 通过，modal JS 冒烟通过。记录见 `nnz-mvp-2026-06-22-H5体验弹窗与CTA修复记录.md`。2026-06-23 已通过 `5e0df09` 推送上线。
 
-2026-06-23 H5 创建体验优化结果：`node` 内联脚本 smoke、`git diff --check`、`npm run typecheck`、`npm test`、`npm run build:demo`、H5 多选行为 smoke 均通过；全量测试为 12 个测试文件、79 tests。记录见 `nnz-mvp-2026-06-23-H5创建体验选项交互优化.md`。注意：本次本地优化尚未提交 / 推送，线上 Render 仍需后续部署才会生效。
+2026-06-23 H5 创建体验优化结果：`node` 内联脚本 smoke、`git diff --check`、`npm run typecheck`、`npm test`、`npm run build:demo`、H5 多选行为 smoke 均通过；全量测试为 12 个测试文件、79 tests。记录见 `nnz-mvp-2026-06-23-H5创建体验选项交互优化.md`。已通过 `5e0df09` 推送上线，GitHub Actions run `28012032867` success，Render 首页 HTML smoke 通过。
 
 最新 CI run：
 
 ```text
-https://github.com/chaoshorizon316/nnz/actions/runs/27267872384
+https://github.com/chaoshorizon316/nnz/actions/runs/28012032867
 ```
 
 ## 2026-06-05 接手校验
