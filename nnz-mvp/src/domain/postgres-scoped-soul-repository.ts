@@ -2,16 +2,25 @@ import { randomUUID } from 'node:crypto';
 
 import pg from 'pg';
 
-import { NotFoundError, OwnershipError, ScopeValidationError } from './errors';
+import { CovenantStateError, NotFoundError, OwnershipError, ScopeValidationError } from './errors';
 import type {
   ConversationMessage,
   MemoryItem,
+  NodeEvent,
   Persona,
   PersonaType,
+  RuntimeSession,
+  SoulSnapshot,
+  SoulVersion,
   User,
   UserPersonaScope,
 } from './types';
-import type { AddConversationInput, AddMemoryInput } from './soul-store';
+import type {
+  AddConversationInput,
+  AddMemoryInput,
+  CreateNodeInput,
+  CreateSoulVersionInput,
+} from './soul-store';
 
 const { Pool } = pg;
 
@@ -57,6 +66,58 @@ CREATE TABLE IF NOT EXISTS nnz_memory_items (
 CREATE INDEX IF NOT EXISTS idx_nnz_memory_scope_created
   ON nnz_memory_items (user_id, persona_id, created_at, id);
 
+CREATE TABLE IF NOT EXISTS nnz_soul_versions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  persona_id TEXT NOT NULL,
+  version INTEGER NOT NULL,
+  kernel_json JSONB NOT NULL,
+  status TEXT NOT NULL,
+  knowledge_cutoff TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL,
+  UNIQUE (user_id, persona_id, id),
+  UNIQUE (user_id, persona_id, version),
+  FOREIGN KEY (user_id, persona_id) REFERENCES nnz_personas (user_id, id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_nnz_soul_versions_scope_version
+  ON nnz_soul_versions (user_id, persona_id, version);
+
+CREATE INDEX IF NOT EXISTS idx_nnz_soul_versions_scope_status
+  ON nnz_soul_versions (user_id, persona_id, status, version);
+
+CREATE TABLE IF NOT EXISTS nnz_soul_snapshots (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  persona_id TEXT NOT NULL,
+  soul_version_id TEXT NOT NULL,
+  kernel_json JSONB NOT NULL,
+  memory_ids JSONB NOT NULL,
+  sealed_at TIMESTAMPTZ NOT NULL,
+  UNIQUE (user_id, persona_id, id),
+  FOREIGN KEY (user_id, persona_id) REFERENCES nnz_personas (user_id, id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id, persona_id, soul_version_id)
+    REFERENCES nnz_soul_versions (user_id, persona_id, id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_nnz_soul_snapshots_scope_sealed
+  ON nnz_soul_snapshots (user_id, persona_id, sealed_at, id);
+
+CREATE TABLE IF NOT EXISTS nnz_node_events (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  persona_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  status TEXT NOT NULL,
+  start_at TIMESTAMPTZ NOT NULL,
+  end_at TIMESTAMPTZ NOT NULL,
+  UNIQUE (user_id, persona_id, id),
+  FOREIGN KEY (user_id, persona_id) REFERENCES nnz_personas (user_id, id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_nnz_node_events_scope_start
+  ON nnz_node_events (user_id, persona_id, start_at, id);
+
 CREATE TABLE IF NOT EXISTS nnz_conversation_messages (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -70,6 +131,20 @@ CREATE TABLE IF NOT EXISTS nnz_conversation_messages (
 
 CREATE INDEX IF NOT EXISTS idx_nnz_conversation_scope_created
   ON nnz_conversation_messages (user_id, persona_id, created_at, id);
+
+CREATE TABLE IF NOT EXISTS nnz_runtime_sessions (
+  user_id TEXT NOT NULL,
+  persona_id TEXT NOT NULL,
+  state TEXT NOT NULL,
+  soul_snapshot_id TEXT,
+  node_id TEXT,
+  node_name TEXT,
+  daily_message_count INTEGER,
+  last_message_date TEXT,
+  updated_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (user_id, persona_id),
+  FOREIGN KEY (user_id, persona_id) REFERENCES nnz_personas (user_id, id) ON DELETE CASCADE
+);
 `;
 
 type OptionalScope = Partial<UserPersonaScope> | undefined;
@@ -88,6 +163,8 @@ export interface CreatePersonaRowInput {
 
 export type PostgresScopedAddMemoryInput = Omit<AddMemoryInput, 'userId' | 'personaId'>;
 export type PostgresScopedAddConversationInput = Omit<AddConversationInput, 'userId' | 'personaId'>;
+export type PostgresScopedCreateSoulVersionInput = Omit<CreateSoulVersionInput, 'userId' | 'personaId'>;
+export type PostgresScopedCreateNodeInput = Omit<CreateNodeInput, 'userId' | 'personaId'>;
 
 export class PostgresScopedSoulRepository {
   private readonly scopeValue: UserPersonaScope;
@@ -109,6 +186,111 @@ export class PostgresScopedSoulRepository {
 
   async getPersona(): Promise<Persona> {
     return getPersonaForUser(this.pool, this.scopeValue);
+  }
+
+  async createSoulVersion(input: PostgresScopedCreateSoulVersionInput): Promise<SoulVersion> {
+    await this.ensureBoundPersona();
+    const status = input.status ?? 'ACTIVE';
+
+    if (status === 'ACTIVE') {
+      await this.pool.query(
+        `UPDATE nnz_soul_versions
+         SET status = 'ARCHIVED'
+         WHERE user_id = $1 AND persona_id = $2 AND status = 'ACTIVE'`,
+        [this.scopeValue.userId, this.scopeValue.personaId],
+      );
+    }
+
+    const versionNumber = await this.nextSoulVersionNumber();
+    const soulVersion = createSoulVersion({ ...input, ...this.scopeValue }, versionNumber);
+    await this.pool.query(
+      `INSERT INTO nnz_soul_versions (
+        id, user_id, persona_id, version, kernel_json, status, knowledge_cutoff, created_at
+      ) VALUES (
+        $1, $2, $3, $4, $5::jsonb, $6, $7, $8
+      )`,
+      [
+        soulVersion.id,
+        soulVersion.userId,
+        soulVersion.personaId,
+        soulVersion.version,
+        JSON.stringify(soulVersion.kernelJson),
+        soulVersion.status,
+        soulVersion.knowledgeCutoff ?? null,
+        soulVersion.createdAt,
+      ],
+    );
+    return soulVersion;
+  }
+
+  async getLatestSoulVersion(): Promise<SoulVersion> {
+    await this.ensureBoundPersona();
+    const result = await this.pool.query<SoulVersionRow>(
+      `SELECT *
+       FROM nnz_soul_versions
+       WHERE user_id = $1 AND persona_id = $2 AND status = 'ACTIVE'
+       ORDER BY version DESC
+       LIMIT 1`,
+      [this.scopeValue.userId, this.scopeValue.personaId],
+    );
+    const row = result.rows[0];
+    if (!row) {
+      throw new NotFoundError(
+        `No ACTIVE soul version found for user ${this.scopeValue.userId} and persona ${this.scopeValue.personaId}.`,
+      );
+    }
+    return mapSoulVersionRow(row);
+  }
+
+  async listSoulVersions(): Promise<SoulVersion[]> {
+    await this.ensureBoundPersona();
+    const result = await this.pool.query<SoulVersionRow>(
+      `SELECT *
+       FROM nnz_soul_versions
+       WHERE user_id = $1 AND persona_id = $2
+       ORDER BY version ASC`,
+      [this.scopeValue.userId, this.scopeValue.personaId],
+    );
+    return result.rows.map(mapSoulVersionRow);
+  }
+
+  async createSoulSnapshot(): Promise<SoulSnapshot> {
+    await this.ensureBoundPersona();
+    const soulVersion = await this.getLatestSoulVersion();
+    const memories = await this.listMemory();
+    const snapshot = createSoulSnapshot(this.scopeValue, soulVersion, memories);
+    await this.pool.query(
+      `INSERT INTO nnz_soul_snapshots (
+        id, user_id, persona_id, soul_version_id, kernel_json, memory_ids, sealed_at
+      ) VALUES (
+        $1, $2, $3, $4, $5::jsonb, $6::jsonb, $7
+      )`,
+      [
+        snapshot.id,
+        snapshot.userId,
+        snapshot.personaId,
+        snapshot.soulVersionId,
+        JSON.stringify(snapshot.kernelJson),
+        JSON.stringify(snapshot.memoryIds),
+        snapshot.sealedAt,
+      ],
+    );
+    return snapshot;
+  }
+
+  async getSoulSnapshot(snapshotId: string): Promise<SoulSnapshot> {
+    await this.ensureBoundPersona();
+    const result = await this.pool.query<SoulSnapshotRow>(
+      `SELECT *
+       FROM nnz_soul_snapshots
+       WHERE user_id = $1 AND persona_id = $2 AND id = $3`,
+      [this.scopeValue.userId, this.scopeValue.personaId, snapshotId],
+    );
+    const row = result.rows[0];
+    if (!row) {
+      throw new NotFoundError(`Soul snapshot ${snapshotId} was not found in the requested user/persona scope.`);
+    }
+    return mapSoulSnapshotRow(row);
   }
 
   async addMemory(input: PostgresScopedAddMemoryInput): Promise<MemoryItem> {
@@ -177,6 +359,9 @@ export class PostgresScopedSoulRepository {
 
   async addConversation(input: PostgresScopedAddConversationInput): Promise<ConversationMessage> {
     await this.ensureBoundPersona();
+    if (input.nodeId) {
+      await this.requireNodeOwnership(input.nodeId);
+    }
     const message = createConversation({ ...input, ...this.scopeValue });
     await this.pool.query(
       `INSERT INTO nnz_conversation_messages (
@@ -207,6 +392,260 @@ export class PostgresScopedSoulRepository {
       [this.scopeValue.userId, this.scopeValue.personaId],
     );
     return result.rows.map(mapConversationRow);
+  }
+
+  async createNode(input: PostgresScopedCreateNodeInput): Promise<NodeEvent> {
+    await this.ensureBoundPersona();
+    const node = createNode({ ...input, ...this.scopeValue });
+    await this.pool.query(
+      `INSERT INTO nnz_node_events (
+        id, user_id, persona_id, name, status, start_at, end_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7
+      )`,
+      [
+        node.id,
+        node.userId,
+        node.personaId,
+        node.name,
+        node.status,
+        node.startAt,
+        node.endAt,
+      ],
+    );
+    return node;
+  }
+
+  async listNodes(): Promise<NodeEvent[]> {
+    await this.ensureBoundPersona();
+    const result = await this.pool.query<NodeEventRow>(
+      `SELECT *
+       FROM nnz_node_events
+       WHERE user_id = $1 AND persona_id = $2
+       ORDER BY start_at ASC, id ASC`,
+      [this.scopeValue.userId, this.scopeValue.personaId],
+    );
+    return result.rows.map(mapNodeEventRow);
+  }
+
+  async getRuntimeSession(): Promise<RuntimeSession> {
+    await this.ensureBoundPersona();
+    const existing = await this.getRuntimeSessionRow();
+    if (existing) {
+      return mapRuntimeSessionRow(existing);
+    }
+
+    const fresh: RuntimeSession = {
+      userId: this.scopeValue.userId,
+      personaId: this.scopeValue.personaId,
+      state: 'ACTIVE',
+      dailyMessageCount: 0,
+      lastMessageDate: todayString(),
+    };
+    await this.setSession(fresh);
+    return fresh;
+  }
+
+  async sealSoul(): Promise<{ snapshot: SoulSnapshot; session: RuntimeSession }> {
+    await this.ensureBoundPersona();
+    const current = await this.getRuntimeSession();
+    if (current.state !== 'ACTIVE') {
+      throw new CovenantStateError(current.state);
+    }
+
+    const snapshot = await this.createSoulSnapshot();
+    await this.pool.query(
+      `UPDATE nnz_soul_versions
+       SET status = 'ARCHIVED'
+       WHERE user_id = $1 AND persona_id = $2 AND id = $3`,
+      [this.scopeValue.userId, this.scopeValue.personaId, snapshot.soulVersionId],
+    );
+
+    const session: RuntimeSession = {
+      userId: this.scopeValue.userId,
+      personaId: this.scopeValue.personaId,
+      state: 'SEALED',
+      soulSnapshotId: snapshot.id,
+      dailyMessageCount: current.dailyMessageCount ?? 0,
+      lastMessageDate: current.lastMessageDate ?? todayString(),
+    };
+    await this.setSession(session);
+    return { snapshot, session };
+  }
+
+  async activateNode(nodeName: string, durationDays?: number): Promise<{ node: NodeEvent; session: RuntimeSession }> {
+    await this.ensureBoundPersona();
+    const current = await this.getRuntimeSession();
+    if (current.state !== 'SEALED') {
+      throw new CovenantStateError(current.state);
+    }
+
+    const node = await this.findReusableNode(nodeName) ?? await this.createNode({
+      name: nodeName,
+      ...(durationDays === undefined ? {} : { durationDays }),
+    });
+    await this.addNodeMemoryIfMissing(nodeName);
+
+    const session: RuntimeSession = {
+      userId: this.scopeValue.userId,
+      personaId: this.scopeValue.personaId,
+      state: 'NODE',
+      soulSnapshotId: current.soulSnapshotId!,
+      nodeContext: {
+        nodeId: node.id,
+        nodeName,
+      },
+      dailyMessageCount: current.dailyMessageCount ?? 0,
+      lastMessageDate: current.lastMessageDate ?? todayString(),
+    };
+    await this.setSession(session);
+    return { node, session };
+  }
+
+  async completeNode(): Promise<RuntimeSession> {
+    await this.ensureBoundPersona();
+    const current = await this.getRuntimeSession();
+    if (current.state !== 'NODE') {
+      throw new CovenantStateError(current.state);
+    }
+    if (!current.nodeContext) {
+      throw new Error('NODE session is missing nodeContext.');
+    }
+
+    await this.pool.query(
+      `UPDATE nnz_node_events
+       SET status = 'COMPLETED'
+       WHERE user_id = $1 AND persona_id = $2 AND id = $3`,
+      [this.scopeValue.userId, this.scopeValue.personaId, current.nodeContext.nodeId],
+    );
+
+    const session: RuntimeSession = {
+      userId: this.scopeValue.userId,
+      personaId: this.scopeValue.personaId,
+      state: 'SEALED',
+      soulSnapshotId: current.soulSnapshotId!,
+      dailyMessageCount: current.dailyMessageCount ?? 0,
+      lastMessageDate: current.lastMessageDate ?? todayString(),
+    };
+    await this.setSession(session);
+    return session;
+  }
+
+  async graduateSoul(): Promise<RuntimeSession> {
+    await this.ensureBoundPersona();
+    const current = await this.getRuntimeSession();
+    if (current.state === 'GRADUATED') {
+      throw new CovenantStateError(current.state);
+    }
+
+    await this.pool.query(
+      `UPDATE nnz_soul_versions
+       SET status = 'GRADUATED'
+       WHERE user_id = $1 AND persona_id = $2`,
+      [this.scopeValue.userId, this.scopeValue.personaId],
+    );
+
+    const session: RuntimeSession = {
+      userId: this.scopeValue.userId,
+      personaId: this.scopeValue.personaId,
+      state: 'GRADUATED',
+      dailyMessageCount: current.dailyMessageCount ?? 0,
+      lastMessageDate: current.lastMessageDate ?? todayString(),
+    };
+    await this.setSession(session);
+    return session;
+  }
+
+  private async nextSoulVersionNumber(): Promise<number> {
+    const result = await this.pool.query<{ next_version: number | string }>(
+      `SELECT COALESCE(MAX(version), 0) + 1 AS next_version
+       FROM nnz_soul_versions
+       WHERE user_id = $1 AND persona_id = $2`,
+      [this.scopeValue.userId, this.scopeValue.personaId],
+    );
+    return Number(result.rows[0]?.next_version ?? 1);
+  }
+
+  private async requireNodeOwnership(nodeId: string): Promise<NodeEvent> {
+    const result = await this.pool.query<NodeEventRow>(
+      `SELECT *
+       FROM nnz_node_events
+       WHERE user_id = $1 AND persona_id = $2 AND id = $3`,
+      [this.scopeValue.userId, this.scopeValue.personaId, nodeId],
+    );
+    const row = result.rows[0];
+    if (!row) {
+      throw new OwnershipError(`Node ${nodeId} does not belong to the requested user/persona scope.`);
+    }
+    return mapNodeEventRow(row);
+  }
+
+  private async findReusableNode(nodeName: string): Promise<NodeEvent | undefined> {
+    const result = await this.pool.query<NodeEventRow>(
+      `SELECT *
+       FROM nnz_node_events
+       WHERE user_id = $1 AND persona_id = $2 AND name = $3 AND status = 'ACTIVE'
+       ORDER BY start_at ASC, id ASC
+       LIMIT 1`,
+      [this.scopeValue.userId, this.scopeValue.personaId, nodeName],
+    );
+    const row = result.rows[0];
+    return row ? mapNodeEventRow(row) : undefined;
+  }
+
+  private async addNodeMemoryIfMissing(nodeName: string): Promise<void> {
+    const content = `节点「${nodeName}」已激活。`;
+    const memories = await this.listMemory();
+    const exists = memories.some((memory) => memory.type === 'NODE_MEMORY' && memory.content === content);
+    if (exists) {
+      return;
+    }
+    await this.addMemory({
+      type: 'NODE_MEMORY',
+      content,
+      confidence: 1,
+      enabledForSoul: false,
+    });
+  }
+
+  private async getRuntimeSessionRow(): Promise<RuntimeSessionRow | undefined> {
+    const result = await this.pool.query<RuntimeSessionRow>(
+      `SELECT *
+       FROM nnz_runtime_sessions
+       WHERE user_id = $1 AND persona_id = $2`,
+      [this.scopeValue.userId, this.scopeValue.personaId],
+    );
+    return result.rows[0];
+  }
+
+  private async setSession(session: RuntimeSession): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO nnz_runtime_sessions (
+        user_id, persona_id, state, soul_snapshot_id, node_id, node_name,
+        daily_message_count, last_message_date, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9
+      )
+      ON CONFLICT (user_id, persona_id) DO UPDATE SET
+        state = EXCLUDED.state,
+        soul_snapshot_id = EXCLUDED.soul_snapshot_id,
+        node_id = EXCLUDED.node_id,
+        node_name = EXCLUDED.node_name,
+        daily_message_count = EXCLUDED.daily_message_count,
+        last_message_date = EXCLUDED.last_message_date,
+        updated_at = EXCLUDED.updated_at`,
+      [
+        session.userId,
+        session.personaId,
+        session.state,
+        session.soulSnapshotId ?? null,
+        session.nodeContext?.nodeId ?? null,
+        session.nodeContext?.nodeName ?? null,
+        session.dailyMessageCount ?? null,
+        session.lastMessageDate ?? null,
+        new Date(),
+      ],
+    );
   }
 }
 
@@ -370,6 +809,35 @@ function createMemory(input: AddMemoryInput): MemoryItem {
   };
 }
 
+function createSoulVersion(input: CreateSoulVersionInput, versionNumber: number): SoulVersion {
+  const soulVersion: SoulVersion = {
+    id: createId('soul'),
+    userId: input.userId,
+    personaId: input.personaId,
+    version: versionNumber,
+    kernelJson: cloneJson(input.kernelJson),
+    status: input.status ?? 'ACTIVE',
+    createdAt: new Date(),
+  };
+  return soulVersion;
+}
+
+function createSoulSnapshot(
+  scope: UserPersonaScope,
+  soulVersion: SoulVersion,
+  memories: MemoryItem[],
+): SoulSnapshot {
+  return {
+    id: createId('snapshot'),
+    userId: scope.userId,
+    personaId: scope.personaId,
+    soulVersionId: soulVersion.id,
+    kernelJson: cloneJson(soulVersion.kernelJson),
+    memoryIds: memories.map((memory) => memory.id),
+    sealedAt: new Date(),
+  };
+}
+
 function createConversation(input: AddConversationInput): ConversationMessage {
   const message: ConversationMessage = {
     id: createId('message'),
@@ -383,6 +851,22 @@ function createConversation(input: AddConversationInput): ConversationMessage {
     message.nodeId = input.nodeId;
   }
   return message;
+}
+
+function createNode(input: CreateNodeInput): NodeEvent {
+  const startAt = new Date();
+  const endAt = new Date(startAt);
+  endAt.setDate(endAt.getDate() + (input.durationDays ?? 3));
+
+  return {
+    id: createId('node'),
+    userId: input.userId,
+    personaId: input.personaId,
+    name: input.name,
+    status: 'ACTIVE',
+    startAt,
+    endAt,
+  };
 }
 
 function defaultMemorySource(type: MemoryItem['type']): MemoryItem['source'] {
@@ -432,6 +916,14 @@ function createId(prefix: string): string {
   return `${prefix}_${randomUUID()}`;
 }
 
+function todayString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function cloneJson(value: Record<string, unknown>): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(value));
+}
+
 interface UserRow {
   id: string;
   display_name: string;
@@ -465,6 +957,37 @@ interface MemoryRow {
   created_at: string | Date;
 }
 
+interface SoulVersionRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  version: number;
+  kernel_json: Record<string, unknown> | string;
+  status: SoulVersion['status'];
+  knowledge_cutoff: string | Date | null;
+  created_at: string | Date;
+}
+
+interface SoulSnapshotRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  soul_version_id: string;
+  kernel_json: Record<string, unknown> | string;
+  memory_ids: string[] | string;
+  sealed_at: string | Date;
+}
+
+interface NodeEventRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  name: string;
+  status: NodeEvent['status'];
+  start_at: string | Date;
+  end_at: string | Date;
+}
+
 interface ConversationRow {
   id: string;
   user_id: string;
@@ -473,6 +996,18 @@ interface ConversationRow {
   role: ConversationMessage['role'];
   content: string;
   created_at: string | Date;
+}
+
+interface RuntimeSessionRow {
+  user_id: string;
+  persona_id: string;
+  state: RuntimeSession['state'];
+  soul_snapshot_id: string | null;
+  node_id: string | null;
+  node_name: string | null;
+  daily_message_count: number | null;
+  last_message_date: string | null;
+  updated_at: string | Date;
 }
 
 function mapUserRow(row: UserRow): User {
@@ -491,6 +1026,34 @@ function mapPersonaRow(row: PersonaRow): Persona {
     relationship: row.relationship,
     type: row.type,
     createdAt: toDate(row.created_at),
+  };
+}
+
+function mapSoulVersionRow(row: SoulVersionRow): SoulVersion {
+  const soulVersion: SoulVersion = {
+    id: row.id,
+    userId: row.user_id,
+    personaId: row.persona_id,
+    version: Number(row.version),
+    kernelJson: parseJsonObject(row.kernel_json),
+    status: row.status,
+    createdAt: toDate(row.created_at),
+  };
+  if (row.knowledge_cutoff) {
+    soulVersion.knowledgeCutoff = toDate(row.knowledge_cutoff);
+  }
+  return soulVersion;
+}
+
+function mapSoulSnapshotRow(row: SoulSnapshotRow): SoulSnapshot {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    personaId: row.persona_id,
+    soulVersionId: row.soul_version_id,
+    kernelJson: parseJsonObject(row.kernel_json),
+    memoryIds: parseJsonArray(row.memory_ids),
+    sealedAt: toDate(row.sealed_at),
   };
 }
 
@@ -514,6 +1077,18 @@ function mapMemoryRow(row: MemoryRow): MemoryItem {
   };
 }
 
+function mapNodeEventRow(row: NodeEventRow): NodeEvent {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    personaId: row.persona_id,
+    name: row.name,
+    status: row.status,
+    startAt: toDate(row.start_at),
+    endAt: toDate(row.end_at),
+  };
+}
+
 function mapConversationRow(row: ConversationRow): ConversationMessage {
   const message: ConversationMessage = {
     id: row.id,
@@ -529,10 +1104,38 @@ function mapConversationRow(row: ConversationRow): ConversationMessage {
   return message;
 }
 
+function mapRuntimeSessionRow(row: RuntimeSessionRow): RuntimeSession {
+  const session: RuntimeSession = {
+    userId: row.user_id,
+    personaId: row.persona_id,
+    state: row.state,
+  };
+  if (row.soul_snapshot_id) {
+    session.soulSnapshotId = row.soul_snapshot_id;
+  }
+  if (row.node_id && row.node_name) {
+    session.nodeContext = {
+      nodeId: row.node_id,
+      nodeName: row.node_name,
+    };
+  }
+  if (row.daily_message_count !== null) {
+    session.dailyMessageCount = Number(row.daily_message_count);
+  }
+  if (row.last_message_date !== null) {
+    session.lastMessageDate = row.last_message_date;
+  }
+  return session;
+}
+
 function toDate(value: string | Date): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
 function parseJsonArray(value: string[] | string): string[] {
   return Array.isArray(value) ? value : JSON.parse(value);
+}
+
+function parseJsonObject(value: Record<string, unknown> | string): Record<string, unknown> {
+  return typeof value === 'string' ? JSON.parse(value) : value;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { OwnershipError, ScopeValidationError } from './errors';
+import { CovenantStateError, OwnershipError, ScopeValidationError } from './errors';
 import {
   createPostgresPersona,
   createPostgresScopedSoulRepositoryFromPool,
@@ -9,7 +9,15 @@ import {
   listPostgresPersonasForUser,
   type QueryablePool,
 } from './postgres-scoped-soul-repository';
-import type { ConversationMessage, MemoryItem, PersonaType } from './types';
+import type {
+  ConversationMessage,
+  MemoryItem,
+  NodeEvent,
+  PersonaType,
+  RuntimeSession,
+  SoulSnapshot,
+  SoulVersion,
+} from './types';
 
 describe('PostgresScopedSoulRepository', () => {
   it('creates scoped tables and composite foreign keys', async () => {
@@ -20,7 +28,11 @@ describe('PostgresScopedSoulRepository', () => {
     expect(pool.schemaSql).toContain('FOREIGN KEY (user_id, persona_id)');
     expect(pool.schemaSql).toContain('idx_nnz_personas_user_created');
     expect(pool.schemaSql).toContain('idx_nnz_memory_scope_created');
+    expect(pool.schemaSql).toContain('idx_nnz_soul_versions_scope_version');
+    expect(pool.schemaSql).toContain('idx_nnz_soul_snapshots_scope_sealed');
+    expect(pool.schemaSql).toContain('idx_nnz_node_events_scope_start');
     expect(pool.schemaSql).toContain('idx_nnz_conversation_scope_created');
+    expect(pool.schemaSql).toContain('nnz_runtime_sessions');
   });
 
   it('requires a complete owned user/persona scope', async () => {
@@ -196,6 +208,96 @@ describe('PostgresScopedSoulRepository', () => {
       }),
     ).rejects.toThrow(RangeError);
   });
+
+  it('keeps soul versions and covenant lifecycle scoped', async () => {
+    const { pool, userA, userB, personaA, personaB } = await createFixture();
+    const repoA = createPostgresScopedSoulRepositoryFromPool(pool, {
+      userId: userA.id,
+      personaId: personaA.id,
+    });
+    const repoB = createPostgresScopedSoulRepositoryFromPool(pool, {
+      userId: userB.id,
+      personaId: personaB.id,
+    });
+
+    const soulA1 = await repoA.createSoulVersion({
+      kernelJson: { identityCore: { displayName: '爸爸' }, affectModel: { humorLevel: 'low' } },
+    });
+    const soulA2 = await repoA.createSoulVersion({
+      kernelJson: { identityCore: { displayName: '爸爸' }, affectModel: { humorLevel: 'high' } },
+    });
+    const soulB = await repoB.createSoulVersion({
+      kernelJson: { identityCore: { displayName: '爸爸' }, affectModel: { humorLevel: 'medium' } },
+    });
+    const memoryA = await repoA.addMemory({
+      type: 'DESCRIPTION',
+      content: '爸爸会叫我丫头。',
+      confidence: 1,
+      enabledForSoul: true,
+    });
+
+    expect(await repoA.listSoulVersions()).toMatchObject([
+      { id: soulA1.id, status: 'ARCHIVED' },
+      { id: soulA2.id, status: 'ACTIVE' },
+    ]);
+    expect(await repoB.listSoulVersions()).toEqual([soulB]);
+    expect(await repoA.getLatestSoulVersion()).toMatchObject({ id: soulA2.id });
+
+    const sealed = await repoA.sealSoul();
+    expect(sealed.snapshot).toMatchObject({
+      userId: userA.id,
+      personaId: personaA.id,
+      soulVersionId: soulA2.id,
+      memoryIds: [memoryA.id],
+    });
+    expect(sealed.snapshot.kernelJson).toEqual(soulA2.kernelJson);
+    expect(sealed.session).toMatchObject({
+      userId: userA.id,
+      personaId: personaA.id,
+      state: 'SEALED',
+      soulSnapshotId: sealed.snapshot.id,
+    });
+    expect(await repoA.listSoulVersions()).toMatchObject([
+      { id: soulA1.id, status: 'ARCHIVED' },
+      { id: soulA2.id, status: 'ARCHIVED' },
+    ]);
+    expect(await repoB.listSoulVersions()).toMatchObject([{ id: soulB.id, status: 'ACTIVE' }]);
+    expect(await repoA.getSoulSnapshot(sealed.snapshot.id)).toEqual(sealed.snapshot);
+
+    await expect(repoA.sealSoul()).rejects.toThrow(CovenantStateError);
+
+    const activeNode = await repoA.createNode({ name: '婚礼' });
+    const nodeSession = await repoA.activateNode('婚礼');
+    expect(nodeSession.node.id).toBe(activeNode.id);
+    const completed = await repoA.completeNode();
+    expect(completed.state).toBe('SEALED');
+    const newNodeSession = await repoA.activateNode('婚礼');
+    expect(newNodeSession.node.id).not.toBe(activeNode.id);
+    await repoA.completeNode();
+    expect(await repoA.listNodes()).toMatchObject([
+      { name: '婚礼', status: 'COMPLETED' },
+      { name: '婚礼', status: 'COMPLETED' },
+    ]);
+
+    const freshNode = await repoA.createNode({ name: '毕业典礼' });
+    await repoB.createSoulVersion({ kernelJson: { identityCore: { displayName: '爸爸' } } });
+    await expect(
+      repoB.addConversation({
+        nodeId: freshNode.id,
+        role: 'USER',
+        content: '这个节点不属于 B。',
+      }),
+    ).rejects.toThrow(OwnershipError);
+
+    const graduated = await repoA.graduateSoul();
+    expect(graduated.state).toBe('GRADUATED');
+    expect(await repoA.listSoulVersions()).toMatchObject([
+      { id: soulA1.id, status: 'GRADUATED' },
+      { id: soulA2.id, status: 'GRADUATED' },
+    ]);
+    expect(await repoB.getRuntimeSession()).toMatchObject({ state: 'ACTIVE' });
+    expect(await repoB.listSoulVersions()).toMatchObject([{ id: soulB.id, status: 'ARCHIVED' }, { status: 'ACTIVE' }]);
+  });
 });
 
 async function createFixture() {
@@ -233,7 +335,11 @@ class FakeScopedPool implements QueryablePool {
   private readonly users = new Map<string, UserRow>();
   private readonly personas = new Map<string, PersonaRow>();
   private readonly memoryItems = new Map<string, MemoryRow>();
+  private readonly soulVersions = new Map<string, SoulVersionRow>();
+  private readonly soulSnapshots = new Map<string, SoulSnapshotRow>();
+  private readonly nodeEvents = new Map<string, NodeEventRow>();
   private readonly conversations = new Map<string, ConversationRow>();
+  private readonly runtimeSessions = new Map<string, RuntimeSessionRow>();
 
   async query<T = unknown>(sql: string, params: unknown[] = []): Promise<{ rows: T[] }> {
     const compactSql = sql.replace(/\s+/g, ' ').trim();
@@ -323,6 +429,91 @@ class FakeScopedPool implements QueryablePool {
     }
     if (
       compactSql
+      === "UPDATE nnz_soul_versions SET status = 'ARCHIVED' WHERE user_id = $1 AND persona_id = $2 AND status = 'ACTIVE'"
+    ) {
+      for (const version of this.soulVersions.values()) {
+        if (
+          version.user_id === String(params[0])
+          && version.persona_id === String(params[1])
+          && version.status === 'ACTIVE'
+        ) {
+          version.status = 'ARCHIVED';
+        }
+      }
+      return rows([]);
+    }
+    if (
+      compactSql
+      === 'SELECT COALESCE(MAX(version), 0) + 1 AS next_version FROM nnz_soul_versions WHERE user_id = $1 AND persona_id = $2'
+    ) {
+      const maxVersion = [...this.soulVersions.values()]
+        .filter((version) => version.user_id === String(params[0]) && version.persona_id === String(params[1]))
+        .reduce((max, version) => Math.max(max, Number(version.version)), 0);
+      return rows([{ next_version: maxVersion + 1 }]);
+    }
+    if (compactSql.startsWith('INSERT INTO nnz_soul_versions')) {
+      const [id, userId, personaId, version, kernelJson, status, knowledgeCutoff, createdAt] = params;
+      this.requirePersonaScope(String(userId), String(personaId));
+      this.soulVersions.set(String(id), {
+        id: String(id),
+        user_id: String(userId),
+        persona_id: String(personaId),
+        version: Number(version),
+        kernel_json: JSON.parse(String(kernelJson)) as Record<string, unknown>,
+        status: status as SoulVersion['status'],
+        knowledge_cutoff: knowledgeCutoff ? asDate(knowledgeCutoff) : null,
+        created_at: asDate(createdAt),
+      });
+      return rows([]);
+    }
+    if (
+      compactSql
+      === "SELECT * FROM nnz_soul_versions WHERE user_id = $1 AND persona_id = $2 AND status = 'ACTIVE' ORDER BY version DESC LIMIT 1"
+    ) {
+      return rows(
+        [...this.soulVersions.values()]
+          .filter(
+            (version) =>
+              version.user_id === String(params[0])
+              && version.persona_id === String(params[1])
+              && version.status === 'ACTIVE',
+          )
+          .sort((left, right) => Number(right.version) - Number(left.version))
+          .slice(0, 1),
+      );
+    }
+    if (compactSql === 'SELECT * FROM nnz_soul_versions WHERE user_id = $1 AND persona_id = $2 ORDER BY version ASC') {
+      return rows(
+        [...this.soulVersions.values()]
+          .filter((version) => version.user_id === String(params[0]) && version.persona_id === String(params[1]))
+          .sort((left, right) => Number(left.version) - Number(right.version)),
+      );
+    }
+    if (compactSql.startsWith('INSERT INTO nnz_soul_snapshots')) {
+      const [id, userId, personaId, soulVersionId, kernelJson, memoryIds, sealedAt] = params;
+      this.requirePersonaScope(String(userId), String(personaId));
+      this.requireSoulVersionScope(String(userId), String(personaId), String(soulVersionId));
+      this.soulSnapshots.set(String(id), {
+        id: String(id),
+        user_id: String(userId),
+        persona_id: String(personaId),
+        soul_version_id: String(soulVersionId),
+        kernel_json: JSON.parse(String(kernelJson)) as Record<string, unknown>,
+        memory_ids: JSON.parse(String(memoryIds)) as string[],
+        sealed_at: asDate(sealedAt),
+      });
+      return rows([]);
+    }
+    if (compactSql === 'SELECT * FROM nnz_soul_snapshots WHERE user_id = $1 AND persona_id = $2 AND id = $3') {
+      const snapshot = this.soulSnapshots.get(String(params[2]));
+      return rows(
+        snapshot && snapshot.user_id === String(params[0]) && snapshot.persona_id === String(params[1])
+          ? [snapshot]
+          : [],
+      );
+    }
+    if (
+      compactSql
       === 'SELECT * FROM nnz_memory_items WHERE user_id = $1 AND persona_id = $2 ORDER BY created_at ASC, id ASC'
     ) {
       return rows(
@@ -330,6 +521,105 @@ class FakeScopedPool implements QueryablePool {
           .filter((memory) => memory.user_id === String(params[0]) && memory.persona_id === String(params[1]))
           .sort(compareCreatedAt),
       );
+    }
+    if (
+      compactSql
+      === "UPDATE nnz_soul_versions SET status = 'ARCHIVED' WHERE user_id = $1 AND persona_id = $2 AND id = $3"
+    ) {
+      const version = this.soulVersions.get(String(params[2]));
+      if (version && version.user_id === String(params[0]) && version.persona_id === String(params[1])) {
+        version.status = 'ARCHIVED';
+      }
+      return rows([]);
+    }
+    if (compactSql.startsWith('INSERT INTO nnz_node_events')) {
+      const [id, userId, personaId, name, status, startAt, endAt] = params;
+      this.requirePersonaScope(String(userId), String(personaId));
+      this.nodeEvents.set(String(id), {
+        id: String(id),
+        user_id: String(userId),
+        persona_id: String(personaId),
+        name: String(name),
+        status: status as NodeEvent['status'],
+        start_at: asDate(startAt),
+        end_at: asDate(endAt),
+      });
+      return rows([]);
+    }
+    if (compactSql === 'SELECT * FROM nnz_node_events WHERE user_id = $1 AND persona_id = $2 ORDER BY start_at ASC, id ASC') {
+      return rows(
+        [...this.nodeEvents.values()]
+          .filter((node) => node.user_id === String(params[0]) && node.persona_id === String(params[1]))
+          .sort(compareStartAt),
+      );
+    }
+    if (compactSql === 'SELECT * FROM nnz_runtime_sessions WHERE user_id = $1 AND persona_id = $2') {
+      const session = this.runtimeSessions.get(scopeKey(String(params[0]), String(params[1])));
+      return rows(session ? [session] : []);
+    }
+    if (compactSql.startsWith('INSERT INTO nnz_runtime_sessions')) {
+      const [
+        userId,
+        personaId,
+        state,
+        soulSnapshotId,
+        nodeId,
+        nodeName,
+        dailyMessageCount,
+        lastMessageDate,
+        updatedAt,
+      ] = params;
+      this.requirePersonaScope(String(userId), String(personaId));
+      this.runtimeSessions.set(scopeKey(String(userId), String(personaId)), {
+        user_id: String(userId),
+        persona_id: String(personaId),
+        state: state as RuntimeSession['state'],
+        soul_snapshot_id: soulSnapshotId ? String(soulSnapshotId) : null,
+        node_id: nodeId ? String(nodeId) : null,
+        node_name: nodeName ? String(nodeName) : null,
+        daily_message_count: dailyMessageCount === null ? null : Number(dailyMessageCount),
+        last_message_date: lastMessageDate ? String(lastMessageDate) : null,
+        updated_at: asDate(updatedAt),
+      });
+      return rows([]);
+    }
+    if (
+      compactSql
+      === "SELECT * FROM nnz_node_events WHERE user_id = $1 AND persona_id = $2 AND name = $3 AND status = 'ACTIVE' ORDER BY start_at ASC, id ASC LIMIT 1"
+    ) {
+      return rows(
+        [...this.nodeEvents.values()]
+          .filter(
+            (node) =>
+              node.user_id === String(params[0])
+              && node.persona_id === String(params[1])
+              && node.name === String(params[2])
+              && node.status === 'ACTIVE',
+          )
+          .sort(compareStartAt)
+          .slice(0, 1),
+      );
+    }
+    if (
+      compactSql
+      === "UPDATE nnz_node_events SET status = 'COMPLETED' WHERE user_id = $1 AND persona_id = $2 AND id = $3"
+    ) {
+      const node = this.nodeEvents.get(String(params[2]));
+      if (node && node.user_id === String(params[0]) && node.persona_id === String(params[1])) {
+        node.status = 'COMPLETED';
+      }
+      return rows([]);
+    }
+    if (
+      compactSql
+      === "UPDATE nnz_soul_versions SET status = 'GRADUATED' WHERE user_id = $1 AND persona_id = $2"
+    ) {
+      for (const version of this.soulVersions.values()) {
+        if (version.user_id === String(params[0]) && version.persona_id === String(params[1])) {
+          version.status = 'GRADUATED';
+        }
+      }
+      return rows([]);
     }
     if (compactSql.startsWith('INSERT INTO nnz_conversation_messages')) {
       const [id, userId, personaId, nodeId, role, content, createdAt] = params;
@@ -355,6 +645,10 @@ class FakeScopedPool implements QueryablePool {
           .sort(compareCreatedAt),
       );
     }
+    if (compactSql === 'SELECT * FROM nnz_node_events WHERE user_id = $1 AND persona_id = $2 AND id = $3') {
+      const node = this.nodeEvents.get(String(params[2]));
+      return rows(node && node.user_id === String(params[0]) && node.persona_id === String(params[1]) ? [node] : []);
+    }
 
     throw new Error(`Unexpected SQL in fake scoped pool: ${compactSql}`);
   }
@@ -375,6 +669,13 @@ class FakeScopedPool implements QueryablePool {
     }
   }
 
+  private requireSoulVersionScope(userId: string, personaId: string, soulVersionId: string): void {
+    const version = this.soulVersions.get(soulVersionId);
+    if (!version || version.user_id !== userId || version.persona_id !== personaId) {
+      throw new Error(`Soul version ${soulVersionId} does not belong to user ${userId} in fake pool.`);
+    }
+  }
+
   private findPersona(userId: string, personaId: string): PersonaRow[] {
     const persona = this.personas.get(personaId);
     return persona && persona.user_id === userId ? [persona] : [];
@@ -391,6 +692,14 @@ function asDate(value: unknown): Date {
 
 function compareCreatedAt<T extends { created_at: Date; id: string }>(left: T, right: T): number {
   return left.created_at.getTime() - right.created_at.getTime() || left.id.localeCompare(right.id);
+}
+
+function compareStartAt<T extends { start_at: Date; id: string }>(left: T, right: T): number {
+  return left.start_at.getTime() - right.start_at.getTime() || left.id.localeCompare(right.id);
+}
+
+function scopeKey(userId: string, personaId: string): string {
+  return `${userId}:${personaId}`;
 }
 
 interface UserRow {
@@ -426,6 +735,37 @@ interface MemoryRow {
   created_at: Date;
 }
 
+interface SoulVersionRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  version: number;
+  kernel_json: Record<string, unknown>;
+  status: SoulVersion['status'];
+  knowledge_cutoff: Date | null;
+  created_at: Date;
+}
+
+interface SoulSnapshotRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  soul_version_id: string;
+  kernel_json: Record<string, unknown>;
+  memory_ids: string[];
+  sealed_at: Date;
+}
+
+interface NodeEventRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  name: string;
+  status: NodeEvent['status'];
+  start_at: Date;
+  end_at: Date;
+}
+
 interface ConversationRow {
   id: string;
   user_id: string;
@@ -434,4 +774,16 @@ interface ConversationRow {
   role: ConversationMessage['role'];
   content: string;
   created_at: Date;
+}
+
+interface RuntimeSessionRow {
+  user_id: string;
+  persona_id: string;
+  state: RuntimeSession['state'];
+  soul_snapshot_id: string | null;
+  node_id: string | null;
+  node_name: string | null;
+  daily_message_count: number | null;
+  last_message_date: string | null;
+  updated_at: Date;
 }

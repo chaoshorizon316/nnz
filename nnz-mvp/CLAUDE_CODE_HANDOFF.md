@@ -178,6 +178,19 @@ const repo = createPostgresScopedSoulRepositoryFromPool(pool, { userId, personaI
 - `nnz_memory_items` 和 `nnz_conversation_messages` 使用 `(user_id, persona_id)` 复合外键指向 `nnz_personas(user_id, id)`。
 - 目前还没有替换 demo runtime 的 Postgres snapshot persistence；线上稳定路径仍是 `nnz_store_snapshots` JSONB 快照。
 
+2026-06-24 Step 2.6 已继续扩展 Covenant 主链：
+
+- 新增 `nnz_soul_versions`
+- 新增 `nnz_soul_snapshots`
+- 新增 `nnz_node_events`
+- 新增 `nnz_runtime_sessions`
+- `createSoulVersion()` 创建新 ACTIVE 时只归档当前 scope 的旧 ACTIVE。
+- `sealSoul()` 创建 snapshot、归档当前 active soul，并进入 SEALED。
+- `activateNode()` 只允许从 SEALED 进入 NODE，复用同名 active node，并写同 scope 的 NODE_MEMORY。
+- `completeNode()` 只完成当前 scope 的 node，并回到 SEALED。
+- `graduateSoul()` 只把当前 scope 的 soul versions 与 session 标为 GRADUATED。
+- `addConversation({ nodeId })` 会校验 node ownership，拒绝引用其他 scope 的 node。
+
 ### 4.2 Soul Runtime
 
 主要文件：
@@ -819,7 +832,7 @@ src/runtime/llm-reply.test.ts
 src/runtime/soul-guard.test.ts
 ```
 
-当前共 84 条测试（2026-06-23 本地验证）。
+当前共 85 条测试（2026-06-24 本地验证）。
 
 Domain tests 覆盖：
 
@@ -832,6 +845,7 @@ Domain tests 覆盖：
 - Postgres scoped repository 中同名「爸爸」的 persona、memory、conversation 在 user A / user B 下互不影响。
 - Postgres scoped repository 拒绝 user A + persona B 的跨所有者读写。
 - Postgres memory runtime / soul update filters 与 InMemorySoulStore 默认规则一致。
+- Postgres scoped Covenant 主链只影响当前 scope：ACTIVE 归档、snapshot、node 复用/完成、graduation、跨 scope node 拒绝。
 
 Runtime tests 覆盖：
 
@@ -1298,7 +1312,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md` 和 `nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，并把 Postgres scoped repository 从 Persona/Memory/Conversation 继续扩到 SoulVersion/Snapshot/Proposal/Node/RuntimeSession 后再考虑替换 demo snapshot persistence。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md` 和 `nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，并把 Postgres scoped repository 继续扩到 SoulUpdateProposal / OpsAudit / Credential 后再考虑替换 demo snapshot persistence。
 
 ## 16.2.1 2026-06-23 Step 2.5 Postgres scoped repository
 
@@ -1323,6 +1337,30 @@ npm run build: passed
 
 - 这不是线上迁移；demo runtime 仍使用现有 Postgres snapshot persistence。
 - 尚未实现 SoulVersion / Snapshot / Proposal / Node / RuntimeSession 的逐表 Postgres repository。
+- 尚未写真实 Postgres 集成测试或数据迁移脚本。
+
+## 16.2.2 2026-06-24 Step 2.6 Postgres scoped Covenant
+
+已完成 Covenant 主链旁路实现：
+
+- 新增 `nnz_soul_versions`、`nnz_soul_snapshots`、`nnz_node_events`、`nnz_runtime_sessions` schema。
+- `PostgresScopedSoulRepository` 支持 create/list/get soul version、snapshot、node、runtime session。
+- 已实现 `sealSoul()`、`activateNode()`、`completeNode()`、`graduateSoul()`。
+- `addConversation({ nodeId })` 已补 node ownership 校验。
+- 测试覆盖同 scope ACTIVE 归档、snapshot memoryIds、SEALED/NODE/GRADUATED 状态、同名 active node 复用、完成后新建 node、跨 scope node 拒绝。
+
+验证：
+
+```text
+npm run typecheck: passed
+npm test: 13 个测试文件、85 tests passed
+npm run build:demo: passed
+```
+
+重要限制：
+
+- 这仍不是线上迁移；demo runtime 仍使用现有 Postgres snapshot persistence。
+- 尚未实现 SoulUpdateProposal / OpsAudit / Credential 的逐表 Postgres repository。
 - 尚未写真实 Postgres 集成测试或数据迁移脚本。
 
 ## 16.3 2026-06-22 H5 modal / CTA 修复
