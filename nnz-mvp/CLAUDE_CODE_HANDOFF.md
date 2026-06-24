@@ -108,8 +108,10 @@ src/domain/types.ts
 src/domain/errors.ts
 src/domain/soul-store.ts
 src/domain/scoped-soul-repository.ts
+src/domain/postgres-scoped-soul-repository.ts
 src/domain/soul-scope.test.ts
 src/domain/scoped-soul-repository.test.ts
+src/domain/postgres-scoped-soul-repository.test.ts
 ```
 
 关键类型：
@@ -154,6 +156,27 @@ const repo = bindSoulRepository(store, { userId, personaId });
 ```
 
 它在绑定时验证完整 scope 和 persona ownership。绑定后，调用方通过 repo 执行 Soul / Memory / Snapshot / Proposal / Node / Conversation / Covenant / Runtime / Maturity 操作，不需要在每次调用时重新传 scope。即使调用方用 `as never` 传入其他 `userId/personaId`，repo 也会以绑定 scope 为准。这是后续从全量 snapshot persistence 演进到 Postgres scoped repositories 的适配层。
+
+新增 `PostgresScopedSoulRepository`（2026-06-23 Step 2.5）：
+
+```ts
+const repo = createPostgresScopedSoulRepositoryFromPool(pool, { userId, personaId });
+```
+
+这是逐表 Postgres repository 的最小旁路切片，当前覆盖：
+
+- `nnz_users`
+- `nnz_personas`
+- `nnz_memory_items`
+- `nnz_conversation_messages`
+
+关键边界：
+
+- 构造 repository 时必须绑定完整 `userId + personaId`。
+- Memory / Conversation 写入前会确认 persona 属于该 user。
+- Memory / Conversation 查询都带 `WHERE user_id = $1 AND persona_id = $2`。
+- `nnz_memory_items` 和 `nnz_conversation_messages` 使用 `(user_id, persona_id)` 复合外键指向 `nnz_personas(user_id, id)`。
+- 目前还没有替换 demo runtime 的 Postgres snapshot persistence；线上稳定路径仍是 `nnz_store_snapshots` JSONB 快照。
 
 ### 4.2 Soul Runtime
 
@@ -787,6 +810,7 @@ src/auth/auth.test.ts
 src/domain/soul-scope.test.ts
 src/domain/persistence.test.ts
 src/domain/postgres-persistence.test.ts
+src/domain/postgres-scoped-soul-repository.test.ts
 src/extraction/orchestrator.test.ts
 src/llm/adapter.test.ts
 src/ops/ops-console.test.ts
@@ -795,7 +819,7 @@ src/runtime/llm-reply.test.ts
 src/runtime/soul-guard.test.ts
 ```
 
-当前共 67 条测试。
+当前共 84 条测试（2026-06-23 本地验证）。
 
 Domain tests 覆盖：
 
@@ -805,6 +829,9 @@ Domain tests 覆盖：
 - 删除 A 数据不删除 B 数据。
 - 缺少 `userId` 的 Soul / Memory / Snapshot API 直接拒绝。
 - `userId` 和 `personaId` 所属不一致时拒绝。
+- Postgres scoped repository 中同名「爸爸」的 persona、memory、conversation 在 user A / user B 下互不影响。
+- Postgres scoped repository 拒绝 user A + persona B 的跨所有者读写。
+- Postgres memory runtime / soul update filters 与 InMemorySoulStore 默认规则一致。
 
 Runtime tests 覆盖：
 
@@ -1271,7 +1298,32 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md` 和 `nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，并开始把 snapshot persistence 演进为逐表 repository。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md` 和 `nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，并把 Postgres scoped repository 从 Persona/Memory/Conversation 继续扩到 SoulVersion/Snapshot/Proposal/Node/RuntimeSession 后再考虑替换 demo snapshot persistence。
+
+## 16.2.1 2026-06-23 Step 2.5 Postgres scoped repository
+
+已完成最小旁路实现：
+
+- 新增 `src/domain/postgres-scoped-soul-repository.ts`。
+- 新增 `ensurePostgresScopedSchema()`，包含 `nnz_users`、`nnz_personas`、`nnz_memory_items`、`nnz_conversation_messages`。
+- 新增 `createPostgresScopedSoulRepositoryFromPool()` / `createPostgresScopedSoulRepository()`。
+- 新增 `createPostgresUser()`、`createPostgresPersona()`、`listPostgresPersonasForUser()`。
+- `PostgresScopedSoulRepository` 当前支持 bound persona、memory、runtime memory、soul-update memory、conversation 读写。
+- 测试使用 fake Postgres pool 验证 schema、同名 persona 隔离、跨 owner 拒绝、bound scope 覆盖 caller-supplied ids、memory filter 默认规则。
+
+验证：
+
+```text
+npm run typecheck: passed
+npm test: 13 个测试文件、84 tests passed
+npm run build: passed
+```
+
+重要限制：
+
+- 这不是线上迁移；demo runtime 仍使用现有 Postgres snapshot persistence。
+- 尚未实现 SoulVersion / Snapshot / Proposal / Node / RuntimeSession 的逐表 Postgres repository。
+- 尚未写真实 Postgres 集成测试或数据迁移脚本。
 
 ## 16.3 2026-06-22 H5 modal / CTA 修复
 

@@ -34,6 +34,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-22 H5 修复：`public/index.html` 已把首页 CTA 改回打开 H5 体验 modal，并修复 h5RenderConversation / h5AuthHeaders / h5LoadChatHistory 遗留断点；本地 typecheck、全量测试、build:demo 通过
 2026-06-23 H5 创建体验优化：`public/index.html` 已把创建表单 Page 1 改为输入区 + 常用称呼左右结构，强化常用称呼选中态；Page 2 特征项改为复选框式真多选，并保持后端 traits payload 兼容；本地 typecheck、全量测试、build:demo 通过
 2026-06-23 H5 修复上线：提交 `5e0df09 fix: restore h5 experience modal` 已推送到 GitHub `main`；GitHub Actions run `28012032867` success；Render `/healthz` 和首页 H5 modal HTML smoke 通过
+2026-06-23 Step 2.5: PostgresScopedSoulRepository 最小旁路切片已实现，覆盖 user/persona/memory/conversation 逐表 schema 与强 scope 查询；本地 typecheck、13 个测试文件 84 tests、build 通过；demo runtime 尚未从 snapshot persistence 切换
 ```
 
 说明：
@@ -69,6 +70,7 @@ https://github.com/chaoshorizon316/nnz
 - 6 月 22 日已接手并修复 H5 modal / CTA：导航和首屏 CTA 调用 `openExperience(event)`；原 `#demo` 唯一 H5 DOM 改为 modal overlay，避免重复 id；补齐 `h5AuthHeaders()`，修复 `h5RenderConversation()` 三元表达式断点和 `h5LoadChatHistory()` 误调用；验证记录见 `nnz-mvp-2026-06-22-H5体验弹窗与CTA修复记录.md`。
 - 6 月 23 日已优化 H5 创建体验：Page 1 改为左右结构并强化常用称呼选中态；Page 2 改为 checkbox 真多选，选中态包含勾选框、底色、边框和阴影；创建人格描述保留全部多选特征，提交给后端的 `traits` 仍保持当前字符串兼容。验证记录见 `nnz-mvp-2026-06-23-H5创建体验选项交互优化.md`。
 - 6 月 23 日 H5 修复已上线：提交 `5e0df09 fix: restore h5 experience modal` 已推送；GitHub Actions run `28012032867` success；Render `/healthz` 为 Postgres；线上首页 HTML 已包含 `openExperience(event)`、`.nnz-experience-modal[hidden]`、`trait-check` 和 `h5-trait-options`。
+- 6 月 23 日 Step 2.5 已实现 `PostgresScopedSoulRepository`：新增 `nnz_users`、`nnz_personas`、`nnz_memory_items`、`nnz_conversation_messages` 最小逐表 schema；repository 构造时绑定完整 `userId + personaId`；memory/conversation 读写强制按双字段 scope 查询；fake Postgres pool 测试覆盖同名 persona 隔离、跨 owner 拒绝、caller-supplied id 不覆盖绑定 scope、memory filter 默认规则。当前仍是旁路实现，尚未替换 demo runtime 的 Postgres snapshot persistence。
 - 本地干净副本验证：`/tmp/nnz-step1-final.MF0YVg` 中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过，10 个测试文件、67 条测试全绿，0 vulnerabilities。
 - 本地 `/ops` browser smoke 通过：输入 `dev-ops-token` 后显示 8 个核心指标、用户表、2 个 Persona 成熟度卡片和测试数据清理面板。
 - Step 1 已推送到 GitHub：`30685df feat: add protected soul ops console`，当前本地与远端同步：`main...origin/main`。
@@ -124,6 +126,8 @@ npm audit
 2026-06-22 H5 修复结果：完整工作区中已执行 `npm ci` 干净重装，`better-sqlite3` 确认为 arm64；`npm run typecheck`、`npm test`、`npm run build:demo` 全部通过，全量测试为 12 个测试文件、79 tests；本地 demo healthz 通过，modal JS 冒烟通过。记录见 `nnz-mvp-2026-06-22-H5体验弹窗与CTA修复记录.md`。2026-06-23 已通过 `5e0df09` 推送上线。
 
 2026-06-23 H5 创建体验优化结果：`node` 内联脚本 smoke、`git diff --check`、`npm run typecheck`、`npm test`、`npm run build:demo`、H5 多选行为 smoke 均通过；全量测试为 12 个测试文件、79 tests。记录见 `nnz-mvp-2026-06-23-H5创建体验选项交互优化.md`。已通过 `5e0df09` 推送上线，GitHub Actions run `28012032867` success，Render 首页 HTML smoke 通过。
+
+2026-06-23 Step 2.5 Postgres scoped repository 结果：新增 `src/domain/postgres-scoped-soul-repository.ts` / `src/domain/postgres-scoped-soul-repository.test.ts`，完成 Persona / Memory / Conversation 的最小逐表 Postgres repository 旁路切片；本地 `npm run typecheck`、`npm test`、`npm run build` 通过，全量测试为 13 个测试文件、84 tests。记录见 `nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`。
 
 最新 CI run：
 

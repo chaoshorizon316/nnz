@@ -28,6 +28,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-22 H5 修复：`public/index.html` 已把 CTA 改回打开 H5 体验 modal，并修复 h5RenderConversation / h5AuthHeaders / h5LoadChatHistory 遗留断点；本地 npm ci、typecheck、12 个测试文件 79 tests、build:demo 通过
 2026-06-23 H5 创建体验优化：`public/index.html` 已把 Step 2 Page 1 改为输入区 + 常用称呼左右结构，常用称呼选中态更明显；特征选择改为复选框式真多选，并保持后端 traits 字符串 payload 兼容；本地 typecheck、12 个测试文件 79 tests、build:demo 通过
 2026-06-23 H5 修复上线：`5e0df09 fix: restore h5 experience modal` 已推送到 GitHub `main`；GitHub Actions run `28012032867` success；Render `/healthz` 与首页 H5 modal HTML smoke 通过
+2026-06-23 Step 2.5: PostgresScopedSoulRepository 最小旁路切片已实现，覆盖 user/persona/memory/conversation 逐表 schema 与强 scope 查询；本地 typecheck、13 个测试文件 84 tests、build 通过；demo runtime 尚未从 snapshot persistence 切换
 ```
 
 当前本地相对远端：
@@ -55,6 +56,7 @@ nnz-mvp-2026-06-22-线上与工作区核查记录.md
 nnz-mvp-2026-06-22-H5体验弹窗与CTA修复记录.md
 nnz-mvp-2026-06-23-H5创建体验选项交互优化.md
 nnz-mvp-2026-06-23-H5修复上线验收记录.md
+nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md
 ```
 
 ## 2026-06-22 工作区注意
@@ -173,9 +175,11 @@ src/
 │   ├── errors.ts         — ScopeValidationError, NotFoundError, OwnershipError, CovenantStateError
 │   ├── soul-store.ts     — InMemorySoulStore：作用域隔离 + covenant 状态机 + memory 分层 + maturity
 │   ├── scoped-soul-repository.ts — 绑定 userId + personaId 的作用域仓储适配层
+│   ├── postgres-scoped-soul-repository.ts — Postgres 逐表 scoped repository 最小旁路切片
 │   ├── persistence.ts    — SQLite save/load for demo persistence
 │   ├── soul-scope.test.ts
 │   ├── scoped-soul-repository.test.ts
+│   ├── postgres-scoped-soul-repository.test.ts
 │   ├── persistence.test.ts
 │   └── index.ts          — re-export barrel
 ├── runtime/
@@ -211,6 +215,7 @@ src/
 | `types.ts` | ~170 行 | 所有类型 | SoulVersion, MemoryItem（13字段）, RuntimeSession, SoulMaturityReport |
 | `soul-store.ts` | ~850 行 | 核心引擎 | sealSoul, activateNode, completeNode, graduateSoul, getRuntimeContext, buildSoulMaturityReport, listRuntimeMemory, listSoulUpdateMemory |
 | `scoped-soul-repository.ts` | ~150 行 | 作用域绑定适配层 | bindSoulRepository, ScopedSoulRepository |
+| `postgres-scoped-soul-repository.ts` | ~380 行 | Postgres scoped repository 最小切片 | ensurePostgresScopedSchema, createPostgresScopedSoulRepositoryFromPool, addMemory, listConversations |
 | `soul-runtime.ts` | ~150 行 | 回复生成 | generateSoulReply(soul, memories, message) → SoulReply |
 | `soul-guard.ts` | ~120 行 | 安全护栏 | checkMessageSafety, checkDailyLimit, incrementDailyCount |
 | `demo-server.ts` | ~850 行 | 演示服务 | 14 个 API 端点 + 完整 HTML UI |
@@ -432,7 +437,34 @@ npm run build:demo
 
 云端基础 smoke：GitHub Actions run `27677337466` success；Render `/healthz` 返回 `fixture:"postgres"`；`/ops` 页面包含 Audit tab；`/api/ops/audit-events` 无 token 返回 401，错 token 返回 403。
 
-下一步：进入 Step 2.4。优先在 Render 验证可选角色 token（viewer/operator/admin）的云端权限边界，然后开始把 Postgres snapshot persistence 演进为强作用域 repository。token 明文不得写入仓库或文档。
+### 已完成：Step 2.5 Postgres scoped repository 最小旁路切片
+
+2026-06-23 已新增 `PostgresScopedSoulRepository`，用于把当前 Postgres snapshot persistence 逐步演进到强作用域逐表 repository。
+
+当前包含：
+
+- `nnz_users`
+- `nnz_personas`
+- `nnz_memory_items`
+- `nnz_conversation_messages`
+
+边界：
+
+- repository 构造时必须绑定完整 `{ userId, personaId }`。
+- memory / conversation 写入前会确认 persona 属于该 user。
+- memory / conversation 查询必须同时带 `user_id` 和 `persona_id`。
+- `nnz_memory_items` / `nnz_conversation_messages` 通过 `(user_id, persona_id)` 复合外键指向 `nnz_personas(user_id, id)`。
+- 这是旁路最小切片，尚未替换 demo runtime 的 `nnz_store_snapshots` JSONB persistence。
+
+本地验证：
+
+```text
+npm run typecheck
+npm test         # 13 files, 84 tests passed
+npm run build
+```
+
+下一步：优先在 Render 验证可选角色 token（viewer/operator/admin）的云端权限边界；工程侧继续扩展 Postgres scoped repository 到 SoulVersion / Snapshot / Proposal / Node / RuntimeSession，再规划 snapshot -> tables 迁移。token 明文不得写入仓库或文档。
 
 ### 后续：微信 / H5 用户端雏形
 
@@ -544,4 +576,4 @@ npm run build:demo
 npm audit        # 0 vulnerabilities
 ```
 
-当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。2026-06-16 已完成 Render `NNZ_OPS_TOKEN` 配置和云端 `/ops` smoke，并完成 Step 2.1 Soul Ops 审计日志。2026-06-17 已完成 Step 2.2 Soul Ops RBAC 与删除回执；同日 Step 2.3 已完成 Audit 查询接口和 `/ops` Audit tab，并已推送通过 GitHub Actions / Render 基础 smoke。下一步进入云端角色 token smoke / scoped repository。
+当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。2026-06-16 已完成 Render `NNZ_OPS_TOKEN` 配置和云端 `/ops` smoke，并完成 Step 2.1 Soul Ops 审计日志。2026-06-17 已完成 Step 2.2 Soul Ops RBAC 与删除回执；同日 Step 2.3 已完成 Audit 查询接口和 `/ops` Audit tab，并已推送通过 GitHub Actions / Render 基础 smoke。2026-06-23 已完成 Step 2.5 Postgres scoped repository 最小旁路切片。下一步进入云端角色 token smoke，并继续扩展 scoped repository 后再规划 snapshot persistence 迁移。
