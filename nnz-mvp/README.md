@@ -20,7 +20,7 @@ Every Soul, Memory, Snapshot, Node, and Conversation access path must provide bo
 
 `ScopedSoulRepository` is the current bridge toward scoped persistence repositories. It binds a complete `{ userId, personaId }` once through `bindSoulRepository(store, scope)` and then exposes only scope-private Soul, Memory, Snapshot, Proposal, Node, Conversation, Covenant, Runtime, and Maturity operations. This keeps the MVP store behavior unchanged while giving the next Postgres repository split a safer call shape.
 
-`PostgresScopedSoulRepository` is the first table-based Postgres slice. It is a sidecar repository, not yet the demo runtime persistence path. It currently covers `nnz_users`, `nnz_personas`, `nnz_memory_items`, `nnz_conversation_messages`, `nnz_soul_versions`, `nnz_soul_snapshots`, `nnz_node_events`, and `nnz_runtime_sessions`, with every Soul, Memory, Node, Session, and Conversation query bound by both `userId` and `personaId`.
+`PostgresScopedSoulRepository` is the first table-based Postgres slice. It is a sidecar repository, not yet the demo runtime persistence path. It currently covers `nnz_users`, `nnz_personas`, `nnz_memory_items`, `nnz_conversation_messages`, `nnz_soul_versions`, `nnz_soul_snapshots`, `nnz_node_events`, `nnz_runtime_sessions`, `nnz_soul_update_proposals`, `nnz_credentials`, and `nnz_ops_audit_events`, with every Soul, Memory, Node, Session, Proposal, and Conversation query bound by both `userId` and `personaId`.
 
 ## Covenant Lifecycle
 
@@ -225,7 +225,7 @@ npm run build:demo
 npm run demo
 ```
 
-Current verified suite on 2026-06-24: 85 tests across domain scope, scoped repositories, Soul Ops cleanup/overview/audit query/RBAC, SQLite/Postgres snapshot persistence, Postgres scoped repository, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+Current verified suite on 2026-06-24: 87 tests across domain scope, scoped repositories, Soul Ops cleanup/overview/audit query/RBAC, SQLite/Postgres snapshot persistence, Postgres scoped repository, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
 Cloud Soul Ops status on 2026-06-16: Render has `NNZ_OPS_TOKEN` configured. `/ops` returns 200, `/api/ops/overview` returns 401 without token, 403 with a wrong token, and 200 with the configured token. `POST /api/ops/cleanup-test-users` dry-run returns one explicit smoke/test candidate and deletes nothing. The token value is stored only in Render and must not be committed or documented.
 
@@ -235,6 +235,6 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 ## Current State
 
-The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, and Step 2.6 scoped Covenant lifecycle tables are implemented locally.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, and Step 2.7 proposal/credential/audit tables are implemented locally.
 
-Next engineering steps: verify optional role-specific tokens in Render, then extend the Postgres scoped repository to SoulUpdateProposal/OpsAudit/Credential before switching demo runtime persistence away from snapshots.
+Next engineering steps: verify optional role-specific tokens in Render, then add real Postgres integration tests and design snapshot-to-table migration before switching demo runtime persistence away from snapshots.

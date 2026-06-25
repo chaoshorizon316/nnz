@@ -13,9 +13,12 @@ import type {
   ConversationMessage,
   MemoryItem,
   NodeEvent,
+  OpsAuditAction,
+  OpsAuditOutcome,
   PersonaType,
   RuntimeSession,
   SoulSnapshot,
+  SoulUpdateProposal,
   SoulVersion,
 } from './types';
 
@@ -31,8 +34,11 @@ describe('PostgresScopedSoulRepository', () => {
     expect(pool.schemaSql).toContain('idx_nnz_soul_versions_scope_version');
     expect(pool.schemaSql).toContain('idx_nnz_soul_snapshots_scope_sealed');
     expect(pool.schemaSql).toContain('idx_nnz_node_events_scope_start');
+    expect(pool.schemaSql).toContain('idx_nnz_soul_update_proposals_scope_status');
     expect(pool.schemaSql).toContain('idx_nnz_conversation_scope_created');
     expect(pool.schemaSql).toContain('nnz_runtime_sessions');
+    expect(pool.schemaSql).toContain('nnz_credentials');
+    expect(pool.schemaSql).toContain('nnz_ops_audit_events');
   });
 
   it('requires a complete owned user/persona scope', async () => {
@@ -298,6 +304,153 @@ describe('PostgresScopedSoulRepository', () => {
     expect(await repoB.getRuntimeSession()).toMatchObject({ state: 'ACTIVE' });
     expect(await repoB.listSoulVersions()).toMatchObject([{ id: soulB.id, status: 'ARCHIVED' }, { status: 'ACTIVE' }]);
   });
+
+  it('keeps soul update proposals scoped and reviewable', async () => {
+    const { pool, userA, userB, personaA, personaB } = await createFixture();
+    const repoA = createPostgresScopedSoulRepositoryFromPool(pool, {
+      userId: userA.id,
+      personaId: personaA.id,
+    });
+    const repoB = createPostgresScopedSoulRepositoryFromPool(pool, {
+      userId: userB.id,
+      personaId: personaB.id,
+    });
+    await repoA.createSoulVersion({
+      kernelJson: { affectModel: { humorLevel: 'low' }, languageModel: { petPhrases: ['慢慢来'] } },
+    });
+    await repoB.createSoulVersion({
+      kernelJson: { affectModel: { humorLevel: 'medium' }, languageModel: { petPhrases: ['你自己拿主意'] } },
+    });
+    const evidenceA = await repoA.addMemory({
+      type: 'CORRECTION',
+      content: '爸爸其实很幽默。',
+      confidence: 1,
+      enabledForSoul: true,
+    });
+    const evidenceB = await repoB.addMemory({
+      type: 'CORRECTION',
+      content: '爸爸说话慢。',
+      confidence: 1,
+      enabledForSoul: true,
+    });
+    const nodeMemory = await repoA.addMemory({
+      type: 'NODE_MEMORY',
+      content: '婚礼节点记忆不能做 Soul 更新证据。',
+      confidence: 1,
+      enabledForSoul: false,
+    });
+
+    await expect(
+      repoA.createSoulUpdateProposal({
+        fieldPath: 'affectModel.humorLevel',
+        newValue: 'high',
+        evidenceIds: [evidenceB.id],
+      }),
+    ).rejects.toThrow(OwnershipError);
+    await expect(
+      repoA.createSoulUpdateProposal({
+        fieldPath: 'affectModel.humorLevel',
+        newValue: 'high',
+        evidenceIds: [nodeMemory.id],
+      }),
+    ).rejects.toThrow(OwnershipError);
+    await expect(
+      repoA.createSoulUpdateProposal({
+        fieldPath: 'unsafe.path',
+        newValue: 'bad',
+        evidenceIds: [evidenceA.id],
+      }),
+    ).rejects.toThrow('not allowed');
+
+    const proposal = await repoA.createSoulUpdateProposal({
+      fieldPath: 'affectModel.humorLevel',
+      newValue: 'high',
+      evidenceIds: [evidenceA.id],
+    });
+    expect(proposal).toMatchObject({
+      userId: userA.id,
+      personaId: personaA.id,
+      oldValue: 'low',
+      newValue: 'high',
+      status: 'PENDING',
+    });
+    expect(await repoA.listSoulUpdateProposalEvidence(proposal.id)).toEqual([evidenceA]);
+    expect(await repoB.listSoulUpdateProposals()).toEqual([]);
+
+    const acceptedSoul = await repoA.acceptSoulUpdateProposal(proposal.id);
+    expect(acceptedSoul.kernelJson).toMatchObject({ affectModel: { humorLevel: 'high' } });
+    expect(await repoA.listSoulUpdateProposals('ACCEPTED')).toHaveLength(1);
+    await expect(repoA.rejectSoulUpdateProposal(proposal.id)).rejects.toThrow('already ACCEPTED');
+    expect(await repoB.getLatestSoulVersion()).toMatchObject({
+      userId: userB.id,
+      personaId: personaB.id,
+      kernelJson: { affectModel: { humorLevel: 'medium' }, languageModel: { petPhrases: ['你自己拿主意'] } },
+    });
+
+    const rejectedProposal = await repoA.createSoulUpdateProposal({
+      fieldPath: 'languageModel.petPhrases',
+      newValue: ['丫头'],
+      evidenceIds: [evidenceA.id],
+    });
+    await expect(repoA.rejectSoulUpdateProposal(rejectedProposal.id)).resolves.toMatchObject({ status: 'REJECTED' });
+    await expect(repoA.acceptSoulUpdateProposal(rejectedProposal.id)).rejects.toThrow('already REJECTED');
+  });
+
+  it('stores credentials by user and records ops audit without leaking sensitive fields', async () => {
+    const { pool, userA, userB, personaA } = await createFixture();
+    const repoA = createPostgresScopedSoulRepositoryFromPool(pool, {
+      userId: userA.id,
+      personaId: personaA.id,
+    });
+
+    await repoA.storeCredential(userA.id, 'a@example.com', 'hash-a');
+    await repoA.storeCredential(userB.id, 'b@example.com', 'hash-b');
+
+    expect(await repoA.getCredentialByEmail('a@example.com')).toMatchObject({
+      userId: userA.id,
+      email: 'a@example.com',
+      passwordHash: 'hash-a',
+    });
+    expect(await repoA.getCredentialByEmail('b@example.com')).toMatchObject({
+      userId: userB.id,
+      email: 'b@example.com',
+      passwordHash: 'hash-b',
+    });
+
+    await repoA.recordOpsAuditEvent({
+      action: 'OVERVIEW_READ',
+      outcome: 'SUCCESS',
+      actor: 'ops:viewer',
+      targetUserIds: [userA.id, userA.id],
+      metadata: { path: '/api/ops/overview', count: 1 },
+    });
+    await repoA.recordOpsAuditEvent({
+      action: 'ACCESS_DENIED',
+      outcome: 'DENIED',
+      actor: 'ops:unknown',
+      metadata: { reason: 'bad-token' },
+    });
+
+    const events = await repoA.listOpsAuditEvents();
+    expect(events).toHaveLength(2);
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: 'ACCESS_DENIED',
+          outcome: 'DENIED',
+          metadata: { reason: 'bad-token' },
+        }),
+        expect.objectContaining({
+          action: 'OVERVIEW_READ',
+          actor: 'ops:viewer',
+          targetUserIds: [userA.id],
+          metadata: { path: '/api/ops/overview', count: 1 },
+        }),
+      ]),
+    );
+    expect(JSON.stringify(events)).not.toContain('hash-a');
+    expect(JSON.stringify(events)).not.toContain('我今天很想你');
+  });
 });
 
 async function createFixture() {
@@ -337,9 +490,12 @@ class FakeScopedPool implements QueryablePool {
   private readonly memoryItems = new Map<string, MemoryRow>();
   private readonly soulVersions = new Map<string, SoulVersionRow>();
   private readonly soulSnapshots = new Map<string, SoulSnapshotRow>();
+  private readonly soulUpdateProposals = new Map<string, SoulUpdateProposalRow>();
   private readonly nodeEvents = new Map<string, NodeEventRow>();
   private readonly conversations = new Map<string, ConversationRow>();
   private readonly runtimeSessions = new Map<string, RuntimeSessionRow>();
+  private readonly credentials = new Map<string, CredentialRow>();
+  private readonly opsAuditEvents = new Map<string, OpsAuditEventRow>();
 
   async query<T = unknown>(sql: string, params: unknown[] = []): Promise<{ rows: T[] }> {
     const compactSql = sql.replace(/\s+/g, ' ').trim();
@@ -522,6 +678,85 @@ class FakeScopedPool implements QueryablePool {
           .sort(compareCreatedAt),
       );
     }
+    if (compactSql.startsWith('INSERT INTO nnz_soul_update_proposals')) {
+      const [id, userId, personaId, fieldPath, oldValue, newValue, evidenceIds, status, createdAt] = params;
+      this.requirePersonaScope(String(userId), String(personaId));
+      this.soulUpdateProposals.set(String(id), {
+        id: String(id),
+        user_id: String(userId),
+        persona_id: String(personaId),
+        field_path: String(fieldPath),
+        old_value: JSON.parse(String(oldValue)),
+        new_value: JSON.parse(String(newValue)),
+        evidence_ids: JSON.parse(String(evidenceIds)) as string[],
+        status: status as SoulUpdateProposal['status'],
+        created_at: asDate(createdAt),
+      });
+      return rows([]);
+    }
+    if (
+      compactSql
+      === 'SELECT * FROM nnz_soul_update_proposals WHERE user_id = $1 AND persona_id = $2 AND status = $3 ORDER BY created_at ASC, id ASC'
+    ) {
+      return rows(
+        [...this.soulUpdateProposals.values()]
+          .filter(
+            (proposal) =>
+              proposal.user_id === String(params[0])
+              && proposal.persona_id === String(params[1])
+              && proposal.status === params[2],
+          )
+          .sort(compareCreatedAt),
+      );
+    }
+    if (
+      compactSql
+      === 'SELECT * FROM nnz_soul_update_proposals WHERE user_id = $1 AND persona_id = $2 ORDER BY created_at ASC, id ASC'
+    ) {
+      return rows(
+        [...this.soulUpdateProposals.values()]
+          .filter((proposal) => proposal.user_id === String(params[0]) && proposal.persona_id === String(params[1]))
+          .sort(compareCreatedAt),
+      );
+    }
+    if (compactSql === 'SELECT * FROM nnz_soul_update_proposals WHERE user_id = $1 AND persona_id = $2 AND id = $3') {
+      const proposal = this.soulUpdateProposals.get(String(params[2]));
+      return rows(
+        proposal && proposal.user_id === String(params[0]) && proposal.persona_id === String(params[1])
+          ? [proposal]
+          : [],
+      );
+    }
+    if (
+      compactSql
+      === "UPDATE nnz_soul_update_proposals SET status = 'ACCEPTED' WHERE user_id = $1 AND persona_id = $2 AND id = $3 AND status = 'PENDING'"
+    ) {
+      const proposal = this.soulUpdateProposals.get(String(params[2]));
+      if (
+        proposal
+        && proposal.user_id === String(params[0])
+        && proposal.persona_id === String(params[1])
+        && proposal.status === 'PENDING'
+      ) {
+        proposal.status = 'ACCEPTED';
+      }
+      return rows([]);
+    }
+    if (
+      compactSql
+      === "UPDATE nnz_soul_update_proposals SET status = 'REJECTED' WHERE user_id = $1 AND persona_id = $2 AND id = $3 AND status = 'PENDING'"
+    ) {
+      const proposal = this.soulUpdateProposals.get(String(params[2]));
+      if (
+        proposal
+        && proposal.user_id === String(params[0])
+        && proposal.persona_id === String(params[1])
+        && proposal.status === 'PENDING'
+      ) {
+        proposal.status = 'REJECTED';
+      }
+      return rows([]);
+    }
     if (
       compactSql
       === "UPDATE nnz_soul_versions SET status = 'ARCHIVED' WHERE user_id = $1 AND persona_id = $2 AND id = $3"
@@ -649,6 +884,39 @@ class FakeScopedPool implements QueryablePool {
       const node = this.nodeEvents.get(String(params[2]));
       return rows(node && node.user_id === String(params[0]) && node.persona_id === String(params[1]) ? [node] : []);
     }
+    if (compactSql.startsWith('INSERT INTO nnz_credentials')) {
+      const [userId, email, passwordHash, createdAt] = params;
+      this.requireUser(String(userId));
+      this.credentials.set(String(userId), {
+        user_id: String(userId),
+        email: String(email),
+        password_hash: String(passwordHash),
+        created_at: asDate(createdAt),
+      });
+      return rows([]);
+    }
+    if (compactSql === 'SELECT * FROM nnz_credentials WHERE email = $1') {
+      return rows([...this.credentials.values()].filter((credential) => credential.email === String(params[0])));
+    }
+    if (compactSql.startsWith('INSERT INTO nnz_ops_audit_events')) {
+      const [id, action, outcome, actor, targetUserIds, metadata, createdAt] = params;
+      this.opsAuditEvents.set(String(id), {
+        id: String(id),
+        action: action as OpsAuditAction,
+        outcome: outcome as OpsAuditOutcome,
+        actor: String(actor),
+        target_user_ids: JSON.parse(String(targetUserIds)) as string[],
+        metadata: JSON.parse(String(metadata)) as Record<string, string | number | boolean | null>,
+        created_at: asDate(createdAt),
+      });
+      return rows([]);
+    }
+    if (compactSql === 'SELECT * FROM nnz_ops_audit_events ORDER BY created_at DESC, id DESC') {
+      return rows([...this.opsAuditEvents.values()].sort(compareCreatedAtDesc));
+    }
+    if (compactSql === 'SELECT * FROM nnz_ops_audit_events ORDER BY created_at DESC, id DESC LIMIT $1') {
+      return rows([...this.opsAuditEvents.values()].sort(compareCreatedAtDesc).slice(0, Number(params[0])));
+    }
 
     throw new Error(`Unexpected SQL in fake scoped pool: ${compactSql}`);
   }
@@ -692,6 +960,10 @@ function asDate(value: unknown): Date {
 
 function compareCreatedAt<T extends { created_at: Date; id: string }>(left: T, right: T): number {
   return left.created_at.getTime() - right.created_at.getTime() || left.id.localeCompare(right.id);
+}
+
+function compareCreatedAtDesc<T extends { created_at: Date; id: string }>(left: T, right: T): number {
+  return right.created_at.getTime() - left.created_at.getTime() || right.id.localeCompare(left.id);
 }
 
 function compareStartAt<T extends { start_at: Date; id: string }>(left: T, right: T): number {
@@ -756,6 +1028,18 @@ interface SoulSnapshotRow {
   sealed_at: Date;
 }
 
+interface SoulUpdateProposalRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  field_path: string;
+  old_value: unknown;
+  new_value: unknown;
+  evidence_ids: string[];
+  status: SoulUpdateProposal['status'];
+  created_at: Date;
+}
+
 interface NodeEventRow {
   id: string;
   user_id: string;
@@ -786,4 +1070,21 @@ interface RuntimeSessionRow {
   daily_message_count: number | null;
   last_message_date: string | null;
   updated_at: Date;
+}
+
+interface CredentialRow {
+  user_id: string;
+  email: string;
+  password_hash: string;
+  created_at: Date;
+}
+
+interface OpsAuditEventRow {
+  id: string;
+  action: OpsAuditAction;
+  outcome: OpsAuditOutcome;
+  actor: string;
+  target_user_ids: string[];
+  metadata: Record<string, string | number | boolean | null>;
+  created_at: Date;
 }

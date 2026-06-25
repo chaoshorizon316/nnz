@@ -2,15 +2,20 @@ import { randomUUID } from 'node:crypto';
 
 import pg from 'pg';
 
+import type { CredentialRecord } from '../auth/auth';
 import { CovenantStateError, NotFoundError, OwnershipError, ScopeValidationError } from './errors';
 import type {
   ConversationMessage,
   MemoryItem,
   NodeEvent,
+  OpsAuditAction,
+  OpsAuditEvent,
+  OpsAuditOutcome,
   Persona,
   PersonaType,
   RuntimeSession,
   SoulSnapshot,
+  SoulUpdateProposal,
   SoulVersion,
   User,
   UserPersonaScope,
@@ -19,6 +24,7 @@ import type {
   AddConversationInput,
   AddMemoryInput,
   CreateNodeInput,
+  CreateSoulUpdateProposalInput,
   CreateSoulVersionInput,
 } from './soul-store';
 
@@ -118,6 +124,22 @@ CREATE TABLE IF NOT EXISTS nnz_node_events (
 CREATE INDEX IF NOT EXISTS idx_nnz_node_events_scope_start
   ON nnz_node_events (user_id, persona_id, start_at, id);
 
+CREATE TABLE IF NOT EXISTS nnz_soul_update_proposals (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  persona_id TEXT NOT NULL,
+  field_path TEXT NOT NULL,
+  old_value JSONB NOT NULL,
+  new_value JSONB NOT NULL,
+  evidence_ids JSONB NOT NULL,
+  status TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  FOREIGN KEY (user_id, persona_id) REFERENCES nnz_personas (user_id, id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_nnz_soul_update_proposals_scope_status
+  ON nnz_soul_update_proposals (user_id, persona_id, status, created_at, id);
+
 CREATE TABLE IF NOT EXISTS nnz_conversation_messages (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -145,6 +167,29 @@ CREATE TABLE IF NOT EXISTS nnz_runtime_sessions (
   PRIMARY KEY (user_id, persona_id),
   FOREIGN KEY (user_id, persona_id) REFERENCES nnz_personas (user_id, id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS nnz_credentials (
+  user_id TEXT PRIMARY KEY REFERENCES nnz_users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_nnz_credentials_email
+  ON nnz_credentials (email);
+
+CREATE TABLE IF NOT EXISTS nnz_ops_audit_events (
+  id TEXT PRIMARY KEY,
+  action TEXT NOT NULL,
+  outcome TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  target_user_ids JSONB NOT NULL,
+  metadata JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_nnz_ops_audit_created
+  ON nnz_ops_audit_events (created_at DESC, id);
 `;
 
 type OptionalScope = Partial<UserPersonaScope> | undefined;
@@ -165,6 +210,18 @@ export type PostgresScopedAddMemoryInput = Omit<AddMemoryInput, 'userId' | 'pers
 export type PostgresScopedAddConversationInput = Omit<AddConversationInput, 'userId' | 'personaId'>;
 export type PostgresScopedCreateSoulVersionInput = Omit<CreateSoulVersionInput, 'userId' | 'personaId'>;
 export type PostgresScopedCreateNodeInput = Omit<CreateNodeInput, 'userId' | 'personaId'>;
+export type PostgresScopedCreateSoulUpdateProposalInput = Omit<
+  CreateSoulUpdateProposalInput,
+  'userId' | 'personaId'
+>;
+
+interface RecordOpsAuditEventInput {
+  action: OpsAuditAction;
+  outcome: OpsAuditOutcome;
+  actor?: string;
+  targetUserIds?: string[];
+  metadata?: Record<string, string | number | boolean | null>;
+}
 
 export class PostgresScopedSoulRepository {
   private readonly scopeValue: UserPersonaScope;
@@ -355,6 +412,110 @@ export class PostgresScopedSoulRepository {
         && memory.type !== 'RISK'
         && memory.sensitivity !== 'RESTRICTED',
     );
+  }
+
+  async createSoulUpdateProposal(
+    input: PostgresScopedCreateSoulUpdateProposalInput,
+  ): Promise<SoulUpdateProposal> {
+    await this.ensureBoundPersona();
+    requireAllowedSoulFieldPath(input.fieldPath);
+    await this.requireSoulUpdateEvidence(input.evidenceIds);
+    const latest = await this.getLatestSoulVersion();
+    const proposal = createSoulUpdateProposal({ ...input, ...this.scopeValue }, latest);
+    await this.pool.query(
+      `INSERT INTO nnz_soul_update_proposals (
+        id, user_id, persona_id, field_path, old_value, new_value, evidence_ids, status, created_at
+      ) VALUES (
+        $1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9
+      )`,
+      [
+        proposal.id,
+        proposal.userId,
+        proposal.personaId,
+        proposal.fieldPath,
+        JSON.stringify(proposal.oldValue),
+        JSON.stringify(proposal.newValue),
+        JSON.stringify(proposal.evidenceIds),
+        proposal.status,
+        proposal.createdAt,
+      ],
+    );
+    return proposal;
+  }
+
+  async listSoulUpdateProposals(status?: SoulUpdateProposal['status']): Promise<SoulUpdateProposal[]> {
+    await this.ensureBoundPersona();
+    const result = status
+      ? await this.pool.query<SoulUpdateProposalRow>(
+        `SELECT *
+         FROM nnz_soul_update_proposals
+         WHERE user_id = $1 AND persona_id = $2 AND status = $3
+         ORDER BY created_at ASC, id ASC`,
+        [this.scopeValue.userId, this.scopeValue.personaId, status],
+      )
+      : await this.pool.query<SoulUpdateProposalRow>(
+        `SELECT *
+         FROM nnz_soul_update_proposals
+         WHERE user_id = $1 AND persona_id = $2
+         ORDER BY created_at ASC, id ASC`,
+        [this.scopeValue.userId, this.scopeValue.personaId],
+      );
+    return result.rows.map(mapSoulUpdateProposalRow);
+  }
+
+  async listSoulUpdateProposalEvidence(proposalId: string): Promise<MemoryItem[]> {
+    const proposal = await this.requireSoulUpdateProposal(proposalId);
+    const memories = await this.listMemory();
+    const byId = new Map(memories.map((memory) => [memory.id, memory]));
+    return proposal.evidenceIds.map((evidenceId) => {
+      const memory = byId.get(evidenceId);
+      if (!memory) {
+        throw new NotFoundError(`Memory ${evidenceId} was not found in the requested user/persona scope.`);
+      }
+      return memory;
+    });
+  }
+
+  async acceptSoulUpdateProposal(proposalId: string): Promise<SoulVersion> {
+    const proposal = await this.requireSoulUpdateProposal(proposalId);
+    if (proposal.status !== 'PENDING') {
+      throw new Error(`Soul update proposal ${proposalId} is already ${proposal.status}.`);
+    }
+
+    const latest = await this.getLatestSoulVersion();
+    const nextKernel = cloneJson(latest.kernelJson);
+    setByPath(nextKernel, proposal.fieldPath, cloneJsonValue(proposal.newValue));
+
+    await this.pool.query(
+      `UPDATE nnz_soul_update_proposals
+       SET status = 'ACCEPTED'
+       WHERE user_id = $1 AND persona_id = $2 AND id = $3 AND status = 'PENDING'`,
+      [this.scopeValue.userId, this.scopeValue.personaId, proposalId],
+    );
+
+    return this.createSoulVersion({
+      kernelJson: nextKernel,
+      status: 'ACTIVE',
+    });
+  }
+
+  async rejectSoulUpdateProposal(proposalId: string): Promise<SoulUpdateProposal> {
+    const proposal = await this.requireSoulUpdateProposal(proposalId);
+    if (proposal.status !== 'PENDING') {
+      throw new Error(`Soul update proposal ${proposalId} is already ${proposal.status}.`);
+    }
+
+    await this.pool.query(
+      `UPDATE nnz_soul_update_proposals
+       SET status = 'REJECTED'
+       WHERE user_id = $1 AND persona_id = $2 AND id = $3 AND status = 'PENDING'`,
+      [this.scopeValue.userId, this.scopeValue.personaId, proposalId],
+    );
+
+    return {
+      ...proposal,
+      status: 'REJECTED',
+    };
   }
 
   async addConversation(input: PostgresScopedAddConversationInput): Promise<ConversationMessage> {
@@ -556,6 +717,68 @@ export class PostgresScopedSoulRepository {
     return session;
   }
 
+  async storeCredential(userId: string, email: string, passwordHash: string): Promise<void> {
+    await requirePostgresUser(this.pool, userId);
+    await this.pool.query(
+      `INSERT INTO nnz_credentials (user_id, email, password_hash, created_at)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id) DO UPDATE SET
+         email = EXCLUDED.email,
+         password_hash = EXCLUDED.password_hash,
+         created_at = EXCLUDED.created_at`,
+      [userId, email, passwordHash, new Date()],
+    );
+  }
+
+  async getCredentialByEmail(email: string): Promise<CredentialRecord | undefined> {
+    const result = await this.pool.query<CredentialRow>(
+      `SELECT *
+       FROM nnz_credentials
+       WHERE email = $1`,
+      [email],
+    );
+    const row = result.rows[0];
+    return row ? mapCredentialRow(row) : undefined;
+  }
+
+  async recordOpsAuditEvent(input: RecordOpsAuditEventInput): Promise<OpsAuditEvent> {
+    const event = createOpsAuditEvent(input);
+    await this.pool.query(
+      `INSERT INTO nnz_ops_audit_events (
+        id, action, outcome, actor, target_user_ids, metadata, created_at
+      ) VALUES (
+        $1, $2, $3, $4, $5::jsonb, $6::jsonb, $7
+      )`,
+      [
+        event.id,
+        event.action,
+        event.outcome,
+        event.actor,
+        JSON.stringify(event.targetUserIds),
+        JSON.stringify(event.metadata),
+        event.createdAt,
+      ],
+    );
+    return event;
+  }
+
+  async listOpsAuditEvents(limit?: number): Promise<OpsAuditEvent[]> {
+    const result = limit === undefined
+      ? await this.pool.query<OpsAuditEventRow>(
+        `SELECT *
+         FROM nnz_ops_audit_events
+         ORDER BY created_at DESC, id DESC`,
+      )
+      : await this.pool.query<OpsAuditEventRow>(
+        `SELECT *
+         FROM nnz_ops_audit_events
+         ORDER BY created_at DESC, id DESC
+         LIMIT $1`,
+        [limit],
+      );
+    return result.rows.map(mapOpsAuditEventRow);
+  }
+
   private async nextSoulVersionNumber(): Promise<number> {
     const result = await this.pool.query<{ next_version: number | string }>(
       `SELECT COALESCE(MAX(version), 0) + 1 AS next_version
@@ -578,6 +801,30 @@ export class PostgresScopedSoulRepository {
       throw new OwnershipError(`Node ${nodeId} does not belong to the requested user/persona scope.`);
     }
     return mapNodeEventRow(row);
+  }
+
+  private async requireSoulUpdateEvidence(evidenceIds: string[]): Promise<void> {
+    const allowedIds = new Set((await this.listSoulUpdateMemory()).map((memory) => memory.id));
+    for (const evidenceId of evidenceIds) {
+      if (!allowedIds.has(evidenceId)) {
+        throw new OwnershipError(`Memory ${evidenceId} is not allowed as Soul update evidence in this scope.`);
+      }
+    }
+  }
+
+  private async requireSoulUpdateProposal(proposalId: string): Promise<SoulUpdateProposal> {
+    await this.ensureBoundPersona();
+    const result = await this.pool.query<SoulUpdateProposalRow>(
+      `SELECT *
+       FROM nnz_soul_update_proposals
+       WHERE user_id = $1 AND persona_id = $2 AND id = $3`,
+      [this.scopeValue.userId, this.scopeValue.personaId, proposalId],
+    );
+    const row = result.rows[0];
+    if (!row) {
+      throw new NotFoundError(`Soul update proposal ${proposalId} was not found in the requested user/persona scope.`);
+    }
+    return mapSoulUpdateProposalRow(row);
   }
 
   private async findReusableNode(nodeName: string): Promise<NodeEvent | undefined> {
@@ -838,6 +1085,23 @@ function createSoulSnapshot(
   };
 }
 
+function createSoulUpdateProposal(
+  input: CreateSoulUpdateProposalInput,
+  latest: SoulVersion,
+): SoulUpdateProposal {
+  return {
+    id: createId('proposal'),
+    userId: input.userId,
+    personaId: input.personaId,
+    fieldPath: input.fieldPath,
+    oldValue: cloneJsonValue(getByPath(latest.kernelJson, input.fieldPath)),
+    newValue: cloneJsonValue(input.newValue),
+    evidenceIds: [...input.evidenceIds],
+    status: 'PENDING',
+    createdAt: new Date(),
+  };
+}
+
 function createConversation(input: AddConversationInput): ConversationMessage {
   const message: ConversationMessage = {
     id: createId('message'),
@@ -867,6 +1131,29 @@ function createNode(input: CreateNodeInput): NodeEvent {
     startAt,
     endAt,
   };
+}
+
+function createOpsAuditEvent(input: RecordOpsAuditEventInput): OpsAuditEvent {
+  return {
+    id: createId('ops_audit'),
+    action: input.action,
+    outcome: input.outcome,
+    actor: input.actor ?? 'ops-token',
+    targetUserIds: [...new Set(input.targetUserIds ?? [])],
+    metadata: cloneMetadata(input.metadata ?? {}),
+    createdAt: new Date(),
+  };
+}
+
+function requireAllowedSoulFieldPath(fieldPath: string): void {
+  const allowed = new Set([
+    'affectModel.humorLevel',
+    'languageModel.petPhrases',
+    'identityCore.relationship',
+  ]);
+  if (!allowed.has(fieldPath)) {
+    throw new Error(`Soul update fieldPath "${fieldPath}" is not allowed.`);
+  }
 }
 
 function defaultMemorySource(type: MemoryItem['type']): MemoryItem['source'] {
@@ -924,6 +1211,39 @@ function cloneJson(value: Record<string, unknown>): Record<string, unknown> {
   return JSON.parse(JSON.stringify(value));
 }
 
+function cloneJsonValue(value: unknown): unknown {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function cloneMetadata(
+  value: Record<string, string | number | boolean | null>,
+): Record<string, string | number | boolean | null> {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getByPath(obj: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((acc, key) => {
+    if (acc && typeof acc === 'object' && key in acc) {
+      return (acc as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj);
+}
+
+function setByPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+  const parts = path.split('.');
+  let current: Record<string, unknown> = obj;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    const key = parts[i]!;
+    const next = current[key];
+    if (!next || typeof next !== 'object' || Array.isArray(next)) {
+      current[key] = {};
+    }
+    current = current[key] as Record<string, unknown>;
+  }
+  current[parts.at(-1)!] = value;
+}
+
 interface UserRow {
   id: string;
   display_name: string;
@@ -978,6 +1298,18 @@ interface SoulSnapshotRow {
   sealed_at: string | Date;
 }
 
+interface SoulUpdateProposalRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  field_path: string;
+  old_value: unknown;
+  new_value: unknown;
+  evidence_ids: string[] | string;
+  status: SoulUpdateProposal['status'];
+  created_at: string | Date;
+}
+
 interface NodeEventRow {
   id: string;
   user_id: string;
@@ -1008,6 +1340,23 @@ interface RuntimeSessionRow {
   daily_message_count: number | null;
   last_message_date: string | null;
   updated_at: string | Date;
+}
+
+interface CredentialRow {
+  user_id: string;
+  email: string;
+  password_hash: string;
+  created_at: string | Date;
+}
+
+interface OpsAuditEventRow {
+  id: string;
+  action: OpsAuditAction;
+  outcome: OpsAuditOutcome;
+  actor: string;
+  target_user_ids: string[] | string;
+  metadata: Record<string, string | number | boolean | null> | string;
+  created_at: string | Date;
 }
 
 function mapUserRow(row: UserRow): User {
@@ -1054,6 +1403,20 @@ function mapSoulSnapshotRow(row: SoulSnapshotRow): SoulSnapshot {
     kernelJson: parseJsonObject(row.kernel_json),
     memoryIds: parseJsonArray(row.memory_ids),
     sealedAt: toDate(row.sealed_at),
+  };
+}
+
+function mapSoulUpdateProposalRow(row: SoulUpdateProposalRow): SoulUpdateProposal {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    personaId: row.persona_id,
+    fieldPath: row.field_path,
+    oldValue: parseJsonValue(row.old_value),
+    newValue: parseJsonValue(row.new_value),
+    evidenceIds: parseJsonArray(row.evidence_ids),
+    status: row.status,
+    createdAt: toDate(row.created_at),
   };
 }
 
@@ -1128,6 +1491,27 @@ function mapRuntimeSessionRow(row: RuntimeSessionRow): RuntimeSession {
   return session;
 }
 
+function mapCredentialRow(row: CredentialRow): CredentialRecord {
+  return {
+    userId: row.user_id,
+    email: row.email,
+    passwordHash: row.password_hash,
+    createdAt: toDate(row.created_at).toISOString(),
+  };
+}
+
+function mapOpsAuditEventRow(row: OpsAuditEventRow): OpsAuditEvent {
+  return {
+    id: row.id,
+    action: row.action,
+    outcome: row.outcome,
+    actor: row.actor,
+    targetUserIds: parseJsonArray(row.target_user_ids),
+    metadata: parseMetadata(row.metadata),
+    createdAt: toDate(row.created_at),
+  };
+}
+
 function toDate(value: string | Date): Date {
   return value instanceof Date ? value : new Date(value);
 }
@@ -1137,5 +1521,30 @@ function parseJsonArray(value: string[] | string): string[] {
 }
 
 function parseJsonObject(value: Record<string, unknown> | string): Record<string, unknown> {
+  return typeof value === 'string' ? JSON.parse(value) : value;
+}
+
+function parseJsonValue(value: unknown): unknown {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (
+    trimmed.startsWith('{')
+    || trimmed.startsWith('[')
+    || trimmed.startsWith('"')
+    || trimmed === 'null'
+    || trimmed === 'true'
+    || trimmed === 'false'
+    || /^-?\d+(\.\d+)?$/.test(trimmed)
+  ) {
+    return JSON.parse(trimmed);
+  }
+  return value;
+}
+
+function parseMetadata(
+  value: Record<string, string | number | boolean | null> | string,
+): Record<string, string | number | boolean | null> {
   return typeof value === 'string' ? JSON.parse(value) : value;
 }
