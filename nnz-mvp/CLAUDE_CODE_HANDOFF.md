@@ -843,7 +843,7 @@ src/runtime/llm-reply.test.ts
 src/runtime/soul-guard.test.ts
 ```
 
-当前共 87 条测试（2026-06-24 本地验证）。
+当前共 87 条默认测试，另有 1 个 opt-in Postgres integration test 默认 skip（2026-06-25 本地验证）。
 
 Domain tests 覆盖：
 
@@ -858,6 +858,7 @@ Domain tests 覆盖：
 - Postgres memory runtime / soul update filters 与 InMemorySoulStore 默认规则一致。
 - Postgres scoped Covenant 主链只影响当前 scope：ACTIVE 归档、snapshot、node 复用/完成、graduation、跨 scope node 拒绝。
 - Postgres scoped proposal 审核只使用同 scope evidence；credential 按 user 绑定；ops audit 不记录 credential/chat 敏感内容。
+- Opt-in Postgres integration test 可用真实数据库验证 schema、JSONB round-trip、复合外键、级联删除；默认没有 `NNZ_POSTGRES_INTEGRATION_URL` 时跳过。
 
 Runtime tests 覆盖：
 
@@ -1324,7 +1325,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md` 和 `nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，并进入真实 Postgres 集成测试与 snapshot -> tables 迁移设计。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md` 和 `nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，并用一次性测试库运行 opt-in Postgres integration test，再进入 snapshot -> tables 迁移设计。
 
 ## 16.2.1 2026-06-23 Step 2.5 Postgres scoped repository
 
@@ -1398,6 +1399,30 @@ npm run build:demo: passed
 
 - 这仍不是线上迁移；demo runtime 仍使用现有 Postgres snapshot persistence。
 - 尚未写真实 Postgres 集成测试或数据迁移脚本。
+
+## 16.2.4 2026-06-25 Step 2.8 Postgres integration test harness
+
+已完成 opt-in 真实 Postgres integration test：
+
+- 新增 `src/domain/postgres-scoped-soul-repository.integration.test.ts`。
+- 只读取 `NNZ_POSTGRES_INTEGRATION_URL`，不会使用 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
+- 默认 `npm test` 会 skip；有一次性测试库时才连接执行。
+- 覆盖 schema 创建、JSONB round-trip、复合外键拒绝跨 scope snapshot / memory、cross-scope evidence/node 拒绝、user 删除后的级联删除、OpsAudit 全局保留。
+
+验证：
+
+```text
+npm run typecheck: passed
+npm test: 13 个测试文件、87 tests passed；1 个 integration 文件 skipped
+npm run build:demo: passed
+git diff --check: passed
+```
+
+重要限制：
+
+- 尚未连接真实测试库跑 opt-in integration。
+- 这仍不是线上迁移；demo runtime 仍使用现有 Postgres snapshot persistence。
+- 下一步是用一次性测试库实际运行 integration test，然后设计 snapshot -> tables 迁移。
 
 ## 16.3 2026-06-22 H5 modal / CTA 修复
 

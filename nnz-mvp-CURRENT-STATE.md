@@ -1,6 +1,6 @@
 # nnz-mvp 当前状态与交接指南
 
-> 更新：2026-06-24
+> 更新：2026-06-25
 > 覆盖：Soul 作用域、Covenant 状态机、Memory 分层、Soul Ops、安全护栏、Render demo、LLM 对话、自动化提取管线、SQLite 持久化、登录注册、官网首页
 
 ## 2026-06-22 GitHub / CI / 本地状态
@@ -31,6 +31,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-23 Step 2.5: PostgresScopedSoulRepository 最小旁路切片已实现，覆盖 user/persona/memory/conversation 逐表 schema 与强 scope 查询；本地 typecheck、13 个测试文件 84 tests、build 通过；demo runtime 尚未从 snapshot persistence 切换
 2026-06-24 Step 2.6: PostgresScopedSoulRepository Covenant 主链旁路切片已实现，覆盖 soul_versions/soul_snapshots/node_events/runtime_sessions 与 seal/activate/complete/graduate lifecycle；本地 typecheck、13 个测试文件 85 tests、build:demo 通过；demo runtime 尚未从 snapshot persistence 切换
 2026-06-24 Step 2.7: PostgresScopedSoulRepository 剩余关键表旁路切片已实现，覆盖 soul_update_proposals/credentials/ops_audit_events；本地 typecheck、13 个测试文件 87 tests、build:demo 通过；demo runtime 尚未从 snapshot persistence 切换
+2026-06-25 Step 2.8: PostgresScopedSoulRepository 真实 Postgres integration test harness 已实现；默认 npm test 跳过，设置 NNZ_POSTGRES_INTEGRATION_URL 后可验证 schema/JSONB/复合外键/级联删除；本地 typecheck、13 个测试文件 87 tests + 1 skipped、build:demo 通过
 ```
 
 当前本地相对远端：
@@ -61,6 +62,7 @@ nnz-mvp-2026-06-23-H5修复上线验收记录.md
 nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md
 nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md
 nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md
+nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md
 ```
 
 ## 2026-06-22 工作区注意
@@ -476,11 +478,11 @@ npm run build:demo
 
 ```text
 npm run typecheck
-npm test         # 13 files, 87 tests passed
+npm test         # 13 files, 87 tests passed; 1 integration file skipped by default
 npm run build:demo
 ```
 
-下一步：优先在 Render 验证可选角色 token（viewer/operator/admin）的云端权限边界；工程侧进入真实 Postgres 集成测试与 snapshot -> tables 迁移设计。token 明文不得写入仓库或文档。
+下一步：优先在 Render 验证可选角色 token（viewer/operator/admin）的云端权限边界；工程侧用一次性测试库运行 `NNZ_POSTGRES_INTEGRATION_URL=... npm test -- src/domain/postgres-scoped-soul-repository.integration.test.ts`，然后进入 snapshot -> tables 迁移设计。token/连接串明文不得写入仓库或文档。
 
 ### 后续：微信 / H5 用户端雏形
 
@@ -592,4 +594,4 @@ npm run build:demo
 npm audit        # 0 vulnerabilities
 ```
 
-当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。2026-06-16 已完成 Render `NNZ_OPS_TOKEN` 配置和云端 `/ops` smoke，并完成 Step 2.1 Soul Ops 审计日志。2026-06-17 已完成 Step 2.2 Soul Ops RBAC 与删除回执；同日 Step 2.3 已完成 Audit 查询接口和 `/ops` Audit tab，并已推送通过 GitHub Actions / Render 基础 smoke。2026-06-23 已完成 Step 2.5 Postgres scoped repository 最小旁路切片。2026-06-24 已完成 Step 2.6 Postgres scoped Covenant 主链旁路切片；同日 Step 2.7 已补齐 Proposal/Credential/OpsAudit 旁路表。下一步进入云端角色 token smoke、真实 Postgres 集成测试与 snapshot persistence 迁移设计。
+当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。2026-06-16 已完成 Render `NNZ_OPS_TOKEN` 配置和云端 `/ops` smoke，并完成 Step 2.1 Soul Ops 审计日志。2026-06-17 已完成 Step 2.2 Soul Ops RBAC 与删除回执；同日 Step 2.3 已完成 Audit 查询接口和 `/ops` Audit tab，并已推送通过 GitHub Actions / Render 基础 smoke。2026-06-23 已完成 Step 2.5 Postgres scoped repository 最小旁路切片。2026-06-24 已完成 Step 2.6 Postgres scoped Covenant 主链旁路切片；同日 Step 2.7 已补齐 Proposal/Credential/OpsAudit 旁路表。2026-06-25 已新增 opt-in 真实 Postgres integration test harness。下一步进入云端角色 token smoke、一次性测试库 integration run 与 snapshot persistence 迁移设计。

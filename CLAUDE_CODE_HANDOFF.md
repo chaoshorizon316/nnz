@@ -37,6 +37,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-23 Step 2.5: PostgresScopedSoulRepository 最小旁路切片已实现，覆盖 user/persona/memory/conversation 逐表 schema 与强 scope 查询；本地 typecheck、13 个测试文件 84 tests、build 通过；demo runtime 尚未从 snapshot persistence 切换
 2026-06-24 Step 2.6: PostgresScopedSoulRepository Covenant 主链旁路切片已实现，覆盖 soul_versions/soul_snapshots/node_events/runtime_sessions 与 seal/activate/complete/graduate lifecycle；本地 typecheck、13 个测试文件 85 tests、build:demo 通过；demo runtime 尚未从 snapshot persistence 切换
 2026-06-24 Step 2.7: PostgresScopedSoulRepository 剩余关键表旁路切片已实现，覆盖 soul_update_proposals/credentials/ops_audit_events；本地 typecheck、13 个测试文件 87 tests、build:demo 通过；demo runtime 尚未从 snapshot persistence 切换
+2026-06-25 Step 2.8: PostgresScopedSoulRepository 真实 Postgres integration test harness 已实现；默认 npm test 跳过，设置 NNZ_POSTGRES_INTEGRATION_URL 后可验证 schema/JSONB/复合外键/级联删除；本地 typecheck、87 tests + 1 skipped、build:demo 通过
 ```
 
 说明：
@@ -75,6 +76,7 @@ https://github.com/chaoshorizon316/nnz
 - 6 月 23 日 Step 2.5 已实现 `PostgresScopedSoulRepository`：新增 `nnz_users`、`nnz_personas`、`nnz_memory_items`、`nnz_conversation_messages` 最小逐表 schema；repository 构造时绑定完整 `userId + personaId`；memory/conversation 读写强制按双字段 scope 查询；fake Postgres pool 测试覆盖同名 persona 隔离、跨 owner 拒绝、caller-supplied id 不覆盖绑定 scope、memory filter 默认规则。当前仍是旁路实现，尚未替换 demo runtime 的 Postgres snapshot persistence。
 - 6 月 24 日 Step 2.6 已扩展 `PostgresScopedSoulRepository`：新增 `nnz_soul_versions`、`nnz_soul_snapshots`、`nnz_node_events`、`nnz_runtime_sessions`；实现 create/list/get soul version、snapshot、node、runtime session 与 seal/activate/complete/graduate；fake Postgres pool 测试覆盖 current scope 归档、snapshot memoryIds、node 复用与完成、跨 scope node 拒绝。当前仍是旁路实现，尚未替换 demo runtime 的 Postgres snapshot persistence。
 - 6 月 24 日 Step 2.7 已补齐 `PostgresScopedSoulRepository` 剩余关键表：新增 `nnz_soul_update_proposals`、`nnz_credentials`、`nnz_ops_audit_events`；实现 proposal 创建/列表/证据/接受/拒绝、credential 存取、ops audit 记录/列表；fake Postgres pool 测试覆盖 cross-scope evidence 拒绝、terminal proposal 状态、credential user 绑定、audit metadata 不含 credential/chat。当前仍是旁路实现，尚未替换 demo runtime 的 Postgres snapshot persistence。
+- 6 月 25 日 Step 2.8 已新增真实 Postgres integration test harness：`src/domain/postgres-scoped-soul-repository.integration.test.ts` 只读取 `NNZ_POSTGRES_INTEGRATION_URL`，默认 skip；有一次性测试库时可验证真实 schema、JSONB round-trip、复合外键拒绝跨 scope snapshot / memory、cross-scope evidence/node 拒绝、user 删除级联，以及 OpsAudit 全局保留。当前仍未替换 demo runtime 的 Postgres snapshot persistence。
 - 本地干净副本验证：`/tmp/nnz-step1-final.MF0YVg` 中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过，10 个测试文件、67 条测试全绿，0 vulnerabilities。
 - 本地 `/ops` browser smoke 通过：输入 `dev-ops-token` 后显示 8 个核心指标、用户表、2 个 Persona 成熟度卡片和测试数据清理面板。
 - Step 1 已推送到 GitHub：`30685df feat: add protected soul ops console`，当前本地与远端同步：`main...origin/main`。
@@ -136,6 +138,8 @@ npm audit
 2026-06-24 Step 2.6 Postgres scoped Covenant 结果：继续扩展 `src/domain/postgres-scoped-soul-repository.ts` / `src/domain/postgres-scoped-soul-repository.test.ts`，完成 SoulVersion / SoulSnapshot / NodeEvent / RuntimeSession 的 Covenant 主链旁路切片；本地 `npm run typecheck`、`npm test`、`npm run build:demo` 通过，全量测试为 13 个测试文件、85 tests。记录见 `nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`。
 
 2026-06-24 Step 2.7 Postgres scoped 剩余表结果：继续扩展 `src/domain/postgres-scoped-soul-repository.ts` / `src/domain/postgres-scoped-soul-repository.test.ts`，完成 SoulUpdateProposal / Credential / OpsAuditEvent 的逐表旁路切片；本地 `npm run typecheck`、`npm test`、`npm run build:demo` 通过，全量测试为 13 个测试文件、87 tests。记录见 `nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`。
+
+2026-06-25 Step 2.8 Postgres integration harness 结果：新增 `src/domain/postgres-scoped-soul-repository.integration.test.ts`，默认跳过；设置 `NNZ_POSTGRES_INTEGRATION_URL` 后可连接一次性测试库验证 schema / JSONB / 复合外键 / 级联删除。本地 `npm run typecheck`、`npm test`、`npm run build:demo` 通过，全量为 13 个测试文件、87 tests，另有 1 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`。
 
 最新 CI run：
 
