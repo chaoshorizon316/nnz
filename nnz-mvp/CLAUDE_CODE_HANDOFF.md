@@ -1325,7 +1325,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md` 和 `nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，并用一次性测试库运行 opt-in Postgres integration test，再进入 snapshot -> tables 迁移设计。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md` 和 `nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，用一次性测试库运行 opt-in Postgres integration test，并用真实 `StoreSnapshot` 样本跑 Step 2.9 planner 审阅 dry-run plan。
 
 ## 16.2.1 2026-06-23 Step 2.5 Postgres scoped repository
 
@@ -1422,7 +1422,36 @@ git diff --check: passed
 
 - 尚未连接真实测试库跑 opt-in integration。
 - 这仍不是线上迁移；demo runtime 仍使用现有 Postgres snapshot persistence。
-- 下一步是用一次性测试库实际运行 integration test，然后设计 snapshot -> tables 迁移。
+- 下一步是用一次性测试库实际运行 integration test，并用真实 `StoreSnapshot` 样本跑 Step 2.9 planner。
+
+## 16.2.5 2026-06-25 Step 2.9 snapshot -> scoped tables migration planner
+
+已完成离线迁移预检 planner：
+
+- 新增 `src/domain/postgres-scoped-migration-plan.ts`。
+- 新增 `src/domain/postgres-scoped-migration-plan.test.ts`。
+- `planPostgresScopedMigration(snapshot)` 输入 `StoreSnapshot`，输出 scoped table order、每表 row count、total rows、blocking errors 和 warnings。
+- 校验 Soul / Memory / Snapshot / Node / Conversation / Session / Proposal 都能回到同一个 `userId + personaId`。
+- 校验 snapshot -> SoulVersion / Memory、proposal -> evidence、conversation/session -> node 的同 scope 引用。
+- 校验 credential 绑定存在 user，且 user/email 不重复。
+- 校验每个 scope 最多一个 ACTIVE SoulVersion。
+- OpsAudit 作为后台全局表，target user 缺失只输出 warning，不阻断迁移。
+- Session 校验兼容当前 `store.serialize()` 的 `nodeContext` 形态和旧扁平 `nodeId` / `nodeName` 形态。
+
+验证：
+
+```text
+npm run typecheck: passed
+npm test -- src/domain/postgres-scoped-migration-plan.test.ts --reporter verbose: 3 tests passed
+npm test: 14 个测试文件、90 tests passed；1 个 integration 文件 skipped
+npm run build:demo: passed
+```
+
+重要限制：
+
+- 这仍不是线上迁移；planner 不读取 `DATABASE_URL`，不连接 Render，不执行 INSERT / DELETE / UPDATE。
+- 尚未用真实线上 `StoreSnapshot` 样本跑 dry-run plan。
+- 下一步必须先审阅真实 snapshot 的 errors / warnings / row count，再设计实际迁移执行器。
 
 ## 16.3 2026-06-22 H5 modal / CTA 修复
 
