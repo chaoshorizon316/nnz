@@ -1325,7 +1325,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md` 和 `nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，用一次性测试库运行 opt-in Postgres integration test，并导出真实 `StoreSnapshot` 样本跑 `npm run migration:plan -- --report <report-json-path> <snapshot-json-path>` 审阅 sanitized dry-run plan。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md` 和 `nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，用一次性测试库运行 opt-in Postgres integration test，并导出真实 `StoreSnapshot` 样本跑 `npm run migration:plan -- --report <report-json-path> <snapshot-json-path>` 审阅 sanitized dry-run plan / rowBuild counts。
 
 ## 16.2.1 2026-06-23 Step 2.5 Postgres scoped repository
 
@@ -1493,6 +1493,36 @@ git diff --check: passed
 - 这仍不是线上迁移；CLI 只读本地 JSON 文件，不读取数据库环境变量，不连接 Render，不写入任何数据库。
 - 尚未用真实线上 `StoreSnapshot` 样本跑 dry-run plan。
 - 下一步仍是一次性 Postgres integration run + 真实 snapshot dry-run 审阅。
+
+## 16.2.7 2026-06-26 Step 2.11 scoped migration row builder
+
+已完成离线 row builder：
+
+- 新增 `src/domain/postgres-scoped-migration-rows.ts`。
+- 新增 `src/domain/postgres-scoped-migration-rows.test.ts`。
+- `buildPostgresScopedMigrationRows(snapshot)` 会先运行 Step 2.9 planner；如果存在 blocking errors，会抛出 `PostgresScopedMigrationRowsError`，不生成 rows。
+- 输出按 `POSTGRES_SCOPED_MIGRATION_TABLE_ORDER` 排列的 table rows 和 totalRows，为后续 write-side migration executor 做准备。
+- 覆盖 users/personas、soul_versions/soul_snapshots、memory/conversation、node/runtime session、proposal、credential、ops audit。
+- NODE session 的 `nodeContext` 会展平为 `node_id` / `node_name`。
+- Step 2.10 `--report` 已实际调用 row builder，但 sanitized report 只输出 rowBuild counts，不输出 rows 或敏感正文。
+
+验证：
+
+```text
+npm run typecheck: passed
+npm test -- src/domain/postgres-scoped-migration-rows.test.ts src/tools/postgres-scoped-migration-plan-cli.test.ts --reporter verbose: 10 tests passed
+npm run migration:plan -- --report /tmp/nnz-migration-row-builder-report.json /tmp/nnz-migration-row-builder-snapshot.json: passed
+rowBuild sanitized report content check: passed, no rows / sensitive memory / sensitive chat text
+npm test: 16 个测试文件、100 tests passed；1 个 integration 文件 skipped
+npm run build:demo: passed
+git diff --check: passed
+```
+
+重要限制：
+
+- 这仍不是线上迁移；row builder 只构造内存 rows，不连接 Render，不写入任何数据库。
+- 尚未用真实线上 `StoreSnapshot` 样本跑 dry-run / rowBuild。
+- 下一步仍是一次性 Postgres integration run + 真实 snapshot dry-run 审阅，再设计 write-side migration executor。
 
 ## 16.3 2026-06-22 H5 modal / CTA 修复
 

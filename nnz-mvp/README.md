@@ -225,7 +225,7 @@ npm run build:demo
 npm run demo
 ```
 
-Current verified suite on 2026-06-26: 94 tests plus one skipped opt-in Postgres integration test across domain scope, scoped repositories, Soul Ops cleanup/overview/audit query/RBAC, SQLite/Postgres snapshot persistence, Postgres scoped repository, snapshot migration planner/CLI, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+Current verified suite on 2026-06-26: 100 tests plus one skipped opt-in Postgres integration test across domain scope, scoped repositories, Soul Ops cleanup/overview/audit query/RBAC, SQLite/Postgres snapshot persistence, Postgres scoped repository, snapshot migration planner/row builder/CLI, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
 Offline snapshot migration dry-run:
 
@@ -245,6 +245,6 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 ## Current State
 
-The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, and Step 2.10 local dry-run CLI are implemented locally.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, and Step 2.11 scoped migration row builder are implemented locally.
 
-Next engineering steps: verify optional role-specific tokens in Render, run the opt-in Postgres integration test against a disposable database, export a real `StoreSnapshot` sample, then run `npm run migration:plan -- --report <report-json-path> <snapshot-json-path>` before designing the migration executor.
+Next engineering steps: verify optional role-specific tokens in Render, run the opt-in Postgres integration test against a disposable database, export a real `StoreSnapshot` sample, then run `npm run migration:plan -- --report <report-json-path> <snapshot-json-path>` before designing the write-side migration executor.

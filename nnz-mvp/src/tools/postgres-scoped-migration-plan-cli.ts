@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import type { StoreSnapshot } from '../domain/persistence';
 import type { PostgresScopedMigrationIssue, PostgresScopedMigrationPlan } from '../domain/postgres-scoped-migration-plan';
 import { planPostgresScopedMigration } from '../domain/postgres-scoped-migration-plan';
+import { buildPostgresScopedMigrationRows } from '../domain/postgres-scoped-migration-rows';
 
 export interface MigrationPlanCliResult {
   exitCode: number;
@@ -42,7 +43,8 @@ export function runMigrationPlanCommand(
     const snapshot = parseSnapshotJson(readTextFile(snapshotPath));
     const plan = planPostgresScopedMigration(snapshot);
     if (parsedArgs.reportPath) {
-      writeTextFile(resolve(parsedArgs.reportPath), `${JSON.stringify(createSanitizedReport(plan, snapshotPath), null, 2)}\n`);
+      const rows = plan.ready ? buildPostgresScopedMigrationRows(snapshot) : undefined;
+      writeTextFile(resolve(parsedArgs.reportPath), `${JSON.stringify(createSanitizedReport(plan, snapshotPath, rows), null, 2)}\n`);
     }
     return {
       exitCode: plan.ready ? 0 : 2,
@@ -106,13 +108,29 @@ export function formatPlan(plan: PostgresScopedMigrationPlan, snapshotPath: stri
   return `${lines.join('\n')}\n`;
 }
 
-export function createSanitizedReport(plan: PostgresScopedMigrationPlan, snapshotPath: string): Record<string, unknown> {
+export function createSanitizedReport(
+  plan: PostgresScopedMigrationPlan,
+  snapshotPath: string,
+  rows?: ReturnType<typeof buildPostgresScopedMigrationRows>,
+): Record<string, unknown> {
+  const rowBuild = rows
+    ? {
+      ready: true,
+      totalRows: rows.totalRows,
+      tables: rows.tables.map((table) => ({ table: table.table, count: table.rows.length })),
+    }
+    : {
+      ready: false,
+      totalRows: 0,
+      tables: [],
+    };
   return {
     kind: 'postgres-scoped-migration-dry-run',
     snapshotPath,
     ready: plan.ready,
     totalRows: plan.totalRows,
     tables: plan.tables,
+    rowBuild,
     warnings: plan.warnings.map(sanitizeIssue),
     errors: plan.errors.map(sanitizeIssue),
   };

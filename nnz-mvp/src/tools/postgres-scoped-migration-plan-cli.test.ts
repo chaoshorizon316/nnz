@@ -63,6 +63,9 @@ describe('Postgres scoped migration plan CLI', () => {
     expect(result.exitCode).toBe(0);
     expect(written['/tmp/report.json']).toBeDefined();
     expect(written['/tmp/report.json']).toContain('"ready": true');
+    expect(written['/tmp/report.json']).toContain('"rowBuild"');
+    expect(written['/tmp/report.json']).toContain('"count"');
+    expect(written['/tmp/report.json']).not.toContain('"rows"');
     expect(written['/tmp/report.json']).not.toContain('private memory text');
     expect(written['/tmp/report.json']).not.toContain('private chat text');
   });
