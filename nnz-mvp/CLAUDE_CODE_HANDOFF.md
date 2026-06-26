@@ -1325,7 +1325,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md` 和 `nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，用一次性测试库运行 opt-in Postgres integration test，并导出真实 `StoreSnapshot` 样本跑 `npm run migration:plan -- --report <report-json-path> <snapshot-json-path>` 审阅 sanitized dry-run plan / rowBuild counts。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`、`nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`、`nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md` 和 `nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，用一次性测试库运行 opt-in repository/executor Postgres integration tests，并导出真实 `StoreSnapshot` 样本跑 `npm run migration:plan -- --report <report-json-path> <snapshot-json-path>` 审阅 sanitized dry-run plan / rowBuild counts。
 
 ## 16.2.1 2026-06-23 Step 2.5 Postgres scoped repository
 
@@ -1523,6 +1523,61 @@ git diff --check: passed
 - 这仍不是线上迁移；row builder 只构造内存 rows，不连接 Render，不写入任何数据库。
 - 尚未用真实线上 `StoreSnapshot` 样本跑 dry-run / rowBuild。
 - 下一步仍是一次性 Postgres integration run + 真实 snapshot dry-run 审阅，再设计 write-side migration executor。
+
+## 16.2.8 2026-06-26 Step 2.12 scoped migration executor core
+
+已完成 write-side executor core：
+
+- 新增 `src/domain/postgres-scoped-migration-executor.ts`。
+- 新增 `src/domain/postgres-scoped-migration-executor.test.ts`。
+- `executePostgresScopedMigration(pool, snapshot, options)` 必须显式传入 `confirm: EXECUTE_POSTGRES_SCOPED_MIGRATION_CONFIRM`，否则不会执行任何 query。
+- 默认执行 `BEGIN` -> `ensurePostgresScopedSchema(pool)` -> 按 row builder 顺序 insert/upsert -> `COMMIT`。
+- 任意 row insert 失败会执行 `ROLLBACK`。
+- `ensureSchema:false` 可用于调用方已确保 schema 的场景。
+- 普通 scoped tables 使用 `ON CONFLICT ... DO UPDATE` 支持幂等重跑；OpsAudit 使用 `ON CONFLICT DO NOTHING`，避免覆盖既有审计事件。
+- Step 2.10 sanitized report 新增 executor section，标记 readyForExecution、executed:false、requiredConfirm，但不会执行迁移。
+
+验证：
+
+```text
+npm run typecheck: passed
+npm test -- src/domain/postgres-scoped-migration-executor.test.ts src/tools/postgres-scoped-migration-plan-cli.test.ts --reporter verbose: 11 tests passed
+npm test: 17 个测试文件、104 tests passed；2 个 integration 文件 skipped
+npm run build:demo: passed
+git diff --check: passed
+```
+
+重要限制：
+
+- 这仍不是线上迁移；没有 CLI 执行入口，不读取 `DATABASE_URL`，不连接 Render。
+- disposable database integration harness 已在 Step 2.13 补齐，但尚未提供一次性 Postgres URL 实跑。
+- 下一步应先用 disposable database 跑 repository/executor integration，再考虑任何受保护的执行入口。
+
+## 16.2.9 2026-06-26 Step 2.13 executor disposable DB integration harness
+
+已完成 opt-in executor integration harness：
+
+- 新增 `src/domain/postgres-scoped-migration-executor.integration.test.ts`。
+- 只读取 `NNZ_POSTGRES_INTEGRATION_URL`，不会使用 `DATABASE_URL` 或 `NNZ_POSTGRES_URL`。
+- 默认 `npm test` 会 skip；有一次性测试库时才连接执行。
+- 构造双 user / 双 persona 的 `StoreSnapshot`，调用 `executePostgresScopedMigration(...)` 两次验证幂等。
+- 通过 `PostgresScopedSoulRepository` 读回 runtime session、snapshot、memory、conversation、proposal、credential。
+- 覆盖 cross-scope node conversation 拒绝、user 删除级联清理、OpsAudit 全局表单独清理。
+
+验证：
+
+```text
+npm run typecheck: passed
+npm test -- src/domain/postgres-scoped-migration-executor.test.ts src/domain/postgres-scoped-migration-executor.integration.test.ts --reporter verbose: 4 tests passed；1 个 integration test skipped
+npm test: 17 个测试文件、104 tests passed；2 个 integration 文件 skipped
+npm run build:demo: passed
+```
+
+重要限制：
+
+- 这仍不是线上迁移；没有 CLI 执行入口，不读取 `DATABASE_URL`，不连接 Render。
+- 尚未连接一次性 Postgres 测试库实跑 repository/executor integration。
+- 下一步是设置 `NNZ_POSTGRES_INTEGRATION_URL` 后运行 `src/domain/postgres-scoped-soul-repository.integration.test.ts` 和 `src/domain/postgres-scoped-migration-executor.integration.test.ts`。
 
 ## 16.3 2026-06-22 H5 modal / CTA 修复
 

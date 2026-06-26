@@ -9,7 +9,7 @@ https://nnz-kego.onrender.com
 
 免费版无请求 15 分钟会休眠，首次访问需等 30–60 秒唤醒。部署细节见 `nnz-mvp-2026-06-04-云托管完成交接.md`。
 
-## 最新 GitHub / CI / 本地状态（2026-06-25）
+## 最新 GitHub / CI / 本地状态（2026-06-26）
 
 GitHub 仓库：
 
@@ -39,6 +39,10 @@ https://github.com/chaoshorizon316/nnz
 2026-06-24 Step 2.7: PostgresScopedSoulRepository 剩余关键表旁路切片已实现，覆盖 soul_update_proposals/credentials/ops_audit_events；本地 typecheck、13 个测试文件 87 tests、build:demo 通过；demo runtime 尚未从 snapshot persistence 切换
 2026-06-25 Step 2.8: PostgresScopedSoulRepository 真实 Postgres integration test harness 已实现；默认 npm test 跳过，设置 NNZ_POSTGRES_INTEGRATION_URL 后可验证 schema/JSONB/复合外键/级联删除；本地 typecheck、87 tests + 1 skipped、build:demo 通过
 2026-06-25 Step 2.9: snapshot -> scoped tables 离线迁移预检 planner 已实现；输入 StoreSnapshot 输出 table order / row count / blocking errors / warnings；本地 typecheck、90 tests + 1 skipped、build:demo 通过
+2026-06-26 Step 2.10: snapshot migration dry-run CLI 已实现；`npm run migration:plan -- <snapshot-json-path>` 支持离线预检、`--json` 和 sanitized `--report`；本地 typecheck、97 tests + 1 skipped、build:demo 通过
+2026-06-26 Step 2.11: scoped migration row builder 已实现；通过 planner 后生成按 scoped table 顺序排列的 rows，并在 sanitized report 中输出 rowBuild counts；本地 typecheck、100 tests + 1 skipped、build:demo 通过
+2026-06-26 Step 2.12: scoped migration executor core 已实现；显式 confirm 后在事务中执行 schema + ordered upsert inserts，失败 rollback；本地 typecheck、104 tests + 1 skipped、build:demo 通过；无线上/CLI 执行入口
+2026-06-26 Step 2.13: executor disposable DB integration harness 已实现；仅在设置 NNZ_POSTGRES_INTEGRATION_URL 时连接一次性测试库，默认 skip；本地 typecheck、104 tests + 2 skipped、build:demo 通过；尚未实跑真实测试库
 ```
 
 说明：
@@ -79,6 +83,10 @@ https://github.com/chaoshorizon316/nnz
 - 6 月 24 日 Step 2.7 已补齐 `PostgresScopedSoulRepository` 剩余关键表：新增 `nnz_soul_update_proposals`、`nnz_credentials`、`nnz_ops_audit_events`；实现 proposal 创建/列表/证据/接受/拒绝、credential 存取、ops audit 记录/列表；fake Postgres pool 测试覆盖 cross-scope evidence 拒绝、terminal proposal 状态、credential user 绑定、audit metadata 不含 credential/chat。当前仍是旁路实现，尚未替换 demo runtime 的 Postgres snapshot persistence。
 - 6 月 25 日 Step 2.8 已新增真实 Postgres integration test harness：`src/domain/postgres-scoped-soul-repository.integration.test.ts` 只读取 `NNZ_POSTGRES_INTEGRATION_URL`，默认 skip；有一次性测试库时可验证真实 schema、JSONB round-trip、复合外键拒绝跨 scope snapshot / memory、cross-scope evidence/node 拒绝、user 删除级联，以及 OpsAudit 全局保留。当前仍未替换 demo runtime 的 Postgres snapshot persistence。
 - 6 月 25 日 Step 2.9 已新增 snapshot -> scoped tables 离线迁移预检 planner：`src/domain/postgres-scoped-migration-plan.ts` / `src/domain/postgres-scoped-migration-plan.test.ts`；输入 `StoreSnapshot` 输出 table order、row count、blocking errors 和 warnings；测试覆盖有效快照、跨 scope 引用阻断、missing owner、OpsAudit missing target warning、重复 ACTIVE SoulVersion。当前仍不读取 `DATABASE_URL`、不连接 Render、不写线上库。
+- 6 月 26 日 Step 2.10 已新增 snapshot migration dry-run CLI：`src/tools/postgres-scoped-migration-plan-cli.ts` 支持本地 `StoreSnapshot` JSON、`--json` 和 sanitized `--report`；不读取数据库环境变量，不连接 Postgres。
+- 6 月 26 日 Step 2.11 已新增 scoped migration row builder：`src/domain/postgres-scoped-migration-rows.ts` 在 planner ready 后生成按目标表顺序排列的 rows；sanitized report 只输出 rowBuild counts，不输出 rows 或 memory/chat 正文。
+- 6 月 26 日 Step 2.12 已新增 scoped migration executor core：`src/domain/postgres-scoped-migration-executor.ts` 需要显式 `EXECUTE_POSTGRES_SCOPED_MIGRATION` confirm，在一个 transaction 中执行 schema + ordered upsert inserts，失败 rollback；无 CLI 执行入口，不读取 `DATABASE_URL`。
+- 6 月 26 日 Step 2.13 已新增 executor disposable DB integration harness：`src/domain/postgres-scoped-migration-executor.integration.test.ts` 只读取 `NNZ_POSTGRES_INTEGRATION_URL`，默认 skip；有一次性测试库时验证 executor 幂等写入、repository 读回、scope 隔离和级联删除。
 - 本地干净副本验证：`/tmp/nnz-step1-final.MF0YVg` 中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过，10 个测试文件、67 条测试全绿，0 vulnerabilities。
 - 本地 `/ops` browser smoke 通过：输入 `dev-ops-token` 后显示 8 个核心指标、用户表、2 个 Persona 成熟度卡片和测试数据清理面板。
 - Step 1 已推送到 GitHub：`30685df feat: add protected soul ops console`，当前本地与远端同步：`main...origin/main`。
@@ -144,6 +152,14 @@ npm audit
 2026-06-25 Step 2.8 Postgres integration harness 结果：新增 `src/domain/postgres-scoped-soul-repository.integration.test.ts`，默认跳过；设置 `NNZ_POSTGRES_INTEGRATION_URL` 后可连接一次性测试库验证 schema / JSONB / 复合外键 / 级联删除。本地 `npm run typecheck`、`npm test`、`npm run build:demo` 通过，全量为 13 个测试文件、87 tests，另有 1 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`。
 
 2026-06-25 Step 2.9 snapshot -> scoped tables 迁移预检结果：新增 `src/domain/postgres-scoped-migration-plan.ts` / `src/domain/postgres-scoped-migration-plan.test.ts`，完成纯函数 dry-run planner；本地 `npm run typecheck`、targeted migration planner test、`npm test`、`npm run build:demo` 通过，全量为 14 个测试文件、90 tests，另有 1 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`。
+
+2026-06-26 Step 2.10 snapshot migration dry-run CLI 结果：新增 `src/tools/postgres-scoped-migration-plan-cli.ts` / `src/tools/postgres-scoped-migration-plan-cli.test.ts`，完成离线 planner CLI、`--json` 和 sanitized `--report`；本地 `npm run typecheck`、targeted CLI test、`npm test`、`npm run build:demo` 通过，全量为 15 个测试文件、97 tests，另有 1 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`。
+
+2026-06-26 Step 2.11 scoped migration row builder 结果：新增 `src/domain/postgres-scoped-migration-rows.ts` / `src/domain/postgres-scoped-migration-rows.test.ts`，完成 planner-ready 后的 scoped table row builder，并接入 sanitized report 的 rowBuild counts；本地 `npm run typecheck`、targeted row builder/CLI test、`npm test`、`npm run build:demo` 通过，全量为 16 个测试文件、100 tests，另有 1 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`。
+
+2026-06-26 Step 2.12 scoped migration executor core 结果：新增 `src/domain/postgres-scoped-migration-executor.ts` / `src/domain/postgres-scoped-migration-executor.test.ts`，完成显式 confirm、transaction、ordered inserts/upserts、rollback 与 sanitized report executor section；本地 `npm run typecheck`、targeted executor/CLI test、`npm test`、`npm run build:demo` 通过，全量为 17 个测试文件、104 tests，另有 1 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md`。
+
+2026-06-26 Step 2.13 executor disposable DB integration harness 结果：新增 `src/domain/postgres-scoped-migration-executor.integration.test.ts`，默认跳过；设置 `NNZ_POSTGRES_INTEGRATION_URL` 后可连接一次性测试库验证 executor 真实写入、幂等、repository 读回、scope 隔离和级联删除。本地 `npm run typecheck`、targeted executor integration test、`npm test`、`npm run build:demo` 通过，全量为 17 个测试文件、104 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`。
 
 最新 CI run：
 

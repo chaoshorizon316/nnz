@@ -6,6 +6,7 @@ import type { StoreSnapshot } from '../domain/persistence';
 import type { PostgresScopedMigrationIssue, PostgresScopedMigrationPlan } from '../domain/postgres-scoped-migration-plan';
 import { planPostgresScopedMigration } from '../domain/postgres-scoped-migration-plan';
 import { buildPostgresScopedMigrationRows } from '../domain/postgres-scoped-migration-rows';
+import { EXECUTE_POSTGRES_SCOPED_MIGRATION_CONFIRM } from '../domain/postgres-scoped-migration-executor';
 
 export interface MigrationPlanCliResult {
   exitCode: number;
@@ -131,6 +132,11 @@ export function createSanitizedReport(
     totalRows: plan.totalRows,
     tables: plan.tables,
     rowBuild,
+    executor: {
+      readyForExecution: Boolean(rows),
+      executed: false,
+      requiredConfirm: EXECUTE_POSTGRES_SCOPED_MIGRATION_CONFIRM,
+    },
     warnings: plan.warnings.map(sanitizeIssue),
     errors: plan.errors.map(sanitizeIssue),
   };
