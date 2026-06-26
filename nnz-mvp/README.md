@@ -232,9 +232,10 @@ Offline snapshot migration dry-run:
 ```bash
 npm run migration:plan -- <snapshot-json-path>
 npm run migration:plan -- --json <snapshot-json-path>
+npm run migration:plan -- --report <report-json-path> <snapshot-json-path>
 ```
 
-The command accepts a raw `StoreSnapshot` JSON object or a wrapper with `snapshot_json`, prints scoped table row counts plus warnings/errors, and exits with code 2 when blocking migration errors exist. It does not read `DATABASE_URL` or connect to Postgres.
+The command accepts a raw `StoreSnapshot` JSON object or a wrapper with `snapshot_json`, prints scoped table row counts plus warnings/errors, and exits with code 2 when blocking migration errors exist. `--report` writes a sanitized JSON report with counts and issue identifiers only, excluding memory and chat content. It does not read `DATABASE_URL` or connect to Postgres.
 
 Cloud Soul Ops status on 2026-06-16: Render has `NNZ_OPS_TOKEN` configured. `/ops` returns 200, `/api/ops/overview` returns 401 without token, 403 with a wrong token, and 200 with the configured token. `POST /api/ops/cleanup-test-users` dry-run returns one explicit smoke/test candidate and deletes nothing. The token value is stored only in Render and must not be committed or documented.
 
@@ -246,4 +247,4 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, and Step 2.10 local dry-run CLI are implemented locally.
 
-Next engineering steps: verify optional role-specific tokens in Render, run the opt-in Postgres integration test against a disposable database, export a real `StoreSnapshot` sample, then run `npm run migration:plan -- <snapshot-json-path>` before designing the migration executor.
+Next engineering steps: verify optional role-specific tokens in Render, run the opt-in Postgres integration test against a disposable database, export a real `StoreSnapshot` sample, then run `npm run migration:plan -- --report <report-json-path> <snapshot-json-path>` before designing the migration executor.

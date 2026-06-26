@@ -33,7 +33,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-24 Step 2.7: PostgresScopedSoulRepository 剩余关键表旁路切片已实现，覆盖 soul_update_proposals/credentials/ops_audit_events；本地 typecheck、13 个测试文件 87 tests、build:demo 通过；demo runtime 尚未从 snapshot persistence 切换
 2026-06-25 Step 2.8: PostgresScopedSoulRepository 真实 Postgres integration test harness 已实现；默认 npm test 跳过，设置 NNZ_POSTGRES_INTEGRATION_URL 后可验证 schema/JSONB/复合外键/级联删除；本地 typecheck、13 个测试文件 87 tests + 1 skipped、build:demo 通过
 2026-06-25 Step 2.9: snapshot -> scoped tables 离线迁移预检 planner 已实现；输入 StoreSnapshot 输出 table order / row count / blocking errors / warnings；覆盖跨 scope 引用、credential user 绑定、重复 ACTIVE SoulVersion、OpsAudit missing target warning；本地 typecheck、14 个测试文件 90 tests + 1 skipped、build:demo 通过
-2026-06-26 Step 2.10: snapshot migration dry-run CLI 已实现；`npm run migration:plan -- <snapshot-json-path>` 可离线审阅 StoreSnapshot / snapshot_json wrapper 的 row count、warnings、errors；本地 typecheck、15 个测试文件 94 tests + 1 skipped、build:demo 通过
+2026-06-26 Step 2.10: snapshot migration dry-run CLI 已实现；`npm run migration:plan -- <snapshot-json-path>` 可离线审阅 StoreSnapshot / snapshot_json wrapper 的 row count、warnings、errors；`--report` 可生成不含 memory/chat 正文的 sanitized JSON report；本地 typecheck、15 个测试文件 97 tests + 1 skipped、build:demo 通过
 ```
 
 当前本地相对远端：
@@ -486,7 +486,7 @@ npm test         # 13 files, 87 tests passed; 1 integration file skipped by defa
 npm run build:demo
 ```
 
-下一步：优先在 Render 验证可选角色 token（viewer/operator/admin）的云端权限边界；工程侧用一次性测试库运行 `NNZ_POSTGRES_INTEGRATION_URL=... npm test -- src/domain/postgres-scoped-soul-repository.integration.test.ts`，再导出真实 `StoreSnapshot` 样本并运行 `npm run migration:plan -- <snapshot-json-path>` 审阅 errors / warnings / row count。token/连接串明文不得写入仓库或文档。
+下一步：优先在 Render 验证可选角色 token（viewer/operator/admin）的云端权限边界；工程侧用一次性测试库运行 `NNZ_POSTGRES_INTEGRATION_URL=... npm test -- src/domain/postgres-scoped-soul-repository.integration.test.ts`，再导出真实 `StoreSnapshot` 样本并运行 `npm run migration:plan -- --report <report-json-path> <snapshot-json-path>` 审阅 errors / warnings / row count。token/连接串明文不得写入仓库或文档。
 
 ### 后续：微信 / H5 用户端雏形
 

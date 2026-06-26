@@ -18,6 +18,7 @@ Step 2.10 的目标是在 Step 2.9 纯函数 planner 之上补一个本地 dry-r
 ```text
 npm run migration:plan -- <snapshot-json-path>
 npm run migration:plan -- --json <snapshot-json-path>
+npm run migration:plan -- --report <report-json-path> <snapshot-json-path>
 ```
 
 输入支持：
@@ -30,6 +31,7 @@ npm run migration:plan -- --json <snapshot-json-path>
 
 - 默认人类可读 summary：ready、totalRows、每表 row count、warnings、errors。
 - `--json` 原样输出 `PostgresScopedMigrationPlan`。
+- `--report` 写入 sanitized JSON report，仅包含 table counts、issue code、table、id，不包含 memory / conversation / credential / token 内容。
 
 退出码：
 
@@ -46,6 +48,7 @@ npm run migration:plan -- --json <snapshot-json-path>
 - `package.json` 新增 `migration:plan` script。
 - script 使用 `node --import tsx ...`，避免 `tsx` CLI 在当前沙盒中尝试创建 IPC pipe 导致 `EPERM`。
 - CLI 只读本地 JSON 文件，不读取任何数据库环境变量。
+- CLI 支持 `--report` 生成可分享/可归档的 sanitized report，不携带聊天或记忆正文。
 
 ## 本地验证
 
@@ -54,6 +57,8 @@ npm run typecheck: passed
 npm test -- src/tools/postgres-scoped-migration-plan-cli.test.ts --reporter verbose: passed, 4 tests
 npm run migration:plan -- --help: passed
 npm run migration:plan -- /tmp/nnz-migration-snapshot.json: passed
+npm run migration:plan -- --report /tmp/nnz-migration-report.json /tmp/nnz-migration-sensitive-snapshot.json: passed
+sanitized report content check: passed, no sensitive memory/chat text
 npm test: passed, 15 test files / 94 tests, 1 integration file skipped
 npm run build:demo: passed
 git diff --check: passed
@@ -72,7 +77,7 @@ npm run migration:plan -- <real-store-snapshot.json>
 
 1. 使用一次性 Postgres 测试库实际运行 Step 2.8 opt-in integration test。
 2. 导出真实 `StoreSnapshot` 样本到本地 JSON 文件。
-3. 使用 `npm run migration:plan -- <real-store-snapshot.json>` 审阅 dry-run plan。
+3. 使用 `npm run migration:plan -- --report <report-json-path> <real-store-snapshot.json>` 审阅 sanitized dry-run report。
 4. 只有 dry-run plan 可解释且无 blocking errors 后，再设计实际 snapshot -> scoped tables 迁移执行器。
 
 ## 产品与伦理边界

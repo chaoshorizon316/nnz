@@ -1325,7 +1325,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md` 和 `nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，用一次性测试库运行 opt-in Postgres integration test，并导出真实 `StoreSnapshot` 样本跑 `npm run migration:plan -- <snapshot-json-path>` 审阅 dry-run plan。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md` 和 `nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，用一次性测试库运行 opt-in Postgres integration test，并导出真实 `StoreSnapshot` 样本跑 `npm run migration:plan -- --report <report-json-path> <snapshot-json-path>` 审阅 sanitized dry-run plan。
 
 ## 16.2.1 2026-06-23 Step 2.5 Postgres scoped repository
 
@@ -1462,6 +1462,7 @@ npm run build:demo: passed
 - `package.json` 新增 `migration:plan` script。
 - 支持原始 `StoreSnapshot` JSON、`snapshot_json` wrapper、`rows[0].snapshot_json` wrapper。
 - 默认输出人类可读 row count / warnings / errors；`--json` 输出完整 `PostgresScopedMigrationPlan`。
+- `--report` 输出 sanitized JSON report，只含 counts、issue code、table 和 id，不含 memory / chat 正文。
 - 退出码：0 表示 ready，1 表示 CLI/JSON 错误，2 表示 planner blocking errors。
 - script 使用 `node --import tsx`，避免当前沙盒下 `tsx` CLI 创建 IPC pipe 时的 `EPERM`。
 
@@ -1470,16 +1471,19 @@ npm run build:demo: passed
 ```text
 npm run migration:plan -- <snapshot-json-path>
 npm run migration:plan -- --json <snapshot-json-path>
+npm run migration:plan -- --report <report-json-path> <snapshot-json-path>
 ```
 
 验证：
 
 ```text
 npm run typecheck: passed
-npm test -- src/tools/postgres-scoped-migration-plan-cli.test.ts --reporter verbose: 4 tests passed
+npm test -- src/tools/postgres-scoped-migration-plan-cli.test.ts --reporter verbose: 7 tests passed
 npm run migration:plan -- --help: passed
 npm run migration:plan -- /tmp/nnz-migration-snapshot.json: passed
-npm test: 15 个测试文件、94 tests passed；1 个 integration 文件 skipped
+npm run migration:plan -- --report /tmp/nnz-migration-report.json /tmp/nnz-migration-sensitive-snapshot.json: passed
+sanitized report content check: passed, no sensitive memory/chat text
+npm test: 15 个测试文件、97 tests passed；1 个 integration 文件 skipped
 npm run build:demo: passed
 git diff --check: passed
 ```

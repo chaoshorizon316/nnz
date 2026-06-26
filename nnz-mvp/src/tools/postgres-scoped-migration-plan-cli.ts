@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -13,17 +13,21 @@ export interface MigrationPlanCliResult {
 }
 
 type ReadTextFile = (path: string) => string;
+type WriteTextFile = (path: string, text: string) => void;
 
 const USAGE = `Usage:
   npm run migration:plan -- <snapshot-json-path>
   npm run migration:plan -- --json <snapshot-json-path>
+  npm run migration:plan -- --report <report-json-path> <snapshot-json-path>
 
 Input may be a raw StoreSnapshot JSON object or an object with a snapshot_json field.
-This command is offline only: it does not read DATABASE_URL or connect to Postgres.`;
+This command is offline only: it does not read DATABASE_URL or connect to Postgres.
+Reports are sanitized: they include counts, issue codes, tables, and ids, but never memory or chat content.`;
 
 export function runMigrationPlanCommand(
   args: string[],
   readTextFile: ReadTextFile = (path) => readFileSync(path, 'utf8'),
+  writeTextFile: WriteTextFile = (path, text) => writeFileSync(path, text),
 ): MigrationPlanCliResult {
   const parsedArgs = parseArgs(args);
   if (parsedArgs.help) {
@@ -37,6 +41,9 @@ export function runMigrationPlanCommand(
     const snapshotPath = resolve(parsedArgs.snapshotPath);
     const snapshot = parseSnapshotJson(readTextFile(snapshotPath));
     const plan = planPostgresScopedMigration(snapshot);
+    if (parsedArgs.reportPath) {
+      writeTextFile(resolve(parsedArgs.reportPath), `${JSON.stringify(createSanitizedReport(plan, snapshotPath), null, 2)}\n`);
+    }
     return {
       exitCode: plan.ready ? 0 : 2,
       stdout: parsedArgs.json ? `${JSON.stringify(plan, null, 2)}\n` : formatPlan(plan, snapshotPath),
@@ -99,13 +106,47 @@ export function formatPlan(plan: PostgresScopedMigrationPlan, snapshotPath: stri
   return `${lines.join('\n')}\n`;
 }
 
-function parseArgs(args: string[]): { help: boolean; json: boolean; snapshotPath: string; error?: string } {
+export function createSanitizedReport(plan: PostgresScopedMigrationPlan, snapshotPath: string): Record<string, unknown> {
+  return {
+    kind: 'postgres-scoped-migration-dry-run',
+    snapshotPath,
+    ready: plan.ready,
+    totalRows: plan.totalRows,
+    tables: plan.tables,
+    warnings: plan.warnings.map(sanitizeIssue),
+    errors: plan.errors.map(sanitizeIssue),
+  };
+}
+
+function parseArgs(args: string[]): {
+  help: boolean;
+  json: boolean;
+  snapshotPath: string;
+  reportPath?: string;
+  error?: string;
+} {
   const rest: string[] = [];
   let json = false;
-  for (const arg of args) {
+  let reportPath: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]!;
     if (arg === '--help' || arg === '-h') return { help: true, json: false, snapshotPath: '' };
     if (arg === '--json') {
       json = true;
+      continue;
+    }
+    if (arg === '--report') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) {
+        return {
+          help: false,
+          json,
+          snapshotPath: '',
+          error: 'Missing report JSON path after --report.',
+        };
+      }
+      reportPath = value;
+      index += 1;
       continue;
     }
     rest.push(arg);
@@ -116,11 +157,17 @@ function parseArgs(args: string[]): { help: boolean; json: boolean; snapshotPath
       help: false,
       json,
       snapshotPath: '',
+      ...(reportPath ? { reportPath } : {}),
       error: rest.length === 0 ? 'Missing snapshot JSON path.' : 'Expected exactly one snapshot JSON path.',
     };
   }
 
-  return { help: false, json, snapshotPath: rest[0]! };
+  return {
+    help: false,
+    json,
+    snapshotPath: rest[0]!,
+    ...(reportPath ? { reportPath } : {}),
+  };
 }
 
 function unwrapSnapshot(value: unknown): unknown {
@@ -142,6 +189,13 @@ function appendIssues(lines: string[], title: string, issues: PostgresScopedMigr
     const location = [issue.table, issue.id].filter(Boolean).join(' ');
     lines.push(`- [${issue.code}]${location ? ` ${location}` : ''}: ${issue.message}`);
   }
+}
+
+function sanitizeIssue(issue: PostgresScopedMigrationIssue): Record<string, string> {
+  const result: Record<string, string> = { code: issue.code };
+  if (issue.table) result['table'] = issue.table;
+  if (issue.id) result['id'] = issue.id;
+  return result;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
