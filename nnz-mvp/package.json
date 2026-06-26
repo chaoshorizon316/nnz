@@ -10,7 +10,8 @@
     "dev": "npm run demo",
     "start": "node dist-cjs/demo-server.js",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "migration:plan": "node --import tsx src/tools/postgres-scoped-migration-plan-cli.ts"
   },
   "engines": {
     "node": ">=22.12.0 <26"
