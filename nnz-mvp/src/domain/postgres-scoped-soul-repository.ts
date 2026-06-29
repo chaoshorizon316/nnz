@@ -194,8 +194,11 @@ CREATE INDEX IF NOT EXISTS idx_nnz_ops_audit_created
 
 type OptionalScope = Partial<UserPersonaScope> | undefined;
 
-export interface QueryablePool {
+export interface QueryableClient {
   query<T = unknown>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>;
+}
+
+export interface QueryablePool extends QueryableClient {
   end(): Promise<void>;
 }
 
@@ -227,7 +230,7 @@ export class PostgresScopedSoulRepository {
   private readonly scopeValue: UserPersonaScope;
 
   constructor(
-    private readonly pool: QueryablePool,
+    private readonly pool: QueryableClient,
     scopeInput: OptionalScope,
   ) {
     this.scopeValue = requireBoundScope(scopeInput);
@@ -896,7 +899,7 @@ export class PostgresScopedSoulRepository {
   }
 }
 
-export async function ensurePostgresScopedSchema(pool: QueryablePool): Promise<void> {
+export async function ensurePostgresScopedSchema(pool: QueryableClient): Promise<void> {
   await pool.query(POSTGRES_SCOPED_SCHEMA);
 }
 
@@ -909,14 +912,14 @@ export function createPostgresScopedSoulRepository(
 }
 
 export function createPostgresScopedSoulRepositoryFromPool(
-  pool: QueryablePool,
+  pool: QueryableClient,
   scopeInput: OptionalScope,
 ): PostgresScopedSoulRepository {
   return new PostgresScopedSoulRepository(pool, scopeInput);
 }
 
 export async function createPostgresUser(
-  pool: QueryablePool,
+  pool: QueryableClient,
   displayName: string,
   id = createId('user'),
 ): Promise<User> {
@@ -934,7 +937,7 @@ export async function createPostgresUser(
 }
 
 export async function createPostgresPersona(
-  pool: QueryablePool,
+  pool: QueryableClient,
   input: CreatePersonaRowInput,
   id = createId('persona'),
 ): Promise<Persona> {
@@ -963,7 +966,7 @@ export async function createPostgresPersona(
 }
 
 export async function listPostgresPersonasForUser(
-  pool: QueryablePool,
+  pool: QueryableClient,
   userId: string,
 ): Promise<Persona[]> {
   await requirePostgresUser(pool, userId);
@@ -977,7 +980,7 @@ export async function listPostgresPersonasForUser(
   return result.rows.map(mapPersonaRow);
 }
 
-async function requirePostgresUser(pool: QueryablePool, userId: string): Promise<User> {
+async function requirePostgresUser(pool: QueryableClient, userId: string): Promise<User> {
   const result = await pool.query<UserRow>(
     'SELECT * FROM nnz_users WHERE id = $1',
     [userId],
@@ -989,7 +992,7 @@ async function requirePostgresUser(pool: QueryablePool, userId: string): Promise
   return mapUserRow(row);
 }
 
-async function getPersonaForUser(pool: QueryablePool, scope: UserPersonaScope): Promise<Persona> {
+async function getPersonaForUser(pool: QueryableClient, scope: UserPersonaScope): Promise<Persona> {
   await requirePostgresUser(pool, scope.userId);
   const result = await pool.query<PersonaRow>(
     `SELECT *

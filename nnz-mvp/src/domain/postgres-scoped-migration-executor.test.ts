@@ -27,12 +27,14 @@ describe('Postgres scoped migration executor', () => {
 
     expect(result.committed).toBe(true);
     expect(result.totalRows).toBeGreaterThan(0);
-    expect(pool.calls[0]?.sql).toBe('BEGIN');
-    expect(pool.calls.some((call) => call.sql.includes('CREATE TABLE IF NOT EXISTS nnz_users'))).toBe(true);
-    expect(pool.calls.at(-1)?.sql).toBe('COMMIT');
-    expect(pool.calls.find((call) => call.sql.startsWith('INSERT INTO nnz_users'))?.params).toContain('user-a@example.test');
-    expect(pool.calls.find((call) => call.sql.startsWith('INSERT INTO nnz_memory_items'))?.params).toContain('private memory text');
-    expect(pool.calls.find((call) => call.sql.startsWith('INSERT INTO nnz_runtime_sessions'))?.params).toContain('wedding');
+    expect(pool.calls).toEqual([]);
+    expect(pool.client.calls[0]?.sql).toBe('BEGIN');
+    expect(pool.client.calls.some((call) => call.sql.includes('CREATE TABLE IF NOT EXISTS nnz_users'))).toBe(true);
+    expect(pool.client.calls.at(-1)?.sql).toBe('COMMIT');
+    expect(pool.client.calls.find((call) => call.sql.startsWith('INSERT INTO nnz_users'))?.params).toContain('user-a@example.test');
+    expect(pool.client.calls.find((call) => call.sql.startsWith('INSERT INTO nnz_memory_items'))?.params).toContain('private memory text');
+    expect(pool.client.calls.find((call) => call.sql.startsWith('INSERT INTO nnz_runtime_sessions'))?.params).toContain('wedding');
+    expect(pool.client.releaseCount).toBe(1);
   });
 
   it('can skip schema creation for callers that already ensured schema', async () => {
@@ -43,7 +45,8 @@ describe('Postgres scoped migration executor', () => {
       ensureSchema: false,
     });
 
-    expect(pool.calls.some((call) => call.sql.includes('CREATE TABLE IF NOT EXISTS'))).toBe(false);
+    expect(pool.client.calls.some((call) => call.sql.includes('CREATE TABLE IF NOT EXISTS'))).toBe(false);
+    expect(pool.client.releaseCount).toBe(1);
   });
 
   it('rolls back when any row insert fails', async () => {
@@ -55,9 +58,10 @@ describe('Postgres scoped migration executor', () => {
       }),
     ).rejects.toThrow('fake insert failure');
 
-    expect(pool.calls[0]?.sql).toBe('BEGIN');
-    expect(pool.calls.at(-1)?.sql).toBe('ROLLBACK');
-    expect(pool.calls.some((call) => call.sql === 'COMMIT')).toBe(false);
+    expect(pool.client.calls[0]?.sql).toBe('BEGIN');
+    expect(pool.client.calls.at(-1)?.sql).toBe('ROLLBACK');
+    expect(pool.client.calls.some((call) => call.sql === 'COMMIT')).toBe(false);
+    expect(pool.client.releaseCount).toBe(1);
   });
 });
 
@@ -68,6 +72,29 @@ interface QueryCall {
 
 class FakePool {
   readonly calls: QueryCall[] = [];
+  readonly client: FakeClient;
+
+  constructor(options: { failOnSqlPrefix?: string } = {}) {
+    this.client = new FakeClient(options);
+  }
+
+  async query<T = unknown>(sql: string, params?: unknown[]): Promise<{ rows: T[] }> {
+    this.calls.push(params ? { sql, params } : { sql });
+    return { rows: [] };
+  }
+
+  async connect(): Promise<FakeClient> {
+    return this.client;
+  }
+
+  async end(): Promise<void> {
+    return undefined;
+  }
+}
+
+class FakeClient {
+  readonly calls: QueryCall[] = [];
+  releaseCount = 0;
 
   constructor(private readonly options: { failOnSqlPrefix?: string } = {}) {}
 
@@ -79,8 +106,8 @@ class FakePool {
     return { rows: [] };
   }
 
-  async end(): Promise<void> {
-    return undefined;
+  release(): void {
+    this.releaseCount += 1;
   }
 }
 

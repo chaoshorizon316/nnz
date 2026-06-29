@@ -43,6 +43,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-26 Step 2.11: scoped migration row builder 已实现；通过 planner 后生成按 scoped table 顺序排列的 rows，并在 sanitized report 中输出 rowBuild counts；本地 typecheck、100 tests + 1 skipped、build:demo 通过
 2026-06-26 Step 2.12: scoped migration executor core 已实现；显式 confirm 后在事务中执行 schema + ordered upsert inserts，失败 rollback；本地 typecheck、104 tests + 1 skipped、build:demo 通过；无线上/CLI 执行入口
 2026-06-26 Step 2.13: executor disposable DB integration harness 已实现；仅在设置 NNZ_POSTGRES_INTEGRATION_URL 时连接一次性测试库，默认 skip；本地 typecheck、104 tests + 2 skipped、build:demo 通过；尚未实跑真实测试库
+2026-06-26 Step 2.14: executor transaction 已改为 pg client-bound；BEGIN/schema/inserts/COMMIT/ROLLBACK 均使用同一个 checked-out client，finally release；targeted executor test 与 typecheck 通过，待全量 test/build
 ```
 
 说明：
@@ -87,6 +88,7 @@ https://github.com/chaoshorizon316/nnz
 - 6 月 26 日 Step 2.11 已新增 scoped migration row builder：`src/domain/postgres-scoped-migration-rows.ts` 在 planner ready 后生成按目标表顺序排列的 rows；sanitized report 只输出 rowBuild counts，不输出 rows 或 memory/chat 正文。
 - 6 月 26 日 Step 2.12 已新增 scoped migration executor core：`src/domain/postgres-scoped-migration-executor.ts` 需要显式 `EXECUTE_POSTGRES_SCOPED_MIGRATION` confirm，在一个 transaction 中执行 schema + ordered upsert inserts，失败 rollback；无 CLI 执行入口，不读取 `DATABASE_URL`。
 - 6 月 26 日 Step 2.13 已新增 executor disposable DB integration harness：`src/domain/postgres-scoped-migration-executor.integration.test.ts` 只读取 `NNZ_POSTGRES_INTEGRATION_URL`，默认 skip；有一次性测试库时验证 executor 幂等写入、repository 读回、scope 隔离和级联删除。
+- 6 月 26 日 Step 2.14 已修正 executor 事务边界：`executePostgresScopedMigration(...)` 使用 `pool.connect()` checked-out client 运行 BEGIN/schema/inserts/COMMIT/ROLLBACK，并在 finally release；避免真实 `pg.Pool#query()` 多连接导致事务不绑定。
 - 本地干净副本验证：`/tmp/nnz-step1-final.MF0YVg` 中 `npm ci`、`npm run typecheck`、`npm test`、`npm run build:demo`、`npm audit` 全部通过，10 个测试文件、67 条测试全绿，0 vulnerabilities。
 - 本地 `/ops` browser smoke 通过：输入 `dev-ops-token` 后显示 8 个核心指标、用户表、2 个 Persona 成熟度卡片和测试数据清理面板。
 - Step 1 已推送到 GitHub：`30685df feat: add protected soul ops console`，当前本地与远端同步：`main...origin/main`。
@@ -160,6 +162,8 @@ npm audit
 2026-06-26 Step 2.12 scoped migration executor core 结果：新增 `src/domain/postgres-scoped-migration-executor.ts` / `src/domain/postgres-scoped-migration-executor.test.ts`，完成显式 confirm、transaction、ordered inserts/upserts、rollback 与 sanitized report executor section；本地 `npm run typecheck`、targeted executor/CLI test、`npm test`、`npm run build:demo` 通过，全量为 17 个测试文件、104 tests，另有 1 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md`。
 
 2026-06-26 Step 2.13 executor disposable DB integration harness 结果：新增 `src/domain/postgres-scoped-migration-executor.integration.test.ts`，默认跳过；设置 `NNZ_POSTGRES_INTEGRATION_URL` 后可连接一次性测试库验证 executor 真实写入、幂等、repository 读回、scope 隔离和级联删除。本地 `npm run typecheck`、targeted executor integration test、`npm test`、`npm run build:demo` 通过，全量为 17 个测试文件、104 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`。
+
+2026-06-26 Step 2.14 executor client-bound transaction 结果：修改 `src/domain/postgres-scoped-migration-executor.ts` 与 repository query 类型，确保真实 pg executor 在 checked-out client 上执行 BEGIN/schema/inserts/COMMIT/ROLLBACK，并在成功/失败路径 release；targeted executor test 和 typecheck 通过，待全量 test/build。记录见 `nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md`。
 
 最新 CI run：
 

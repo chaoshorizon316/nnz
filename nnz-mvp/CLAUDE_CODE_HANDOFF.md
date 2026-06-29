@@ -1579,6 +1579,29 @@ npm run build:demo: passed
 - 尚未连接一次性 Postgres 测试库实跑 repository/executor integration。
 - 下一步是设置 `NNZ_POSTGRES_INTEGRATION_URL` 后运行 `src/domain/postgres-scoped-soul-repository.integration.test.ts` 和 `src/domain/postgres-scoped-migration-executor.integration.test.ts`。
 
+## 16.2.10 2026-06-26 Step 2.14 executor client-bound transaction
+
+已修正 executor 事务边界：
+
+- `executePostgresScopedMigration(...)` 现在要求 pool 支持 `connect()`。
+- executor 通过 checked-out client 执行 `BEGIN` / schema / ordered inserts / `COMMIT`。
+- 失败路径在同一 client 上执行 `ROLLBACK`。
+- 成功和失败路径都会 `release()` client。
+- repository 类型拆分为 `QueryableClient` 与 `QueryablePool`，让 `ensurePostgresScopedSchema(...)` 可在 transaction client 内执行。
+- fake pool 测试验证 transaction SQL 不再走 pool 直接 query，而是走同一个 leased client。
+
+验证：
+
+```text
+npm test -- src/domain/postgres-scoped-migration-executor.test.ts --reporter verbose: 4 tests passed
+npm run typecheck: passed
+```
+
+重要限制：
+
+- 这仍不是线上迁移；没有 CLI 执行入口，不读取 `DATABASE_URL`，不连接 Render。
+- 尚未连接一次性 Postgres 测试库实跑 repository/executor integration。
+
 ## 16.3 2026-06-22 H5 modal / CTA 修复
 
 接手前，另一位 AI 在 2026-06-18 到 2026-06-21 主要围绕 `public/index.html` 反复修 H5 modal / CTA，最后 `main` 回退到：

@@ -37,6 +37,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-26 Step 2.11: scoped migration row builder 已实现；通过预检后可生成按目标 scoped table 顺序排列的 rows，并接入 sanitized report 的 rowBuild counts；本地 typecheck、16 个测试文件 100 tests + 1 skipped、build:demo 通过
 2026-06-26 Step 2.12: scoped migration executor core 已实现；显式 confirm 后可在事务中按 row builder 顺序执行 schema + upsert inserts，失败 rollback；本地 typecheck、17 个测试文件 104 tests + 1 skipped、build:demo 通过；目前无线上/CLI 执行入口
 2026-06-26 Step 2.13: executor disposable DB integration harness 已实现；默认跳过，仅在设置 NNZ_POSTGRES_INTEGRATION_URL 时连接一次性 Postgres 测试库，覆盖 executor 幂等写入、repository 读回、scope 隔离和级联删除；本地 typecheck、17 个测试文件 104 tests + 2 skipped、build:demo 通过；目前仍未实跑真实测试库
+2026-06-26 Step 2.14: executor transaction 已改为 pg client-bound；BEGIN/schema/inserts/COMMIT/ROLLBACK 均使用同一个 checked-out client，finally release；targeted executor test 与 typecheck 通过，待全量 test/build
 ```
 
 当前本地相对远端：
@@ -48,7 +49,7 @@ main...origin/main
 最新提交：
 
 ```text
-5829d36 新增 scoped migration row builder
+c7af2c7 新增 scoped migration executor 与 disposable DB integration harness
 ```
 
 最新云端 Soul Ops 记录：
@@ -73,6 +74,7 @@ nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md
 nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md
 nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md
 nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md
+nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md
 ```
 
 ## 2026-06-22 工作区注意

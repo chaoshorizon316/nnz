@@ -9,6 +9,7 @@ import type {
 } from './postgres-scoped-migration-plan';
 import {
   ensurePostgresScopedSchema,
+  type QueryableClient,
   type QueryablePool,
 } from './postgres-scoped-soul-repository';
 
@@ -27,6 +28,14 @@ export interface ExecutePostgresScopedMigrationResult {
   }>;
   totalRows: number;
   committed: true;
+}
+
+export interface PostgresScopedMigrationClient extends QueryableClient {
+  release(): void;
+}
+
+export interface PostgresScopedMigrationPool extends QueryablePool {
+  connect(): Promise<PostgresScopedMigrationClient>;
 }
 
 interface TableInsertConfig {
@@ -123,7 +132,7 @@ const TABLE_INSERT_CONFIGS: Record<PostgresScopedMigrationTable, TableInsertConf
 };
 
 export async function executePostgresScopedMigration(
-  pool: QueryablePool,
+  pool: PostgresScopedMigrationPool,
   snapshot: StoreSnapshot,
   options: ExecutePostgresScopedMigrationOptions,
 ): Promise<ExecutePostgresScopedMigrationResult> {
@@ -133,20 +142,21 @@ export async function executePostgresScopedMigration(
 
   const rows = buildPostgresScopedMigrationRows(snapshot, options);
   let transactionStarted = false;
+  const client = await pool.connect();
 
   try {
-    await pool.query('BEGIN');
+    await client.query('BEGIN');
     transactionStarted = true;
     if (options.ensureSchema !== false) {
-      await ensurePostgresScopedSchema(pool);
+      await ensurePostgresScopedSchema(client);
     }
     for (const table of rows.tables) {
       const configForTable = TABLE_INSERT_CONFIGS[table.table];
       for (const row of table.rows) {
-        await pool.query(buildInsertSql(configForTable), buildParams(configForTable, row));
+        await client.query(buildInsertSql(configForTable), buildParams(configForTable, row));
       }
     }
-    await pool.query('COMMIT');
+    await client.query('COMMIT');
     return {
       plan: rows.plan,
       tables: rows.tables.map((table) => ({ table: table.table, count: table.rows.length })),
@@ -155,9 +165,11 @@ export async function executePostgresScopedMigration(
     };
   } catch (error) {
     if (transactionStarted) {
-      await pool.query('ROLLBACK');
+      await client.query('ROLLBACK');
     }
     throw error;
+  } finally {
+    client.release();
   }
 }
 
