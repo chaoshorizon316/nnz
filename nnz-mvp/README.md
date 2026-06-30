@@ -225,7 +225,16 @@ npm run build:demo
 npm run demo
 ```
 
-Current verified suite on 2026-06-26: 104 tests plus two skipped opt-in Postgres integration tests across domain scope, scoped repositories, Soul Ops cleanup/overview/audit query/RBAC, SQLite/Postgres snapshot persistence, Postgres scoped repository, snapshot migration planner/row builder/executor/CLI, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+Current verified suite on 2026-06-29: 109 tests plus two skipped opt-in Postgres integration tests across domain scope, scoped repositories, Soul Ops cleanup/overview/audit query/RBAC, SQLite/Postgres snapshot persistence, Postgres scoped repository, snapshot export, snapshot migration planner/row builder/executor/CLI, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+
+Offline StoreSnapshot export:
+
+```bash
+npm run snapshot:export -- --from-sqlite <sqlite-db-path> --out <snapshot-json-path>
+npm run snapshot:export -- --from-json <snapshot-or-wrapper-json-path> --out <snapshot-json-path>
+```
+
+The export command only reads explicit local files. It does not read `DATABASE_URL`, `NNZ_POSTGRES_URL`, or connect to Postgres. Its output JSON is a full raw `StoreSnapshot`, so it may contain memory text, chat content, credential hashes, and ops audit metadata. Keep exported snapshots local and use the sanitized migration report for review.
 
 Offline snapshot migration dry-run:
 
@@ -245,6 +254,6 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 ## Current State
 
-The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, Step 2.11 scoped migration row builder, Step 2.12 write-side migration executor core, Step 2.13 executor disposable DB integration harness, and Step 2.14 client-bound executor transaction are implemented locally.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, Step 2.11 scoped migration row builder, Step 2.12 write-side migration executor core, Step 2.13 executor disposable DB integration harness, Step 2.14 client-bound executor transaction, and Step 2.15 StoreSnapshot export CLI are implemented locally.
 
-Next engineering steps: verify optional role-specific tokens in Render, run the opt-in repository and executor Postgres integration tests against a disposable database, then export a real `StoreSnapshot` sample and run `npm run migration:plan -- --report <report-json-path> <snapshot-json-path>`.
+Next engineering steps: verify optional role-specific tokens in Render, use `snapshot:export` plus `migration:plan -- --report` on a real local snapshot sample, then run the opt-in repository and executor Postgres integration tests against a disposable database.

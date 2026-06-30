@@ -1602,6 +1602,37 @@ npm run typecheck: passed
 - 这仍不是线上迁移；没有 CLI 执行入口，不读取 `DATABASE_URL`，不连接 Render。
 - 尚未连接一次性 Postgres 测试库实跑 repository/executor integration。
 
+## 16.2.11 2026-06-29 Step 2.15 StoreSnapshot export CLI
+
+已完成离线 snapshot export CLI：
+
+- 新增 `src/tools/store-snapshot-export-cli.ts`。
+- 新增 `src/tools/store-snapshot-export-cli.test.ts`。
+- `package.json` 新增 `snapshot:export` script。
+- 支持 `--from-sqlite <sqlite-db-path> --out <snapshot-json-path>`，从显式本地 SQLite demo persistence 导出。
+- 支持 `--from-json <snapshot-or-wrapper-json-path> --out <snapshot-json-path>`，接受 raw `StoreSnapshot`、`snapshot_json` wrapper、`rows[0].snapshot_json` wrapper。
+- 默认拒绝覆盖输出文件；`--force` 才覆盖。
+- stdout 只打印 counts 和下一步命令，不打印 memory/chat/credential hash。
+- 输出 JSON 是完整原始 snapshot，包含敏感数据，必须留在本地。
+
+验证：
+
+```text
+npm test -- src/tools/store-snapshot-export-cli.test.ts src/tools/postgres-scoped-migration-plan-cli.test.ts --reporter verbose: 12 tests passed
+npm run typecheck: passed
+npm run snapshot:export -- --from-json /tmp/nnz-export-smoke-input.json --out /tmp/nnz-export-smoke-output.json --force: passed
+npm run migration:plan -- --report /tmp/nnz-export-smoke-report.json /tmp/nnz-export-smoke-output.json: passed
+sanitized report content check: passed, no smoke memory/chat text
+npm test: 18 个测试文件、109 tests passed；2 个 integration 文件 skipped
+npm run build:demo: passed
+git diff --check: passed
+```
+
+重要限制：
+
+- 这仍不是线上迁移；不读取 `DATABASE_URL` / `NNZ_POSTGRES_URL`，不连接 Render。
+- `snapshot:export` 输出的是完整敏感 snapshot；审阅应使用 `migration:plan -- --report` 的 sanitized report。
+
 ## 16.3 2026-06-22 H5 modal / CTA 修复
 
 接手前，另一位 AI 在 2026-06-18 到 2026-06-21 主要围绕 `public/index.html` 反复修 H5 modal / CTA，最后 `main` 回退到：
