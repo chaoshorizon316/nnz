@@ -225,7 +225,7 @@ npm run build:demo
 npm run demo
 ```
 
-Current verified suite on 2026-06-30: 112 tests plus two skipped opt-in Postgres integration tests across domain scope, scoped repositories, Soul Ops cleanup/overview/audit query/RBAC, SQLite/Postgres snapshot persistence, Postgres scoped repository, snapshot export, snapshot migration planner/row builder/executor/CLI, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+Current verified suite on 2026-07-01: 129 tests plus two skipped opt-in Postgres integration tests across domain scope, scoped repositories, Soul Ops cleanup/overview/audit query/RBAC, SQLite/Postgres snapshot persistence, Postgres scoped repository, snapshot export, snapshot migration planner/row builder/executor/readiness/smoke CLI, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
 Offline StoreSnapshot export:
 
@@ -265,6 +265,14 @@ npm run migration:execute -- --snapshot <snapshot-json-path> --execute --databas
 
 Default mode is a protected dry-run that reads only the explicit local snapshot file and prints sanitized counts. Execution mode refuses `DATABASE_URL` and `NNZ_POSTGRES_URL`; it only reads `NNZ_POSTGRES_INTEGRATION_URL`, requires the explicit confirm string, rejects blocking errors, and rejects warnings unless `--allow-warnings` is passed after review. This is for disposable database validation, not production migration.
 
+Disposable Postgres migration smoke:
+
+```bash
+npm run migration:smoke -- --database-url-env NNZ_POSTGRES_INTEGRATION_URL --confirm RUN_POSTGRES_SCOPED_MIGRATION_SMOKE
+```
+
+This command is for disposable database validation only. It creates scoped fixture data, executes the migration twice, reads back through `PostgresScopedSoulRepository`, verifies cross-scope rejection and cascade delete, then attempts fixture cleanup. It refuses `DATABASE_URL` and does not print database URLs or fixture row content.
+
 Cloud Soul Ops status on 2026-06-16: Render has `NNZ_OPS_TOKEN` configured. `/ops` returns 200, `/api/ops/overview` returns 401 without token, 403 with a wrong token, and 200 with the configured token. `POST /api/ops/cleanup-test-users` dry-run returns one explicit smoke/test candidate and deletes nothing. The token value is stored only in Render and must not be committed or documented.
 
 Step 2.3 cloud status on 2026-06-17: `/api/ops/audit-events` and the `/ops` Audit tab are implemented and pushed. GitHub Actions run `27677337466` passed. Render `/healthz` reports Postgres persistence, `/ops` returns 200 and includes the Audit tab, `/api/ops/audit-events` returns 401 without a token and 403 with a wrong token. Cloud role-specific token smoke is the next verification step after Render has `NNZ_OPS_VIEWER_TOKEN`, `NNZ_OPS_OPERATOR_TOKEN`, and `NNZ_OPS_ADMIN_TOKEN` configured.
@@ -273,8 +281,8 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 ## Current State
 
-The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, Step 2.11 scoped migration row builder, Step 2.12 write-side migration executor core, Step 2.13 executor disposable DB integration harness, Step 2.14 client-bound executor transaction, Step 2.15 StoreSnapshot export CLI, Step 2.16 sanitized migration summary, Step 2.17 protected migration execution CLI, and Step 2.18 migration readiness CLI are implemented locally. The 2026-07-01 migration readiness roadmap tracks the remaining Step 2 goals in `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, Step 2.11 scoped migration row builder, Step 2.12 write-side migration executor core, Step 2.13 executor disposable DB integration harness, Step 2.14 client-bound executor transaction, Step 2.15 StoreSnapshot export CLI, Step 2.16 sanitized migration summary, Step 2.17 protected migration execution CLI, Step 2.18 migration readiness CLI, and Step 2.19 disposable migration smoke CLI are implemented locally. The 2026-07-01 migration readiness roadmap tracks the remaining Step 2 goals in `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`.
 
-Remaining Step 2 goals: run `migration:readiness` on a real local snapshot, run repository and executor integration tests plus the protected execution CLI against a disposable Postgres database, verify optional role-specific tokens in Render, and later switch demo runtime persistence from snapshot JSONB to scoped tables.
+Remaining Step 2 goals: run `migration:readiness` on a real local snapshot, run `migration:smoke` against a disposable Postgres database, verify optional role-specific tokens in Render, and later switch demo runtime persistence from snapshot JSONB to scoped tables.
 
-Next engineering steps: run `migration:readiness` on a real local snapshot sample, then run the opt-in repository and executor Postgres integration tests against a disposable database. Do not use production `DATABASE_URL` for migration validation; use only explicit local files and `NNZ_POSTGRES_INTEGRATION_URL`.
+Next engineering steps: run `migration:readiness` on a real local snapshot sample, then run `migration:smoke` against a disposable database. Do not use production `DATABASE_URL` for migration validation; use only explicit local files and `NNZ_POSTGRES_INTEGRATION_URL`.

@@ -49,6 +49,7 @@ https://github.com/chaoshorizon316/nnz
 2026-07-01 Step 2 migration readiness roadmap 已整理；当时剩余 5 个目标：真实 snapshot dry-run、一次性 Postgres integration run、云端角色 token smoke、protected migration execution runbook、demo runtime scoped tables 切换
 2026-07-01 Step 2.17: protected migration execution CLI 已实现；`npm run migration:execute` 默认 dry-run，执行模式只允许 `NNZ_POSTGRES_INTEGRATION_URL` + 显式 confirm，拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`；本地 typecheck、118 tests + 2 skipped、build:demo 通过；真实 disposable DB 尚未实跑
 2026-07-01 Step 2.18: migration readiness CLI 已实现；`npm run migration:readiness` 从显式本地 JSON/SQLite 一次生成 raw snapshot、sanitized report、sanitized summary，不读取任何 DB env、不连接 Postgres；本地 typecheck、124 tests + 2 skipped、build:demo 通过；真实 snapshot 尚未实跑
+2026-07-01 Step 2.19: disposable migration smoke CLI 已实现；`npm run migration:smoke` 只允许 `NNZ_POSTGRES_INTEGRATION_URL` + 显式 confirm，验证 executor 幂等、repository 读回、scope 隔离、audit row、cascade delete 和 cleanup；本地 typecheck、129 tests + 2 skipped、build:demo 通过；真实 disposable DB 尚未实跑
 ```
 
 说明：
@@ -181,6 +182,8 @@ npm audit
 2026-07-01 Step 2.17 protected migration execution CLI 结果：新增 `src/tools/postgres-scoped-migration-execute-cli.ts` / `src/tools/postgres-scoped-migration-execute-cli.test.ts`，新增 `migration:execute` script；默认 dry-run 不建 pool、不连库，执行模式必须同时传 `--execute`、`--database-url-env NNZ_POSTGRES_INTEGRATION_URL`、`--confirm EXECUTE_POSTGRES_SCOPED_MIGRATION`；拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`，blocking errors 拒绝执行，warnings 默认拒绝，stdout/report 不含 memory/chat、credential hash、DB URL 或 rows。本地 `npm run typecheck`、targeted 20 tests、`npm test`、`npm run build:demo`、CLI help 通过；全量为 19 个测试文件、118 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md`。
 
 2026-07-01 Step 2.18 migration readiness CLI 结果：新增 `src/tools/postgres-scoped-migration-readiness-cli.ts` / `src/tools/postgres-scoped-migration-readiness-cli.test.ts`，新增 `migration:readiness` script；从显式 `--from-json` 或 `--from-sqlite` 输入一次生成 raw snapshot、sanitized report、sanitized summary；默认拒绝覆盖、拒绝输出路径重复、拒绝输出覆盖输入；不读取 `DATABASE_URL` / `NNZ_POSTGRES_URL` / `NNZ_POSTGRES_INTEGRATION_URL`，不连接 Postgres。raw snapshot 可能含敏感数据，summary/report 不含 memory/chat、credential hash 或 rows。本地 `npm run typecheck`、targeted 27 tests、`npm test`、`npm run build:demo`、CLI help 通过；全量为 20 个测试文件、124 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md`。
+
+2026-07-01 Step 2.19 disposable migration smoke CLI 结果：新增 `src/tools/postgres-scoped-migration-smoke-cli.ts` / `src/tools/postgres-scoped-migration-smoke-cli.test.ts`，新增 `migration:smoke` script；必须传 `--database-url-env NNZ_POSTGRES_INTEGRATION_URL` 和 `--confirm RUN_POSTGRES_SCOPED_MIGRATION_SMOKE`；拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`；构造双 user/persona fixture，执行 scoped migration 两次验证幂等，通过 repository 读回 runtime/snapshot/memory/conversation/proposal/credential，验证 cross-scope node conversation 拒绝、audit row 写入、user delete cascade、sibling scope preserved，并 finally 清理 fixture users/audit rows。stdout/失败输出不含 DB URL、fixture memory/chat、credential hash、row payload 或 raw DB error details。本地 `npm run typecheck`、targeted 21 tests、`npm test`、`npm run build:demo`、CLI help 通过；全量为 21 个测试文件、129 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-01-Step2.19-DisposableMigrationSmokeCLI.md`。
 
 最新 CI run：
 
@@ -351,6 +354,7 @@ nnz-mvp/src/ops/ops-console.ts
 nnz-mvp/src/ops/ops-console.test.ts
 nnz-mvp/public/index.html
 nnz-mvp/CLAUDE_CODE_HANDOFF.md
+nnz-mvp-2026-07-01-Step2.19-DisposableMigrationSmokeCLI.md
 nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md
 nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md
 nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md

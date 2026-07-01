@@ -14,6 +14,7 @@
     "migration:plan": "node --import tsx src/tools/postgres-scoped-migration-plan-cli.ts",
     "migration:execute": "node --import tsx src/tools/postgres-scoped-migration-execute-cli.ts",
     "migration:readiness": "node --import tsx src/tools/postgres-scoped-migration-readiness-cli.ts",
+    "migration:smoke": "node --import tsx src/tools/postgres-scoped-migration-smoke-cli.ts",
     "snapshot:export": "node --import tsx src/tools/store-snapshot-export-cli.ts"
   },
   "engines": {

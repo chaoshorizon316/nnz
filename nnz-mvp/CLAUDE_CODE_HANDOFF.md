@@ -1274,10 +1274,10 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.18。最新已推送提交是 `22f6338 feat: add protected migration execute CLI`，当前迁移 readiness 还剩 4 个未完成目标：
+Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.19。最新已推送提交是 `c77e3de feat: add migration readiness CLI`，当前迁移 readiness 还剩 4 个未完成目标：
 
 1. 用真实本地 snapshot 样本跑 `migration:readiness`，生成 raw snapshot、sanitized report、sanitized summary。
-2. 用一次性 Postgres 测试库跑 repository + executor opt-in integration tests，并对 `migration:execute` 做 protected execution smoke。
+2. 用一次性 Postgres 测试库跑 `migration:smoke`。
 3. 在 Render 验证可选角色 token 的 viewer/operator/admin 权限边界。
 4. 等迁移验收稳定后，再规划 demo runtime 从 snapshot JSONB persistence 切到 scoped tables。
 
@@ -1326,7 +1326,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`、`nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`、`nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md`、`nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`、`nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md`、`nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md`、`nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md`、`nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`、`nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md` 和 `nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口；而是按 4 个未完成 readiness 目标推进：真实 snapshot readiness、一次性 Postgres integration + protected execution smoke、云端角色 token smoke，以及最后的 demo runtime scoped tables 切换。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`、`nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`、`nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md`、`nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`、`nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md`、`nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md`、`nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md`、`nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`、`nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md`、`nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md` 和 `nnz-mvp-2026-07-01-Step2.19-DisposableMigrationSmokeCLI.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口；而是按 4 个未完成 readiness 目标推进：真实 snapshot readiness、一次性 Postgres migration smoke、云端角色 token smoke，以及最后的 demo runtime scoped tables 切换。
 
 ## 16.2.1 2026-06-23 Step 2.5 Postgres scoped repository
 
@@ -1734,6 +1734,44 @@ npm run migration:readiness -- --help: passed
 
 - 真实 snapshot readiness 仍未实跑，因为当前没有本地 SQLite / StoreSnapshot JSON 路径。
 - disposable DB integration 和 protected execution smoke 仍未实跑，因为当前没有 `NNZ_POSTGRES_INTEGRATION_URL`。
+
+## 16.2.15 2026-07-01 Step 2.19 disposable migration smoke CLI
+
+已完成一次性 Postgres smoke 命令：
+
+- 新增 `src/tools/postgres-scoped-migration-smoke-cli.ts`。
+- 新增 `src/tools/postgres-scoped-migration-smoke-cli.test.ts`。
+- `package.json` 新增 `migration:smoke` script。
+- 必须传 `--database-url-env NNZ_POSTGRES_INTEGRATION_URL`。
+- 必须传 `--confirm RUN_POSTGRES_SCOPED_MIGRATION_SMOKE`。
+- 明确拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`。
+- 构造双 user / 双 persona fixture snapshot。
+- 执行 scoped migration 两次，验证幂等。
+- 通过 `PostgresScopedSoulRepository` 读回 runtime session、snapshot、memory、conversation、proposal、credential。
+- 验证 cross-scope node conversation 拒绝、OpsAudit row 写入、user delete cascade、sibling scope preserved。
+- finally 中清理 fixture users 和 audit rows。
+- stdout 和失败输出不含 DB URL、fixture memory/chat、credential hash、row payload 或 raw DB error details。
+
+命令：
+
+```bash
+npm run migration:smoke -- --database-url-env NNZ_POSTGRES_INTEGRATION_URL --confirm RUN_POSTGRES_SCOPED_MIGRATION_SMOKE
+```
+
+验证：
+
+```text
+npm test -- src/tools/postgres-scoped-migration-smoke-cli.test.ts src/tools/postgres-scoped-migration-execute-cli.test.ts src/tools/postgres-scoped-migration-readiness-cli.test.ts src/domain/postgres-scoped-migration-executor.test.ts --reporter verbose: 21 tests passed
+npm run typecheck: passed
+npm test: 21 个测试文件、129 tests passed；2 个 integration 文件 skipped
+npm run build:demo: passed
+npm run migration:smoke -- --help: passed
+```
+
+重要限制：
+
+- 真实 disposable DB smoke 仍未实跑，因为当前没有 `NNZ_POSTGRES_INTEGRATION_URL`。
+- 真实 snapshot readiness 仍未实跑，因为当前没有本地 SQLite / StoreSnapshot JSON 路径。
 
 ## 16.3 2026-06-22 H5 modal / CTA 修复
 
