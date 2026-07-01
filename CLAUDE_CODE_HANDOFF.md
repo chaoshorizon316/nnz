@@ -48,6 +48,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-30 Step 2.16: migration dry-run sanitized summary 已实现；`npm run migration:plan -- --summary <snapshot-json-path>` 输出聚合 counts/code/table，不含 issue message、邮箱、memory/chat；本地 typecheck、112 tests + 2 skipped、build:demo 通过
 2026-07-01 Step 2 migration readiness roadmap 已整理；当时剩余 5 个目标：真实 snapshot dry-run、一次性 Postgres integration run、云端角色 token smoke、protected migration execution runbook、demo runtime scoped tables 切换
 2026-07-01 Step 2.17: protected migration execution CLI 已实现；`npm run migration:execute` 默认 dry-run，执行模式只允许 `NNZ_POSTGRES_INTEGRATION_URL` + 显式 confirm，拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`；本地 typecheck、118 tests + 2 skipped、build:demo 通过；真实 disposable DB 尚未实跑
+2026-07-01 Step 2.18: migration readiness CLI 已实现；`npm run migration:readiness` 从显式本地 JSON/SQLite 一次生成 raw snapshot、sanitized report、sanitized summary，不读取任何 DB env、不连接 Postgres；本地 typecheck、124 tests + 2 skipped、build:demo 通过；真实 snapshot 尚未实跑
 ```
 
 说明：
@@ -178,6 +179,8 @@ npm audit
 2026-07-01 Step 2 migration readiness roadmap：新增 `nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`，当时明确剩余 5 个目标、完成标准、推荐顺序和安全边界；Step 2.17 后已更新为剩余 4 个未完成目标。当前无需每个小步骤都 push；应按目标连续推进，遇到真实 snapshot、disposable DB URL、云端 token 等外部输入点再做明确 checkpoint。
 
 2026-07-01 Step 2.17 protected migration execution CLI 结果：新增 `src/tools/postgres-scoped-migration-execute-cli.ts` / `src/tools/postgres-scoped-migration-execute-cli.test.ts`，新增 `migration:execute` script；默认 dry-run 不建 pool、不连库，执行模式必须同时传 `--execute`、`--database-url-env NNZ_POSTGRES_INTEGRATION_URL`、`--confirm EXECUTE_POSTGRES_SCOPED_MIGRATION`；拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`，blocking errors 拒绝执行，warnings 默认拒绝，stdout/report 不含 memory/chat、credential hash、DB URL 或 rows。本地 `npm run typecheck`、targeted 20 tests、`npm test`、`npm run build:demo`、CLI help 通过；全量为 19 个测试文件、118 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md`。
+
+2026-07-01 Step 2.18 migration readiness CLI 结果：新增 `src/tools/postgres-scoped-migration-readiness-cli.ts` / `src/tools/postgres-scoped-migration-readiness-cli.test.ts`，新增 `migration:readiness` script；从显式 `--from-json` 或 `--from-sqlite` 输入一次生成 raw snapshot、sanitized report、sanitized summary；默认拒绝覆盖、拒绝输出路径重复、拒绝输出覆盖输入；不读取 `DATABASE_URL` / `NNZ_POSTGRES_URL` / `NNZ_POSTGRES_INTEGRATION_URL`，不连接 Postgres。raw snapshot 可能含敏感数据，summary/report 不含 memory/chat、credential hash 或 rows。本地 `npm run typecheck`、targeted 27 tests、`npm test`、`npm run build:demo`、CLI help 通过；全量为 20 个测试文件、124 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md`。
 
 最新 CI run：
 
@@ -348,6 +351,7 @@ nnz-mvp/src/ops/ops-console.ts
 nnz-mvp/src/ops/ops-console.test.ts
 nnz-mvp/public/index.html
 nnz-mvp/CLAUDE_CODE_HANDOFF.md
+nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md
 nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md
 nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md
 nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md

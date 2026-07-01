@@ -42,6 +42,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-30 Step 2.16: migration dry-run sanitized summary 已实现；`npm run migration:plan -- --summary <snapshot-json-path>` 输出聚合 counts/code/table，不含 issue message、邮箱、memory/chat；本地 typecheck、18 个测试文件 112 tests + 2 skipped、build:demo 通过
 2026-07-01 Step 2 migration readiness roadmap 已整理；当时剩余 5 个目标，其中真实 snapshot dry-run、一次性 Postgres integration run、云端角色 token smoke 依赖外部输入，protected execution runbook 和 runtime scoped tables 切换可继续本地推进
 2026-07-01 Step 2.17: protected migration execution CLI 已实现；`npm run migration:execute` 默认 dry-run，执行模式只允许 `NNZ_POSTGRES_INTEGRATION_URL` + 显式 confirm，拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`；本地 typecheck、19 个测试文件 118 tests + 2 skipped、build:demo 通过；真实 disposable DB 尚未实跑
+2026-07-01 Step 2.18: migration readiness CLI 已实现；`npm run migration:readiness` 可从显式本地 JSON/SQLite 一次生成 raw snapshot、sanitized report、sanitized summary，不读取任何 DB env、不连接 Postgres；本地 typecheck、20 个测试文件 124 tests + 2 skipped、build:demo 通过；真实 snapshot 尚未实跑
 ```
 
 当前本地相对远端：
@@ -53,7 +54,7 @@ main...origin/main
 最新提交：
 
 ```text
-4d474dd docs: add Step 2 migration readiness roadmap
+22f6338 feat: add protected migration execute CLI
 ```
 
 最新云端 Soul Ops 记录：
@@ -83,6 +84,7 @@ nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md
 nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md
 nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md
 nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md
+nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md
 ```
 
 ## 2026-06-22 工作区注意
@@ -502,7 +504,7 @@ npm test         # 13 files, 87 tests passed; 1 integration file skipped by defa
 npm run build:demo
 ```
 
-下一步：Step 2 migration readiness 还剩 4 个未完成目标。优先用真实本地 snapshot 样本运行 `snapshot:export` + `migration:plan -- --summary/--report`；随后用一次性测试库运行 `NNZ_POSTGRES_INTEGRATION_URL=... npm test -- src/domain/postgres-scoped-soul-repository.integration.test.ts src/domain/postgres-scoped-migration-executor.integration.test.ts --reporter verbose`，并用同一个 disposable DB 验证 `migration:execute` protected execution smoke；Render 侧再验证可选角色 token（viewer/operator/admin）；最后再规划 demo runtime 从 snapshot persistence 切到 scoped tables。token/连接串明文不得写入仓库或文档。
+下一步：Step 2 migration readiness 还剩 4 个未完成目标。优先用真实本地 snapshot 样本运行 `migration:readiness` 生成 raw snapshot、sanitized report、sanitized summary；随后用一次性测试库运行 `NNZ_POSTGRES_INTEGRATION_URL=... npm test -- src/domain/postgres-scoped-soul-repository.integration.test.ts src/domain/postgres-scoped-migration-executor.integration.test.ts --reporter verbose`，并用同一个 disposable DB 验证 `migration:execute` protected execution smoke；Render 侧再验证可选角色 token（viewer/operator/admin）；最后再规划 demo runtime 从 snapshot persistence 切到 scoped tables。token/连接串明文不得写入仓库或文档。
 
 ### 后续：微信 / H5 用户端雏形
 

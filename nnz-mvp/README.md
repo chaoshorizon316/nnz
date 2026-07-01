@@ -247,6 +247,15 @@ npm run migration:plan -- --report <report-json-path> <snapshot-json-path>
 
 The command accepts a raw `StoreSnapshot` JSON object or a wrapper with `snapshot_json`, prints scoped table row counts plus warnings/errors, and exits with code 2 when blocking migration errors exist. `--summary` prints aggregate counts/code/table buckets only, without issue messages or ids. `--report` writes a sanitized JSON report with counts and issue identifiers only, excluding memory and chat content. It does not read `DATABASE_URL` or connect to Postgres.
 
+One-command migration readiness bundle:
+
+```bash
+npm run migration:readiness -- --from-json <snapshot-or-wrapper-json-path> --snapshot-out <raw-snapshot-json-path> --report-out <sanitized-report-json-path> --summary-out <sanitized-summary-json-path>
+npm run migration:readiness -- --from-sqlite <sqlite-db-path> --snapshot-out <raw-snapshot-json-path> --report-out <sanitized-report-json-path> --summary-out <sanitized-summary-json-path>
+```
+
+This command is offline only. It creates a raw local snapshot plus sanitized report and summary outputs, refuses accidental overwrites by default, and does not read or connect to any Postgres environment. Use it when a real local snapshot or SQLite file is available.
+
 Protected snapshot migration execution:
 
 ```bash
@@ -264,8 +273,8 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 ## Current State
 
-The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, Step 2.11 scoped migration row builder, Step 2.12 write-side migration executor core, Step 2.13 executor disposable DB integration harness, Step 2.14 client-bound executor transaction, Step 2.15 StoreSnapshot export CLI, Step 2.16 sanitized migration summary, and Step 2.17 protected migration execution CLI are implemented locally. The 2026-07-01 migration readiness roadmap tracks the remaining Step 2 goals in `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, Step 2.11 scoped migration row builder, Step 2.12 write-side migration executor core, Step 2.13 executor disposable DB integration harness, Step 2.14 client-bound executor transaction, Step 2.15 StoreSnapshot export CLI, Step 2.16 sanitized migration summary, Step 2.17 protected migration execution CLI, and Step 2.18 migration readiness CLI are implemented locally. The 2026-07-01 migration readiness roadmap tracks the remaining Step 2 goals in `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`.
 
-Remaining Step 2 goals: run a real local snapshot dry-run, run repository and executor integration tests plus the protected execution CLI against a disposable Postgres database, verify optional role-specific tokens in Render, and later switch demo runtime persistence from snapshot JSONB to scoped tables.
+Remaining Step 2 goals: run `migration:readiness` on a real local snapshot, run repository and executor integration tests plus the protected execution CLI against a disposable Postgres database, verify optional role-specific tokens in Render, and later switch demo runtime persistence from snapshot JSONB to scoped tables.
 
-Next engineering steps: use `snapshot:export` plus `migration:plan -- --summary/--report` on a real local snapshot sample, then run the opt-in repository and executor Postgres integration tests against a disposable database. Do not use production `DATABASE_URL` for migration validation; use only explicit local files and `NNZ_POSTGRES_INTEGRATION_URL`.
+Next engineering steps: run `migration:readiness` on a real local snapshot sample, then run the opt-in repository and executor Postgres integration tests against a disposable database. Do not use production `DATABASE_URL` for migration validation; use only explicit local files and `NNZ_POSTGRES_INTEGRATION_URL`.
