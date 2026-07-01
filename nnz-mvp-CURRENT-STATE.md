@@ -35,12 +35,13 @@ https://github.com/chaoshorizon316/nnz
 2026-06-25 Step 2.9: snapshot -> scoped tables 离线迁移预检 planner 已实现；输入 StoreSnapshot 输出 table order / row count / blocking errors / warnings；覆盖跨 scope 引用、credential user 绑定、重复 ACTIVE SoulVersion、OpsAudit missing target warning；本地 typecheck、14 个测试文件 90 tests + 1 skipped、build:demo 通过
 2026-06-26 Step 2.10: snapshot migration dry-run CLI 已实现；`npm run migration:plan -- <snapshot-json-path>` 可离线审阅 StoreSnapshot / snapshot_json wrapper 的 row count、warnings、errors；`--report` 可生成不含 memory/chat 正文的 sanitized JSON report；本地 typecheck、15 个测试文件 97 tests + 1 skipped、build:demo 通过
 2026-06-26 Step 2.11: scoped migration row builder 已实现；通过预检后可生成按目标 scoped table 顺序排列的 rows，并接入 sanitized report 的 rowBuild counts；本地 typecheck、16 个测试文件 100 tests + 1 skipped、build:demo 通过
-2026-06-26 Step 2.12: scoped migration executor core 已实现；显式 confirm 后可在事务中按 row builder 顺序执行 schema + upsert inserts，失败 rollback；本地 typecheck、17 个测试文件 104 tests + 1 skipped、build:demo 通过；目前无线上/CLI 执行入口
+2026-06-26 Step 2.12: scoped migration executor core 已实现；显式 confirm 后可在事务中按 row builder 顺序执行 schema + upsert inserts，失败 rollback；本地 typecheck、17 个测试文件 104 tests + 1 skipped、build:demo 通过；当时无线上/CLI 执行入口，后续 Step 2.17 已补本地 protected CLI
 2026-06-26 Step 2.13: executor disposable DB integration harness 已实现；默认跳过，仅在设置 NNZ_POSTGRES_INTEGRATION_URL 时连接一次性 Postgres 测试库，覆盖 executor 幂等写入、repository 读回、scope 隔离和级联删除；本地 typecheck、17 个测试文件 104 tests + 2 skipped、build:demo 通过；目前仍未实跑真实测试库
 2026-06-26 Step 2.14: executor transaction 已改为 pg client-bound；BEGIN/schema/inserts/COMMIT/ROLLBACK 均使用同一个 checked-out client，finally release；本地 typecheck、17 个测试文件 104 tests + 2 skipped、build:demo 通过
 2026-06-29 Step 2.15: StoreSnapshot export CLI 已实现；`npm run snapshot:export` 支持显式本地 JSON/SQLite 输入导出完整 snapshot，stdout 只输出 counts，已验证可串联 sanitized migration report；本地 typecheck、18 个测试文件 109 tests + 2 skipped、build:demo 通过
 2026-06-30 Step 2.16: migration dry-run sanitized summary 已实现；`npm run migration:plan -- --summary <snapshot-json-path>` 输出聚合 counts/code/table，不含 issue message、邮箱、memory/chat；本地 typecheck、18 个测试文件 112 tests + 2 skipped、build:demo 通过
-2026-07-01 Step 2 migration readiness roadmap 已整理；剩余 5 个目标，其中真实 snapshot dry-run、一次性 Postgres integration run、云端角色 token smoke 依赖外部输入，protected execution runbook 和 runtime scoped tables 切换可继续本地推进
+2026-07-01 Step 2 migration readiness roadmap 已整理；当时剩余 5 个目标，其中真实 snapshot dry-run、一次性 Postgres integration run、云端角色 token smoke 依赖外部输入，protected execution runbook 和 runtime scoped tables 切换可继续本地推进
+2026-07-01 Step 2.17: protected migration execution CLI 已实现；`npm run migration:execute` 默认 dry-run，执行模式只允许 `NNZ_POSTGRES_INTEGRATION_URL` + 显式 confirm，拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`；本地 typecheck、19 个测试文件 118 tests + 2 skipped、build:demo 通过；真实 disposable DB 尚未实跑
 ```
 
 当前本地相对远端：
@@ -52,7 +53,7 @@ main...origin/main
 最新提交：
 
 ```text
-bf8fadf 新增 migration dry-run 安全摘要
+4d474dd docs: add Step 2 migration readiness roadmap
 ```
 
 最新云端 Soul Ops 记录：
@@ -81,6 +82,7 @@ nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md
 nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md
 nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md
 nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md
+nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md
 ```
 
 ## 2026-06-22 工作区注意
@@ -500,7 +502,7 @@ npm test         # 13 files, 87 tests passed; 1 integration file skipped by defa
 npm run build:demo
 ```
 
-下一步：Step 2 migration readiness 还剩 5 个目标。优先用真实本地 snapshot 样本运行 `snapshot:export` + `migration:plan -- --summary/--report`；随后用一次性测试库运行 `NNZ_POSTGRES_INTEGRATION_URL=... npm test -- src/domain/postgres-scoped-soul-repository.integration.test.ts src/domain/postgres-scoped-migration-executor.integration.test.ts --reporter verbose`；Render 侧再验证可选角色 token（viewer/operator/admin）。工程侧可并行补 protected migration execution runbook，最后再规划 demo runtime 从 snapshot persistence 切到 scoped tables。token/连接串明文不得写入仓库或文档。
+下一步：Step 2 migration readiness 还剩 4 个未完成目标。优先用真实本地 snapshot 样本运行 `snapshot:export` + `migration:plan -- --summary/--report`；随后用一次性测试库运行 `NNZ_POSTGRES_INTEGRATION_URL=... npm test -- src/domain/postgres-scoped-soul-repository.integration.test.ts src/domain/postgres-scoped-migration-executor.integration.test.ts --reporter verbose`，并用同一个 disposable DB 验证 `migration:execute` protected execution smoke；Render 侧再验证可选角色 token（viewer/operator/admin）；最后再规划 demo runtime 从 snapshot persistence 切到 scoped tables。token/连接串明文不得写入仓库或文档。
 
 ### 后续：微信 / H5 用户端雏形
 
@@ -612,4 +614,4 @@ npm run build:demo
 npm audit        # 0 vulnerabilities
 ```
 
-当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。2026-06-16 已完成 Render `NNZ_OPS_TOKEN` 配置和云端 `/ops` smoke，并完成 Step 2.1 Soul Ops 审计日志。2026-06-17 已完成 Step 2.2 Soul Ops RBAC 与删除回执；同日 Step 2.3 已完成 Audit 查询接口和 `/ops` Audit tab，并已推送通过 GitHub Actions / Render 基础 smoke。2026-06-23 已完成 Step 2.5 Postgres scoped repository 最小旁路切片。2026-06-24 已完成 Step 2.6 Postgres scoped Covenant 主链旁路切片；同日 Step 2.7 已补齐 Proposal/Credential/OpsAudit 旁路表。2026-06-25 已新增 opt-in 真实 Postgres integration test harness，并完成 snapshot -> scoped tables 离线迁移预检 planner。2026-06-26 已补本地 dry-run CLI、scoped migration row builder、executor core 和 executor disposable DB integration harness。2026-06-29 已补 StoreSnapshot export CLI。2026-06-30 已补 migration dry-run sanitized summary。2026-07-01 已整理 migration readiness roadmap：剩余 5 个目标，先验真实 snapshot dry-run 与一次性 Postgres integration，再补云端角色 token smoke、protected execution runbook 和 runtime scoped tables 切换。
+当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。2026-06-16 已完成 Render `NNZ_OPS_TOKEN` 配置和云端 `/ops` smoke，并完成 Step 2.1 Soul Ops 审计日志。2026-06-17 已完成 Step 2.2 Soul Ops RBAC 与删除回执；同日 Step 2.3 已完成 Audit 查询接口和 `/ops` Audit tab，并已推送通过 GitHub Actions / Render 基础 smoke。2026-06-23 已完成 Step 2.5 Postgres scoped repository 最小旁路切片。2026-06-24 已完成 Step 2.6 Postgres scoped Covenant 主链旁路切片；同日 Step 2.7 已补齐 Proposal/Credential/OpsAudit 旁路表。2026-06-25 已新增 opt-in 真实 Postgres integration test harness，并完成 snapshot -> scoped tables 离线迁移预检 planner。2026-06-26 已补本地 dry-run CLI、scoped migration row builder、executor core 和 executor disposable DB integration harness。2026-06-29 已补 StoreSnapshot export CLI。2026-06-30 已补 migration dry-run sanitized summary。2026-07-01 已整理 migration readiness roadmap，并已补 protected migration execution CLI；当前剩余 4 个未完成目标：真实 snapshot dry-run、一次性 Postgres integration + protected execution smoke、云端角色 token smoke、demo runtime scoped tables 切换。

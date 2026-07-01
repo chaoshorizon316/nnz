@@ -12,6 +12,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "migration:plan": "node --import tsx src/tools/postgres-scoped-migration-plan-cli.ts",
+    "migration:execute": "node --import tsx src/tools/postgres-scoped-migration-execute-cli.ts",
     "snapshot:export": "node --import tsx src/tools/store-snapshot-export-cli.ts"
   },
   "engines": {

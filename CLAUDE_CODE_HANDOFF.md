@@ -41,12 +41,13 @@ https://github.com/chaoshorizon316/nnz
 2026-06-25 Step 2.9: snapshot -> scoped tables 离线迁移预检 planner 已实现；输入 StoreSnapshot 输出 table order / row count / blocking errors / warnings；本地 typecheck、90 tests + 1 skipped、build:demo 通过
 2026-06-26 Step 2.10: snapshot migration dry-run CLI 已实现；`npm run migration:plan -- <snapshot-json-path>` 支持离线预检、`--json` 和 sanitized `--report`；本地 typecheck、97 tests + 1 skipped、build:demo 通过
 2026-06-26 Step 2.11: scoped migration row builder 已实现；通过 planner 后生成按 scoped table 顺序排列的 rows，并在 sanitized report 中输出 rowBuild counts；本地 typecheck、100 tests + 1 skipped、build:demo 通过
-2026-06-26 Step 2.12: scoped migration executor core 已实现；显式 confirm 后在事务中执行 schema + ordered upsert inserts，失败 rollback；本地 typecheck、104 tests + 1 skipped、build:demo 通过；无线上/CLI 执行入口
+2026-06-26 Step 2.12: scoped migration executor core 已实现；显式 confirm 后在事务中执行 schema + ordered upsert inserts，失败 rollback；本地 typecheck、104 tests + 1 skipped、build:demo 通过；当时无线上/CLI 执行入口，后续 Step 2.17 已补本地 protected CLI
 2026-06-26 Step 2.13: executor disposable DB integration harness 已实现；仅在设置 NNZ_POSTGRES_INTEGRATION_URL 时连接一次性测试库，默认 skip；本地 typecheck、104 tests + 2 skipped、build:demo 通过；尚未实跑真实测试库
 2026-06-26 Step 2.14: executor transaction 已改为 pg client-bound；BEGIN/schema/inserts/COMMIT/ROLLBACK 均使用同一个 checked-out client，finally release；本地 typecheck、104 tests + 2 skipped、build:demo 通过
 2026-06-29 Step 2.15: StoreSnapshot export CLI 已实现；`npm run snapshot:export` 支持显式本地 JSON/SQLite 输入导出完整 snapshot，stdout 只输出 counts，已验证可串联 sanitized migration report；本地 typecheck、109 tests + 2 skipped、build:demo 通过
 2026-06-30 Step 2.16: migration dry-run sanitized summary 已实现；`npm run migration:plan -- --summary <snapshot-json-path>` 输出聚合 counts/code/table，不含 issue message、邮箱、memory/chat；本地 typecheck、112 tests + 2 skipped、build:demo 通过
-2026-07-01 Step 2 migration readiness roadmap 已整理；剩余 5 个目标：真实 snapshot dry-run、一次性 Postgres integration run、云端角色 token smoke、protected migration execution runbook、demo runtime scoped tables 切换
+2026-07-01 Step 2 migration readiness roadmap 已整理；当时剩余 5 个目标：真实 snapshot dry-run、一次性 Postgres integration run、云端角色 token smoke、protected migration execution runbook、demo runtime scoped tables 切换
+2026-07-01 Step 2.17: protected migration execution CLI 已实现；`npm run migration:execute` 默认 dry-run，执行模式只允许 `NNZ_POSTGRES_INTEGRATION_URL` + 显式 confirm，拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`；本地 typecheck、118 tests + 2 skipped、build:demo 通过；真实 disposable DB 尚未实跑
 ```
 
 说明：
@@ -174,7 +175,9 @@ npm audit
 
 2026-06-30 Step 2.16 sanitized migration summary 结果：`src/tools/postgres-scoped-migration-plan-cli.ts` 新增 `--summary` 与 report summary 字段；summary 只输出聚合 counts/code/table 和 nextAction，不输出 issue message、row id、email、memory/chat 正文。本地 `npm run typecheck`、targeted CLI tests、summary smoke、`npm test`、`npm run build:demo`、`git diff --check` 通过，全量为 18 个测试文件、112 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md`。
 
-2026-07-01 Step 2 migration readiness roadmap：新增 `nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`，明确剩余 5 个目标、完成标准、推荐顺序和安全边界。当前无需每个小步骤都 push；应按目标连续推进，遇到真实 snapshot、disposable DB URL、云端 token 等外部输入点再做明确 checkpoint。
+2026-07-01 Step 2 migration readiness roadmap：新增 `nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`，当时明确剩余 5 个目标、完成标准、推荐顺序和安全边界；Step 2.17 后已更新为剩余 4 个未完成目标。当前无需每个小步骤都 push；应按目标连续推进，遇到真实 snapshot、disposable DB URL、云端 token 等外部输入点再做明确 checkpoint。
+
+2026-07-01 Step 2.17 protected migration execution CLI 结果：新增 `src/tools/postgres-scoped-migration-execute-cli.ts` / `src/tools/postgres-scoped-migration-execute-cli.test.ts`，新增 `migration:execute` script；默认 dry-run 不建 pool、不连库，执行模式必须同时传 `--execute`、`--database-url-env NNZ_POSTGRES_INTEGRATION_URL`、`--confirm EXECUTE_POSTGRES_SCOPED_MIGRATION`；拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`，blocking errors 拒绝执行，warnings 默认拒绝，stdout/report 不含 memory/chat、credential hash、DB URL 或 rows。本地 `npm run typecheck`、targeted 20 tests、`npm test`、`npm run build:demo`、CLI help 通过；全量为 19 个测试文件、118 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md`。
 
 最新 CI run：
 
@@ -345,6 +348,7 @@ nnz-mvp/src/ops/ops-console.ts
 nnz-mvp/src/ops/ops-console.test.ts
 nnz-mvp/public/index.html
 nnz-mvp/CLAUDE_CODE_HANDOFF.md
+nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md
 nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md
 nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md
 nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md

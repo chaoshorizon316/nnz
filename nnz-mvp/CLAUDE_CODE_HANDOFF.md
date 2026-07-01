@@ -1274,13 +1274,12 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.16。最新已推送提交是 `bf8fadf 新增 migration dry-run 安全摘要`，当前迁移 readiness 还剩 5 个目标：
+Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.17。最新已推送提交是 `4d474dd docs: add Step 2 migration readiness roadmap`，当前迁移 readiness 还剩 4 个未完成目标：
 
 1. 用真实本地 snapshot 样本跑 `snapshot:export` + `migration:plan -- --summary/--report`。
-2. 用一次性 Postgres 测试库跑 repository + executor opt-in integration tests。
+2. 用一次性 Postgres 测试库跑 repository + executor opt-in integration tests，并对 `migration:execute` 做 protected execution smoke。
 3. 在 Render 验证可选角色 token 的 viewer/operator/admin 权限边界。
-4. 补 protected migration execution runbook 和受保护执行入口设计。
-5. 等迁移验收稳定后，再规划 demo runtime 从 snapshot JSONB persistence 切到 scoped tables。
+4. 等迁移验收稳定后，再规划 demo runtime 从 snapshot JSONB persistence 切到 scoped tables。
 
 当前不需要每个小步骤都停下来等 push；应按上面目标连续开发和验证。遇到真实 snapshot、`NNZ_POSTGRES_INTEGRATION_URL`、Render role tokens 这类外部输入点时再做明确 checkpoint。完整路线图见 `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`。
 
@@ -1327,7 +1326,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`、`nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`、`nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md`、`nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`、`nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md`、`nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md`、`nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md` 和 `nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口；而是按 5 个 readiness 目标推进：真实 snapshot dry-run、一次性 Postgres integration run、云端角色 token smoke、protected migration execution runbook，以及最后的 demo runtime scoped tables 切换。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`、`nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`、`nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md`、`nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`、`nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md`、`nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md`、`nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md`、`nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md` 和 `nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口；而是按 4 个未完成 readiness 目标推进：真实 snapshot dry-run、一次性 Postgres integration + protected execution smoke、云端角色 token smoke，以及最后的 demo runtime scoped tables 切换。
 
 ## 16.2.1 2026-06-23 Step 2.5 Postgres scoped repository
 
@@ -1551,7 +1550,7 @@ git diff --check: passed
 
 重要限制：
 
-- 这仍不是线上迁移；没有 CLI 执行入口，不读取 `DATABASE_URL`，不连接 Render。
+- 这仍不是线上迁移；当时没有 CLI 执行入口，不读取 `DATABASE_URL`，不连接 Render；后续 Step 2.17 已补本地 protected CLI。
 - disposable database integration harness 已在 Step 2.13 补齐，但尚未提供一次性 Postgres URL 实跑。
 - 下一步应先用 disposable database 跑 repository/executor integration，再考虑任何受保护的执行入口。
 
@@ -1577,7 +1576,7 @@ npm run build:demo: passed
 
 重要限制：
 
-- 这仍不是线上迁移；没有 CLI 执行入口，不读取 `DATABASE_URL`，不连接 Render。
+- 这仍不是线上迁移；当时没有 CLI 执行入口，不读取 `DATABASE_URL`，不连接 Render；后续 Step 2.17 已补本地 protected CLI。
 - 尚未连接一次性 Postgres 测试库实跑 repository/executor integration。
 - 下一步是设置 `NNZ_POSTGRES_INTEGRATION_URL` 后运行 `src/domain/postgres-scoped-soul-repository.integration.test.ts` 和 `src/domain/postgres-scoped-migration-executor.integration.test.ts`。
 
@@ -1601,7 +1600,7 @@ npm run typecheck: passed
 
 重要限制：
 
-- 这仍不是线上迁移；没有 CLI 执行入口，不读取 `DATABASE_URL`，不连接 Render。
+- 这仍不是线上迁移；当时没有 CLI 执行入口，不读取 `DATABASE_URL`，不连接 Render；后续 Step 2.17 已补本地 protected CLI。
 - 尚未连接一次性 Postgres 测试库实跑 repository/executor integration。
 
 ## 16.2.11 2026-06-29 Step 2.15 StoreSnapshot export CLI
@@ -1662,6 +1661,42 @@ git diff --check: passed
 
 - 这仍不是线上迁移；不读取 `DATABASE_URL`，不连接 Render。
 - summary 是给审阅用的聚合视图；具体修复仍需在本地查看 raw snapshot 或 sanitized report。
+
+## 16.2.13 2026-07-01 Step 2.17 protected migration execution CLI
+
+已完成受保护执行入口：
+
+- 新增 `src/tools/postgres-scoped-migration-execute-cli.ts`。
+- 新增 `src/tools/postgres-scoped-migration-execute-cli.test.ts`。
+- `package.json` 新增 `migration:execute` script。
+- 默认模式是 dry-run：只读显式 `--snapshot` 文件，输出 sanitized counts，不创建 pool，不连接 Postgres。
+- 执行模式必须同时传 `--execute`、`--database-url-env NNZ_POSTGRES_INTEGRATION_URL`、`--confirm EXECUTE_POSTGRES_SCOPED_MIGRATION`。
+- CLI 明确拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`，只允许 disposable DB env。
+- blocking errors 会拒绝执行；warnings 默认拒绝执行，审阅后才可显式 `--allow-warnings`。
+- stdout/report 不输出 rows、memory/chat 正文、credential hash、数据库 URL 或原始数据库错误详情。
+
+命令：
+
+```bash
+npm run migration:execute -- --snapshot <snapshot-json-path>
+npm run migration:execute -- --snapshot <snapshot-json-path> --execute --database-url-env NNZ_POSTGRES_INTEGRATION_URL --confirm EXECUTE_POSTGRES_SCOPED_MIGRATION
+```
+
+验证：
+
+```text
+npm test -- src/tools/postgres-scoped-migration-execute-cli.test.ts src/tools/postgres-scoped-migration-plan-cli.test.ts src/domain/postgres-scoped-migration-executor.test.ts --reporter verbose: 20 tests passed
+npm run typecheck: passed
+npm test: 19 个测试文件、118 tests passed；2 个 integration 文件 skipped
+npm run build:demo: passed
+npm run migration:execute -- --help: passed
+```
+
+重要限制：
+
+- 这仍不是线上迁移；真实执行只能用于 disposable DB。
+- 尚未用真实 `NNZ_POSTGRES_INTEGRATION_URL` 实跑 protected execution smoke。
+- 尚未用真实本地 snapshot 串起 `snapshot:export` -> `migration:plan` -> `migration:execute`。
 
 ## 16.3 2026-06-22 H5 modal / CTA 修复
 

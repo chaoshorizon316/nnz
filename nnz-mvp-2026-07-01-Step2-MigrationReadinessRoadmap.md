@@ -2,13 +2,13 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.16。最新已推送提交是：
+Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.17。最新已推送提交是：
 
 ```text
-bf8fadf 新增 migration dry-run 安全摘要
+4d474dd docs: add Step 2 migration readiness roadmap
 ```
 
-截至 2026-07-01，迁移链路还剩 **5 个目标**。其中 3 个是验收类目标，需要真实本地 snapshot、一次性 Postgres 测试库 URL 或 Render 角色 token；2 个是工程推进项，可以先做 runbook / guardrail / protected entry 设计，但正式执行必须等验收通过。
+截至 2026-07-01，迁移链路还剩 **4 个未完成目标**。目标 4 的本地 protected execution CLI 已完成，仍需在 disposable DB 上和目标 2 一起验收；其余 3 个验收类目标需要真实本地 snapshot、一次性 Postgres 测试库 URL 或 Render 角色 token。
 
 ## 已完成基线
 
@@ -22,22 +22,23 @@ bf8fadf 新增 migration dry-run 安全摘要
 - Step 2.14：executor 已改为 checked-out client transaction，避免 `pg.Pool#query()` 多连接事务漂移。
 - Step 2.15：`snapshot:export` CLI 已实现，只读取显式本地 JSON/SQLite 输入，stdout 只输出 counts。
 - Step 2.16：`migration:plan -- --summary` 已实现，只输出聚合 counts/code/table/nextAction。
+- Step 2.17：`migration:execute` protected CLI 已实现；默认 dry-run，执行模式只读取 `NNZ_POSTGRES_INTEGRATION_URL`，拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`，需要显式 confirm。
 
-## 剩余 5 个目标
+## 剩余目标状态
 
 | # | 目标 | 当前状态 | 完成标准 |
 |---|---|---|---|
 | 1 | 真实本地 snapshot dry-run | 需要可用的本地 SQLite 或 snapshot JSON | 运行 `snapshot:export` 后用 `migration:plan -- --summary/--report` 生成 sanitized 结果，审阅 blocking errors、warnings、rowBuild counts |
-| 2 | 一次性 Postgres repository/executor integration run | 需要 `NNZ_POSTGRES_INTEGRATION_URL`，不能用线上 `DATABASE_URL` | 两个 opt-in integration 文件在 disposable DB 上通过，覆盖 schema、JSONB、scope 隔离、executor 幂等写入和级联删除 |
+| 2 | 一次性 Postgres repository/executor integration run | 需要 `NNZ_POSTGRES_INTEGRATION_URL`，不能用线上 `DATABASE_URL` | 两个 opt-in integration 文件和 `migration:execute` 在 disposable DB 上通过，覆盖 schema、JSONB、scope 隔离、executor 幂等写入和级联删除 |
 | 3 | 云端角色 token smoke | 需要 Render 配置 viewer/operator/admin token 或用户提供操作窗口 | 验证 viewer 只读、operator 可 dry-run、admin 可 confirm cleanup；不记录 token 明文 |
-| 4 | 受保护迁移执行入口与 runbook | 可先本地设计；正式启用需等目标 1 和 2 通过 | 有明确 confirm、只允许显式 migration URL、默认 dry-run、日志不含敏感正文、失败可 rollback |
+| 4 | 受保护迁移执行入口与 runbook | 本地 CLI 已实现；真实执行仍需目标 1 和 2 通过 | 有明确 confirm、只允许 `NNZ_POSTGRES_INTEGRATION_URL`、默认 dry-run、日志不含敏感正文、失败可 rollback |
 | 5 | demo runtime 从 snapshot persistence 切到 scoped tables | 后续较大里程碑；应等迁移验收和执行入口稳定 | `/api/me/*`、chat、ops、cleanup、export/delete 都走 scoped tables，仍保持 `userId + personaId` 强隔离 |
 
 ## 推荐推进顺序
 
 1. 先做目标 1：拿一个真实本地 snapshot 样本跑 summary/report。这个步骤只读本地文件，不连数据库，最适合先发现数据形状问题。
 2. 再做目标 2：用一次性 Postgres 测试库实跑 repository + executor integration。这里必须使用 disposable DB，不能使用 Render 线上库。
-3. 并行准备目标 4：补受保护执行入口的 runbook、confirm 文案、失败回滚和审计边界，但不开放真实执行。
+3. 并行验收目标 4：用 `migration:execute` 在 disposable DB 上做 protected execution smoke；仍不开放线上执行。
 4. 做目标 3：当 Render 角色 token 配好后，补 viewer/operator/admin cloud smoke。
 5. 最后进入目标 5：把 demo runtime 的持久化路径从 snapshot JSONB 切到 scoped tables。
 
@@ -47,12 +48,12 @@ bf8fadf 新增 migration dry-run 安全摘要
 - 所有 migration integration 只读取 `NNZ_POSTGRES_INTEGRATION_URL`。
 - `snapshot:export` 输出是完整敏感 snapshot，不能提交，不能贴到聊天或文档。
 - `migration:plan -- --summary` 可用于口头同步；`--report` 可用于审阅，但仍只保留 sanitized 结果。
+- `migration:execute` 默认是 dry-run；真正执行必须同时传 `--execute`、`--database-url-env NNZ_POSTGRES_INTEGRATION_URL`、`--confirm EXECUTE_POSTGRES_SCOPED_MIGRATION`。
 - 任何执行入口都必须保留 `userId + personaId` 作用域边界，不能引入 persona-only 查询。
 - 用户端不可暴露 `SoulVersion`、`SoulSnapshot`、`scope`、`evidence`、`migration` 等后台机制。
 
 ## 当前可继续做的本地工作
 
-- 补 protected migration execution runbook 和命令规范。
 - 为目标 1/2 写固定验收 checklist，避免拿到 snapshot 或 disposable DB 后临时拼命令。
 - 预设计 demo runtime 切换计划，但暂不替换线上 persistence。
 
