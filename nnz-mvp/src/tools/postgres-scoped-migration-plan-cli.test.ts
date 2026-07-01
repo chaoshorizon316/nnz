@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import type { StoreSnapshot } from '../domain/persistence';
 import { InMemorySoulStore } from '../domain/soul-store';
-import { createSanitizedReport, parseSnapshotJson, runMigrationPlanCommand } from './postgres-scoped-migration-plan-cli';
+import {
+  createSanitizedReport,
+  createSanitizedSummary,
+  parseSnapshotJson,
+  runMigrationPlanCommand,
+} from './postgres-scoped-migration-plan-cli';
 
 describe('Postgres scoped migration plan CLI', () => {
   it('prints a ready dry-run summary for a StoreSnapshot JSON file', () => {
@@ -48,6 +53,39 @@ describe('Postgres scoped migration plan CLI', () => {
     });
   });
 
+  it('prints a sanitized summary without issue messages or private content', () => {
+    const snapshot = createSnapshot();
+    snapshot.credentials.push({
+      userId: snapshot.users[0]!.id,
+      email: 'private-user@example.test',
+      passwordHash: 'private-hash',
+      createdAt: new Date().toISOString(),
+    });
+    snapshot.credentials.push({
+      userId: 'missing-user',
+      email: 'private-user@example.test',
+      passwordHash: 'other-private-hash',
+      createdAt: new Date().toISOString(),
+    });
+
+    const result = runMigrationPlanCommand(
+      ['--summary', '/tmp/bad-snapshot.json'],
+      () => JSON.stringify(snapshot),
+    );
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toBe('');
+    expect(result.stdout).toContain('Postgres scoped migration sanitized summary');
+    expect(result.stdout).toContain('errorCount: 2');
+    expect(result.stdout).toContain('DUPLICATE_CREDENTIAL_EMAIL: 1');
+    expect(result.stdout).toContain('USER_MISSING: 1');
+    expect(result.stdout).not.toContain('private-user@example.test');
+    expect(result.stdout).not.toContain('private-hash');
+    expect(result.stdout).not.toContain('private memory text');
+    expect(result.stdout).not.toContain('private chat text');
+    expect(result.stdout).not.toContain('Multiple credentials use email');
+  });
+
   it('writes a sanitized report without memory or chat content', () => {
     const snapshot = createSnapshot();
     const written: Record<string, string> = {};
@@ -87,6 +125,27 @@ describe('Postgres scoped migration plan CLI', () => {
     expect(JSON.stringify(report)).not.toContain('private chat text');
   });
 
+  it('builds sanitized summaries as aggregate counts only', () => {
+    const snapshot = createSnapshot();
+    snapshot.personas[0]!.userId = 'missing-user';
+    const result = runMigrationPlanCommand(
+      ['--json', '/tmp/bad-snapshot.json'],
+      () => JSON.stringify(snapshot),
+    );
+
+    const summary = createSanitizedSummary(JSON.parse(result.stdout));
+
+    expect(summary).toMatchObject({
+      kind: 'postgres-scoped-migration-summary',
+      ready: false,
+      nextAction: 'fix-blocking-errors',
+    });
+    expect(summary['errorCount']).toBeGreaterThan(0);
+    expect(JSON.stringify(summary)).toContain('USER_MISSING');
+    expect(JSON.stringify(summary)).not.toContain('missing-user');
+    expect(JSON.stringify(summary)).not.toContain('private memory text');
+  });
+
   it('rejects missing file arguments before reading', () => {
     const result = runMigrationPlanCommand([], () => {
       throw new Error('should not read');
@@ -103,6 +162,15 @@ describe('Postgres scoped migration plan CLI', () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain('Missing report JSON path after --report.');
+  });
+
+  it('rejects mutually exclusive json and summary output modes', () => {
+    const result = runMigrationPlanCommand(['--json', '--summary', '/tmp/snapshot.json'], () => {
+      throw new Error('should not read');
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Pass either --json or --summary');
   });
 });
 

@@ -20,11 +20,12 @@ type WriteTextFile = (path: string, text: string) => void;
 const USAGE = `Usage:
   npm run migration:plan -- <snapshot-json-path>
   npm run migration:plan -- --json <snapshot-json-path>
+  npm run migration:plan -- --summary <snapshot-json-path>
   npm run migration:plan -- --report <report-json-path> <snapshot-json-path>
 
 Input may be a raw StoreSnapshot JSON object or an object with a snapshot_json field.
 This command is offline only: it does not read DATABASE_URL or connect to Postgres.
-Reports are sanitized: they include counts, issue codes, tables, and ids, but never memory or chat content.`;
+Reports and summaries are sanitized: they include counts, issue codes, tables, and ids, but never memory or chat content.`;
 
 export function runMigrationPlanCommand(
   args: string[],
@@ -49,7 +50,7 @@ export function runMigrationPlanCommand(
     }
     return {
       exitCode: plan.ready ? 0 : 2,
-      stdout: parsedArgs.json ? `${JSON.stringify(plan, null, 2)}\n` : formatPlan(plan, snapshotPath),
+      stdout: formatOutput(plan, snapshotPath, parsedArgs.json, parsedArgs.summary),
       stderr: '',
     };
   } catch (error) {
@@ -114,6 +115,7 @@ export function createSanitizedReport(
   snapshotPath: string,
   rows?: ReturnType<typeof buildPostgresScopedMigrationRows>,
 ): Record<string, unknown> {
+  const summary = createSanitizedSummary(plan, rows);
   const rowBuild = rows
     ? {
       ready: true,
@@ -130,6 +132,7 @@ export function createSanitizedReport(
     snapshotPath,
     ready: plan.ready,
     totalRows: plan.totalRows,
+    summary,
     tables: plan.tables,
     rowBuild,
     executor: {
@@ -145,18 +148,24 @@ export function createSanitizedReport(
 function parseArgs(args: string[]): {
   help: boolean;
   json: boolean;
+  summary: boolean;
   snapshotPath: string;
   reportPath?: string;
   error?: string;
 } {
   const rest: string[] = [];
   let json = false;
+  let summary = false;
   let reportPath: string | undefined;
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]!;
-    if (arg === '--help' || arg === '-h') return { help: true, json: false, snapshotPath: '' };
+    if (arg === '--help' || arg === '-h') return { help: true, json: false, summary: false, snapshotPath: '' };
     if (arg === '--json') {
       json = true;
+      continue;
+    }
+    if (arg === '--summary') {
+      summary = true;
       continue;
     }
     if (arg === '--report') {
@@ -165,6 +174,7 @@ function parseArgs(args: string[]): {
         return {
           help: false,
           json,
+          summary,
           snapshotPath: '',
           error: 'Missing report JSON path after --report.',
         };
@@ -176,10 +186,22 @@ function parseArgs(args: string[]): {
     rest.push(arg);
   }
 
+  if (json && summary) {
+    return {
+      help: false,
+      json,
+      summary,
+      snapshotPath: '',
+      ...(reportPath ? { reportPath } : {}),
+      error: 'Pass either --json or --summary, not both.',
+    };
+  }
+
   if (rest.length !== 1) {
     return {
       help: false,
       json,
+      summary,
       snapshotPath: '',
       ...(reportPath ? { reportPath } : {}),
       error: rest.length === 0 ? 'Missing snapshot JSON path.' : 'Expected exactly one snapshot JSON path.',
@@ -189,9 +211,94 @@ function parseArgs(args: string[]): {
   return {
     help: false,
     json,
+    summary,
     snapshotPath: rest[0]!,
     ...(reportPath ? { reportPath } : {}),
   };
+}
+
+function formatOutput(
+  plan: PostgresScopedMigrationPlan,
+  snapshotPath: string,
+  json: boolean,
+  summary: boolean,
+): string {
+  if (json) return `${JSON.stringify(plan, null, 2)}\n`;
+  if (summary) return formatSanitizedSummary(createSanitizedSummary(plan), snapshotPath);
+  return formatPlan(plan, snapshotPath);
+}
+
+export function createSanitizedSummary(
+  plan: PostgresScopedMigrationPlan,
+  rows?: ReturnType<typeof buildPostgresScopedMigrationRows>,
+): Record<string, unknown> {
+  return {
+    kind: 'postgres-scoped-migration-summary',
+    ready: plan.ready,
+    totalRows: plan.totalRows,
+    tableCount: plan.tables.length,
+    nonEmptyTableCount: plan.tables.filter((table) => table.count > 0).length,
+    warningCount: plan.warnings.length,
+    errorCount: plan.errors.length,
+    warningsByCode: countIssuesBy(plan.warnings, 'code'),
+    errorsByCode: countIssuesBy(plan.errors, 'code'),
+    warningsByTable: countIssuesBy(plan.warnings, 'table'),
+    errorsByTable: countIssuesBy(plan.errors, 'table'),
+    rowBuildReady: Boolean(rows),
+    executorReady: Boolean(rows),
+    nextAction: nextAction(plan, Boolean(rows)),
+  };
+}
+
+function formatSanitizedSummary(summary: Record<string, unknown>, snapshotPath: string): string {
+  const lines = [
+    'Postgres scoped migration sanitized summary',
+    `snapshot: ${snapshotPath}`,
+    `ready: ${summary['ready'] === true ? 'yes' : 'no'}`,
+    `totalRows: ${summary['totalRows']}`,
+    `nonEmptyTableCount: ${summary['nonEmptyTableCount']}`,
+    `warningCount: ${summary['warningCount']}`,
+    `errorCount: ${summary['errorCount']}`,
+    `rowBuildReady: ${summary['rowBuildReady'] === true ? 'yes' : 'no'}`,
+    `executorReady: ${summary['executorReady'] === true ? 'yes' : 'no'}`,
+    `nextAction: ${summary['nextAction']}`,
+  ];
+  appendCountMap(lines, 'Warnings by code', summary['warningsByCode']);
+  appendCountMap(lines, 'Errors by code', summary['errorsByCode']);
+  appendCountMap(lines, 'Warnings by table', summary['warningsByTable']);
+  appendCountMap(lines, 'Errors by table', summary['errorsByTable']);
+  return `${lines.join('\n')}\n`;
+}
+
+function appendCountMap(lines: string[], title: string, value: unknown): void {
+  lines.push('', `${title}:`);
+  if (!isRecord(value) || Object.keys(value).length === 0) {
+    lines.push('- none');
+    return;
+  }
+  for (const [key, count] of Object.entries(value).sort(([left], [right]) => left.localeCompare(right))) {
+    lines.push(`- ${key}: ${count}`);
+  }
+}
+
+function countIssuesBy(
+  issues: PostgresScopedMigrationIssue[],
+  field: 'code' | 'table',
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const issue of issues) {
+    const key = field === 'code' ? issue.code : issue.table;
+    if (!key) continue;
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function nextAction(plan: PostgresScopedMigrationPlan, rowBuildReady: boolean): string {
+  if (plan.errors.length > 0) return 'fix-blocking-errors';
+  if (!rowBuildReady) return 'build-rows-before-execution';
+  if (plan.warnings.length > 0) return 'review-warnings-then-run-disposable-db-integration';
+  return 'run-disposable-db-integration';
 }
 
 function unwrapSnapshot(value: unknown): unknown {

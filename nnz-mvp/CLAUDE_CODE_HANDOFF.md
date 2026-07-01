@@ -1633,6 +1633,34 @@ git diff --check: passed
 - 这仍不是线上迁移；不读取 `DATABASE_URL` / `NNZ_POSTGRES_URL`，不连接 Render。
 - `snapshot:export` 输出的是完整敏感 snapshot；审阅应使用 `migration:plan -- --report` 的 sanitized report。
 
+## 16.2.12 2026-06-30 Step 2.16 sanitized migration summary
+
+已完成 sanitized summary：
+
+- `src/tools/postgres-scoped-migration-plan-cli.ts` 新增 `--summary`。
+- `createSanitizedReport(...)` 新增 `summary` 字段。
+- 新增 `createSanitizedSummary(...)` helper。
+- `--summary` 与 `--json` 互斥。
+- summary 只输出 ready、row count、warning/error count、code/table 聚合、nextAction。
+- summary 不输出 issue message、row id、用户 id、email、memory/chat 正文。
+
+验证：
+
+```text
+npm test -- src/tools/postgres-scoped-migration-plan-cli.test.ts --reporter verbose: 10 tests passed
+npm run typecheck: passed
+npm run migration:plan -- --summary /tmp/nnz-summary-smoke.json: passed with expected exit code 2
+sanitized summary content check: passed, no test memory/chat/user id
+npm test: 18 个测试文件、112 tests passed；2 个 integration 文件 skipped
+npm run build:demo: passed
+git diff --check: passed
+```
+
+重要限制：
+
+- 这仍不是线上迁移；不读取 `DATABASE_URL`，不连接 Render。
+- summary 是给审阅用的聚合视图；具体修复仍需在本地查看 raw snapshot 或 sanitized report。
+
 ## 16.3 2026-06-22 H5 modal / CTA 修复
 
 接手前，另一位 AI 在 2026-06-18 到 2026-06-21 主要围绕 `public/index.html` 反复修 H5 modal / CTA，最后 `main` 回退到：

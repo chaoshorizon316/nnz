@@ -225,7 +225,7 @@ npm run build:demo
 npm run demo
 ```
 
-Current verified suite on 2026-06-29: 109 tests plus two skipped opt-in Postgres integration tests across domain scope, scoped repositories, Soul Ops cleanup/overview/audit query/RBAC, SQLite/Postgres snapshot persistence, Postgres scoped repository, snapshot export, snapshot migration planner/row builder/executor/CLI, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+Current verified suite on 2026-06-30: 112 tests plus two skipped opt-in Postgres integration tests across domain scope, scoped repositories, Soul Ops cleanup/overview/audit query/RBAC, SQLite/Postgres snapshot persistence, Postgres scoped repository, snapshot export, snapshot migration planner/row builder/executor/CLI, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
 Offline StoreSnapshot export:
 
@@ -241,10 +241,11 @@ Offline snapshot migration dry-run:
 ```bash
 npm run migration:plan -- <snapshot-json-path>
 npm run migration:plan -- --json <snapshot-json-path>
+npm run migration:plan -- --summary <snapshot-json-path>
 npm run migration:plan -- --report <report-json-path> <snapshot-json-path>
 ```
 
-The command accepts a raw `StoreSnapshot` JSON object or a wrapper with `snapshot_json`, prints scoped table row counts plus warnings/errors, and exits with code 2 when blocking migration errors exist. `--report` writes a sanitized JSON report with counts and issue identifiers only, excluding memory and chat content. It does not read `DATABASE_URL` or connect to Postgres.
+The command accepts a raw `StoreSnapshot` JSON object or a wrapper with `snapshot_json`, prints scoped table row counts plus warnings/errors, and exits with code 2 when blocking migration errors exist. `--summary` prints aggregate counts/code/table buckets only, without issue messages or ids. `--report` writes a sanitized JSON report with counts and issue identifiers only, excluding memory and chat content. It does not read `DATABASE_URL` or connect to Postgres.
 
 Cloud Soul Ops status on 2026-06-16: Render has `NNZ_OPS_TOKEN` configured. `/ops` returns 200, `/api/ops/overview` returns 401 without token, 403 with a wrong token, and 200 with the configured token. `POST /api/ops/cleanup-test-users` dry-run returns one explicit smoke/test candidate and deletes nothing. The token value is stored only in Render and must not be committed or documented.
 
@@ -254,6 +255,6 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 ## Current State
 
-The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, Step 2.11 scoped migration row builder, Step 2.12 write-side migration executor core, Step 2.13 executor disposable DB integration harness, Step 2.14 client-bound executor transaction, and Step 2.15 StoreSnapshot export CLI are implemented locally.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, Step 2.11 scoped migration row builder, Step 2.12 write-side migration executor core, Step 2.13 executor disposable DB integration harness, Step 2.14 client-bound executor transaction, Step 2.15 StoreSnapshot export CLI, and Step 2.16 sanitized migration summary are implemented locally.
 
-Next engineering steps: verify optional role-specific tokens in Render, use `snapshot:export` plus `migration:plan -- --report` on a real local snapshot sample, then run the opt-in repository and executor Postgres integration tests against a disposable database.
+Next engineering steps: verify optional role-specific tokens in Render, use `snapshot:export` plus `migration:plan -- --summary/--report` on a real local snapshot sample, then run the opt-in repository and executor Postgres integration tests against a disposable database.
