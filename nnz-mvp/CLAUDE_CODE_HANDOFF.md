@@ -1274,13 +1274,15 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-auth user -> private Soul 的首页 H5 验证链路已经落地，并已通过 GitHub Actions 与 Render smoke。Postgres snapshot persistence 已在代码中实现，云端数据库也已完成配置和重启持久化验证：
+Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.16。最新已推送提交是 `bf8fadf 新增 migration dry-run 安全摘要`，当前迁移 readiness 还剩 5 个目标：
 
-1. Render Web Service `nnz` 已配置 `DATABASE_URL`。
-2. `/healthz` 已显示 `fixture: "postgres"`。
-3. 已完成“注册 -> 创建 persona -> 聊天 -> Restart service -> 再登录读取”的持久化 smoke。
-4. 用户端继续补 persona 列表、切换会话、删除数据、封存/节点/毕业入口。
-5. 微信客户端后续复用 `/api/me/*` 的 auth-aware 设计，不另造一条绕过 `userId + personaId` 的数据流。
+1. 用真实本地 snapshot 样本跑 `snapshot:export` + `migration:plan -- --summary/--report`。
+2. 用一次性 Postgres 测试库跑 repository + executor opt-in integration tests。
+3. 在 Render 验证可选角色 token 的 viewer/operator/admin 权限边界。
+4. 补 protected migration execution runbook 和受保护执行入口设计。
+5. 等迁移验收稳定后，再规划 demo runtime 从 snapshot JSONB persistence 切到 scoped tables。
+
+当前不需要每个小步骤都停下来等 push；应按上面目标连续开发和验证。遇到真实 snapshot、`NNZ_POSTGRES_INTEGRATION_URL`、Render role tokens 这类外部输入点时再做明确 checkpoint。完整路线图见 `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`。
 
 ## 16.2 2026-06-11 Render Postgres 排查
 
@@ -1325,7 +1327,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`、`nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`、`nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md` 和 `nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口，而是补云端角色 token smoke，用一次性测试库运行 opt-in repository/executor Postgres integration tests，并导出真实 `StoreSnapshot` 样本跑 `npm run migration:plan -- --report <report-json-path> <snapshot-json-path>` 审阅 sanitized dry-run plan / rowBuild counts。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`、`nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`、`nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md`、`nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`、`nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md`、`nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md`、`nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md` 和 `nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口；而是按 5 个 readiness 目标推进：真实 snapshot dry-run、一次性 Postgres integration run、云端角色 token smoke、protected migration execution runbook，以及最后的 demo runtime scoped tables 切换。
 
 ## 16.2.1 2026-06-23 Step 2.5 Postgres scoped repository
 

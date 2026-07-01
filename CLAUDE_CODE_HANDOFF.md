@@ -9,7 +9,7 @@ https://nnz-kego.onrender.com
 
 免费版无请求 15 分钟会休眠，首次访问需等 30–60 秒唤醒。部署细节见 `nnz-mvp-2026-06-04-云托管完成交接.md`。
 
-## 最新 GitHub / CI / 本地状态（2026-06-26）
+## 最新 GitHub / CI / 本地状态（2026-07-01）
 
 GitHub 仓库：
 
@@ -46,6 +46,7 @@ https://github.com/chaoshorizon316/nnz
 2026-06-26 Step 2.14: executor transaction 已改为 pg client-bound；BEGIN/schema/inserts/COMMIT/ROLLBACK 均使用同一个 checked-out client，finally release；本地 typecheck、104 tests + 2 skipped、build:demo 通过
 2026-06-29 Step 2.15: StoreSnapshot export CLI 已实现；`npm run snapshot:export` 支持显式本地 JSON/SQLite 输入导出完整 snapshot，stdout 只输出 counts，已验证可串联 sanitized migration report；本地 typecheck、109 tests + 2 skipped、build:demo 通过
 2026-06-30 Step 2.16: migration dry-run sanitized summary 已实现；`npm run migration:plan -- --summary <snapshot-json-path>` 输出聚合 counts/code/table，不含 issue message、邮箱、memory/chat；本地 typecheck、112 tests + 2 skipped、build:demo 通过
+2026-07-01 Step 2 migration readiness roadmap 已整理；剩余 5 个目标：真实 snapshot dry-run、一次性 Postgres integration run、云端角色 token smoke、protected migration execution runbook、demo runtime scoped tables 切换
 ```
 
 说明：
@@ -167,11 +168,13 @@ npm audit
 
 2026-06-26 Step 2.13 executor disposable DB integration harness 结果：新增 `src/domain/postgres-scoped-migration-executor.integration.test.ts`，默认跳过；设置 `NNZ_POSTGRES_INTEGRATION_URL` 后可连接一次性测试库验证 executor 真实写入、幂等、repository 读回、scope 隔离和级联删除。本地 `npm run typecheck`、targeted executor integration test、`npm test`、`npm run build:demo` 通过，全量为 17 个测试文件、104 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`。
 
-2026-06-26 Step 2.14 executor client-bound transaction 结果：修改 `src/domain/postgres-scoped-migration-executor.ts` 与 repository query 类型，确保真实 pg executor 在 checked-out client 上执行 BEGIN/schema/inserts/COMMIT/ROLLBACK，并在成功/失败路径 release；targeted executor test 和 typecheck 通过，待全量 test/build。记录见 `nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md`。
+2026-06-26 Step 2.14 executor client-bound transaction 结果：修改 `src/domain/postgres-scoped-migration-executor.ts` 与 repository query 类型，确保真实 pg executor 在 checked-out client 上执行 BEGIN/schema/inserts/COMMIT/ROLLBACK，并在成功/失败路径 release；本地 typecheck、targeted executor test、全量 test/build 已在后续 Step 2.15/2.16 验证通过。记录见 `nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md`。
 
 2026-06-29 Step 2.15 StoreSnapshot export CLI 结果：新增 `src/tools/store-snapshot-export-cli.ts` / `src/tools/store-snapshot-export-cli.test.ts`，新增 `snapshot:export` script；支持显式本地 JSON/SQLite 输入导出完整 snapshot，stdout 只输出 counts，并已通过 `snapshot:export` -> `migration:plan -- --report` smoke 确认 sanitized report 不含测试 memory/chat 正文。本地 `npm run typecheck`、targeted CLI tests、`npm test`、`npm run build:demo`、`git diff --check` 通过，全量为 18 个测试文件、109 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md`。
 
 2026-06-30 Step 2.16 sanitized migration summary 结果：`src/tools/postgres-scoped-migration-plan-cli.ts` 新增 `--summary` 与 report summary 字段；summary 只输出聚合 counts/code/table 和 nextAction，不输出 issue message、row id、email、memory/chat 正文。本地 `npm run typecheck`、targeted CLI tests、summary smoke、`npm test`、`npm run build:demo`、`git diff --check` 通过，全量为 18 个测试文件、112 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md`。
+
+2026-07-01 Step 2 migration readiness roadmap：新增 `nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`，明确剩余 5 个目标、完成标准、推荐顺序和安全边界。当前无需每个小步骤都 push；应按目标连续推进，遇到真实 snapshot、disposable DB URL、云端 token 等外部输入点再做明确 checkpoint。
 
 最新 CI run：
 
@@ -342,6 +345,10 @@ nnz-mvp/src/ops/ops-console.ts
 nnz-mvp/src/ops/ops-console.test.ts
 nnz-mvp/public/index.html
 nnz-mvp/CLAUDE_CODE_HANDOFF.md
+nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md
+nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md
+nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md
+nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md
 nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md
 nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md
 nnz-mvp-2026-06-16-SoulOps云端启用记录.md
