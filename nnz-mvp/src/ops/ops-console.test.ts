@@ -90,9 +90,15 @@ describe('Soul Ops console helpers', () => {
 
     const overview = buildOpsOverview(store, {
       mode: 'memory',
+      runtimeMode: 'snapshot',
+      requestedRuntimeMode: null,
       postgresConfigured: false,
       postgresEnv: null,
+      scopedPostgresConfigured: false,
+      scopedPostgresEnv: null,
       sqliteConfigured: false,
+      startupBlocked: false,
+      startupBlockReason: null,
     });
 
     expect(overview.totals.users).toBe(3);
@@ -153,9 +159,15 @@ describe('Soul Ops console helpers', () => {
 
     const overview = buildOpsOverview(store, {
       mode: 'memory',
+      runtimeMode: 'snapshot',
+      requestedRuntimeMode: null,
       postgresConfigured: false,
       postgresEnv: null,
+      scopedPostgresConfigured: false,
+      scopedPostgresEnv: null,
       sqliteConfigured: false,
+      startupBlocked: false,
+      startupBlockReason: null,
     });
 
     expect(overview.totals.opsAuditEvents).toBe(2);

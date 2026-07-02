@@ -1,4 +1,5 @@
 import { InMemorySoulStore } from '../domain/soul-store';
+import type { RuntimePersistenceMode } from '../runtime-persistence-config';
 import type {
   OpsAuditAction,
   OpsAuditEvent,
@@ -13,9 +14,15 @@ type StoreSnapshot = ReturnType<InMemorySoulStore['serialize']>;
 
 export interface OpsPersistenceInfo {
   mode: 'memory' | 'sqlite' | 'postgres';
+  runtimeMode: RuntimePersistenceMode;
+  requestedRuntimeMode: string | null;
   postgresConfigured: boolean;
   postgresEnv: string | null;
+  scopedPostgresConfigured: boolean;
+  scopedPostgresEnv: string | null;
   sqliteConfigured: boolean;
+  startupBlocked: boolean;
+  startupBlockReason: string | null;
 }
 
 export interface OpsOverview {

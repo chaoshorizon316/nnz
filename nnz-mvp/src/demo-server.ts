@@ -28,6 +28,7 @@ import { GRADUATED_REPLY, SEALED_REPLY, generateSoulReply } from './runtime/soul
 import { extractToken, hashPassword, signToken, verifyPassword, verifyToken } from './auth/auth';
 import { checkDailyLimit, checkMessageSafety, incrementDailyCount } from './runtime/soul-guard';
 import { buildOpsOverview, cleanupTestUsers, queryOpsAuditEvents } from './ops/ops-console';
+import { buildRuntimePersistenceConfig } from './runtime-persistence-config';
 import {
   buildOpsPermissions,
   buildOpsTokenEntries,
@@ -52,9 +53,10 @@ interface DemoFixture {
 
 let fixture = createFixture();
 
-const DB_PATH = readNonEmptyEnv('NNZ_DB_PATH');
-const POSTGRES_ENV_SOURCE = readFirstConfiguredEnvKey(['NNZ_POSTGRES_URL', 'DATABASE_URL']);
-const POSTGRES_URL = POSTGRES_ENV_SOURCE ? readNonEmptyEnv(POSTGRES_ENV_SOURCE) : undefined;
+const RUNTIME_PERSISTENCE = buildRuntimePersistenceConfig(process.env);
+const DB_PATH = RUNTIME_PERSISTENCE.sqlitePath;
+const POSTGRES_ENV_SOURCE = RUNTIME_PERSISTENCE.snapshotPostgresEnv;
+const POSTGRES_URL = RUNTIME_PERSISTENCE.snapshotPostgresUrl;
 const OPS_TOKEN = readNonEmptyEnv('NNZ_OPS_TOKEN');
 const OPS_TOKEN_ENTRIES = buildOpsTokenEntries({
   legacyAdminToken: OPS_TOKEN,
@@ -352,9 +354,15 @@ const server = createServer(async (req, res) => {
         fixture: persistenceMode === 'memory' ? 'in-memory' : persistenceMode,
         persistence: {
           mode: persistenceMode === 'memory' ? 'in-memory' : persistenceMode,
+          runtimeMode: RUNTIME_PERSISTENCE.runtimeMode,
+          requestedRuntimeMode: RUNTIME_PERSISTENCE.requestedRuntimeMode,
           postgresConfigured: Boolean(POSTGRES_URL),
-          postgresEnv: POSTGRES_ENV_SOURCE ?? null,
+          postgresEnv: POSTGRES_ENV_SOURCE,
+          scopedPostgresConfigured: Boolean(RUNTIME_PERSISTENCE.scopedPostgresUrl),
+          scopedPostgresEnv: RUNTIME_PERSISTENCE.scopedPostgresEnv,
           sqliteConfigured: Boolean(DB_PATH),
+          startupBlocked: Boolean(RUNTIME_PERSISTENCE.startupBlockReason),
+          startupBlockReason: RUNTIME_PERSISTENCE.startupBlockReason,
         },
       });
     }
@@ -578,9 +586,15 @@ function safeSecretEquals(left: string, right: string): boolean {
 function getOpsPersistenceInfo() {
   return {
     mode: persistenceMode,
+    runtimeMode: RUNTIME_PERSISTENCE.runtimeMode,
+    requestedRuntimeMode: RUNTIME_PERSISTENCE.requestedRuntimeMode,
     postgresConfigured: Boolean(POSTGRES_URL),
-    postgresEnv: POSTGRES_ENV_SOURCE ?? null,
+    postgresEnv: POSTGRES_ENV_SOURCE,
+    scopedPostgresConfigured: Boolean(RUNTIME_PERSISTENCE.scopedPostgresUrl),
+    scopedPostgresEnv: RUNTIME_PERSISTENCE.scopedPostgresEnv,
     sqliteConfigured: Boolean(DB_PATH),
+    startupBlocked: Boolean(RUNTIME_PERSISTENCE.startupBlockReason),
+    startupBlockReason: RUNTIME_PERSISTENCE.startupBlockReason,
   };
 }
 
@@ -659,8 +673,12 @@ async function startServer(): Promise<void> {
 }
 
 async function initializePersistence(): Promise<void> {
+  if (RUNTIME_PERSISTENCE.startupBlockReason) {
+    throw new Error(RUNTIME_PERSISTENCE.startupBlockReason);
+  }
+
   if (POSTGRES_URL) {
-    console.log(`Postgres persistence configured via ${POSTGRES_ENV_SOURCE}.`);
+    console.log(`Postgres persistence configured via ${POSTGRES_ENV_SOURCE ?? 'unknown'}.`);
     postgresPersistence = createPostgresPersistence(POSTGRES_URL);
     const loaded = await postgresPersistence.load(fixture.store);
     persistenceMode = 'postgres';
@@ -694,10 +712,6 @@ async function initializePersistence(): Promise<void> {
 function readNonEmptyEnv(key: string): string | undefined {
   const value = process.env[key]?.trim();
   return value ? value : undefined;
-}
-
-function readFirstConfiguredEnvKey(keys: readonly string[]): string | undefined {
-  return keys.find((key) => readNonEmptyEnv(key));
 }
 
 function refreshDemoFixtureReferences(): void {

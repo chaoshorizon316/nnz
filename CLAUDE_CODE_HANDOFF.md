@@ -50,6 +50,7 @@ https://github.com/chaoshorizon316/nnz
 2026-07-01 Step 2.17: protected migration execution CLI 已实现；`npm run migration:execute` 默认 dry-run，执行模式只允许 `NNZ_POSTGRES_INTEGRATION_URL` + 显式 confirm，拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`；本地 typecheck、118 tests + 2 skipped、build:demo 通过；真实 disposable DB 尚未实跑
 2026-07-01 Step 2.18: migration readiness CLI 已实现；`npm run migration:readiness` 从显式本地 JSON/SQLite 一次生成 raw snapshot、sanitized report、sanitized summary，不读取任何 DB env、不连接 Postgres；本地 typecheck、124 tests + 2 skipped、build:demo 通过；真实 snapshot 尚未实跑
 2026-07-01 Step 2.19: disposable migration smoke CLI 已实现；`npm run migration:smoke` 只允许 `NNZ_POSTGRES_INTEGRATION_URL` + 显式 confirm，验证 executor 幂等、repository 读回、scope 隔离、audit row、cascade delete 和 cleanup；本地 typecheck、129 tests + 2 skipped、build:demo 通过；真实 disposable DB 尚未实跑
+2026-07-01 Step 2.20: runtime persistence mode guardrail 已实现；默认 `snapshot` 路径不变，`NNZ_RUNTIME_PERSISTENCE_MODE=scoped` 需要 `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 且在 adapter 完成前 fail-fast；`/healthz` 和 Ops overview 只暴露 env key / boolean 诊断；本地 typecheck、134 tests + 2 skipped、build:demo 通过
 ```
 
 说明：
@@ -61,7 +62,7 @@ https://github.com/chaoshorizon316/nnz
 - 6 月 10 日 `/tmp` 干净副本验证：9 个测试文件、64 条测试全绿，typecheck / build / audit 通过；本地 API/browser smoke 通过。
 - 6 月 10 日 Render 云端 smoke 通过：首页 `/` 已是 H5 真实用户流，`/demo` 仍是开发者验证页，`/api/me` 未登录 401，跨用户 persona 访问 403，A/B 同名“爸爸”回复不同且无机制词泄露。
 - Postgres snapshot persistence 已合入并通过 CI；6 月 11 日已在 Render Web Service `nnz` 配置 `DATABASE_URL` 并重新部署。
-- 当前 `/healthz`：`fixture: "postgres"`，`persistence.mode: "postgres"`，`persistence.postgresConfigured: true`，`persistence.postgresEnv: "DATABASE_URL"`。
+- 当前 `/healthz`：`fixture: "postgres"`，`persistence.mode: "postgres"`，`persistence.runtimeMode: "snapshot"`，`persistence.postgresConfigured: true`，`persistence.postgresEnv: "DATABASE_URL"`；诊断只返回 env key / boolean，不返回 URL。
 - 6 月 11 日云端持久化 smoke：注册临时测试用户 -> 创建“爸爸” -> 发送一句话 -> Restart service -> 重新登录后 persona 与 2 条 chat-history 均可读回。
 - Render runtime logs 已确认：`Postgres persistence configured via DATABASE_URL.` 与 `LLM adapter initialized for extraction pipeline.`。
 - 6 月 11 日 Step 1 已实现：新增 `src/ops/ops-console.ts` / `src/ops/ops-console.test.ts`，拆出独立 `/ops` 后台，新增受 `NNZ_OPS_TOKEN` 保护的 `/api/ops/overview` 和 `/api/ops/cleanup-test-users`。
@@ -184,6 +185,8 @@ npm audit
 2026-07-01 Step 2.18 migration readiness CLI 结果：新增 `src/tools/postgres-scoped-migration-readiness-cli.ts` / `src/tools/postgres-scoped-migration-readiness-cli.test.ts`，新增 `migration:readiness` script；从显式 `--from-json` 或 `--from-sqlite` 输入一次生成 raw snapshot、sanitized report、sanitized summary；默认拒绝覆盖、拒绝输出路径重复、拒绝输出覆盖输入；不读取 `DATABASE_URL` / `NNZ_POSTGRES_URL` / `NNZ_POSTGRES_INTEGRATION_URL`，不连接 Postgres。raw snapshot 可能含敏感数据，summary/report 不含 memory/chat、credential hash 或 rows。本地 `npm run typecheck`、targeted 27 tests、`npm test`、`npm run build:demo`、CLI help 通过；全量为 20 个测试文件、124 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md`。
 
 2026-07-01 Step 2.19 disposable migration smoke CLI 结果：新增 `src/tools/postgres-scoped-migration-smoke-cli.ts` / `src/tools/postgres-scoped-migration-smoke-cli.test.ts`，新增 `migration:smoke` script；必须传 `--database-url-env NNZ_POSTGRES_INTEGRATION_URL` 和 `--confirm RUN_POSTGRES_SCOPED_MIGRATION_SMOKE`；拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`；构造双 user/persona fixture，执行 scoped migration 两次验证幂等，通过 repository 读回 runtime/snapshot/memory/conversation/proposal/credential，验证 cross-scope node conversation 拒绝、audit row 写入、user delete cascade、sibling scope preserved，并 finally 清理 fixture users/audit rows。stdout/失败输出不含 DB URL、fixture memory/chat、credential hash、row payload 或 raw DB error details。本地 `npm run typecheck`、targeted 21 tests、`npm test`、`npm run build:demo`、CLI help 通过；全量为 21 个测试文件、129 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-01-Step2.19-DisposableMigrationSmokeCLI.md`。
+
+2026-07-01 Step 2.20 runtime persistence mode guardrail 结果：新增 `src/runtime-persistence-config.ts` / `src/runtime-persistence-config.test.ts`，`src/demo-server.ts` 改为通过配置模块选择 runtime persistence；默认 `snapshot` 路径不变，`scoped` 模式必须使用 `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 且在 adapter 完成前 fail-fast；`/healthz` 和 Ops overview 只返回 `runtimeMode`、env key、boolean 和非敏感状态原因，不返回 URL/token/正文/rows。本地 `npm run typecheck`、targeted runtime config/Ops tests、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 22 个测试文件、134 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-01-Step2.20-RuntimePersistenceModeGuardrail.md`。
 
 最新 CI run：
 
@@ -350,10 +353,13 @@ nnz-mvp/src/domain/soul-scope.test.ts
 nnz-mvp/src/runtime/soul-runtime.ts
 nnz-mvp/src/runtime/soul-runtime.test.ts
 nnz-mvp/src/demo-server.ts
+nnz-mvp/src/runtime-persistence-config.ts
+nnz-mvp/src/runtime-persistence-config.test.ts
 nnz-mvp/src/ops/ops-console.ts
 nnz-mvp/src/ops/ops-console.test.ts
 nnz-mvp/public/index.html
 nnz-mvp/CLAUDE_CODE_HANDOFF.md
+nnz-mvp-2026-07-01-Step2.20-RuntimePersistenceModeGuardrail.md
 nnz-mvp-2026-07-01-Step2.19-DisposableMigrationSmokeCLI.md
 nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md
 nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md
