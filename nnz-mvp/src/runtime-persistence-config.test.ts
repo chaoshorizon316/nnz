@@ -69,10 +69,12 @@ describe('runtime persistence config', () => {
     expect(config.startupBlockReason).toContain('DATABASE_URL');
   });
 
-  it('still blocks scoped mode with a dedicated URL until the runtime adapter is implemented', () => {
+  it('allows scoped mode with a dedicated runtime URL while keeping snapshot URLs ignored', () => {
     const config = buildRuntimePersistenceConfig({
       [RUNTIME_PERSISTENCE_MODE_ENV]: 'scoped',
       [SCOPED_RUNTIME_POSTGRES_ENV]: 'postgres://disposable.example/scoped-runtime',
+      DATABASE_URL: 'postgres://prod.example/ignored',
+      NNZ_POSTGRES_URL: 'postgres://snapshot.example/ignored',
     });
 
     expect(config.runtimeMode).toBe('scoped');
@@ -80,7 +82,6 @@ describe('runtime persistence config', () => {
     expect(config.scopedPostgresUrl).toBe('postgres://disposable.example/scoped-runtime');
     expect(config.snapshotPostgresEnv).toBeNull();
     expect(config.snapshotPostgresUrl).toBeNull();
-    expect(config.startupBlockReason).toContain('reserved');
-    expect(config.startupBlockReason).toContain('migration:smoke');
+    expect(config.startupBlockReason).toBeNull();
   });
 });

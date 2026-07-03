@@ -28,8 +28,13 @@ import { generateLlmReply } from './runtime/llm-reply';
 import { GRADUATED_REPLY, SEALED_REPLY, generateSoulReply } from './runtime/soul-runtime';
 import {
   createInMemoryScopedRuntimeAdapter,
+  type ScopedRuntimeAdapter,
   type ScopedPersonaRuntimeAdapter,
 } from './runtime/scoped-runtime-adapter';
+import {
+  createPostgresScopedRuntimePersistence,
+  type ScopedRuntimePersistence,
+} from './runtime/scoped-runtime-persistence';
 import { extractToken, hashPassword, signToken, verifyPassword, verifyToken } from './auth/auth';
 import { checkDailyLimit, checkMessageSafety, incrementDailyCount } from './runtime/soul-guard';
 import { buildOpsOverview, cleanupTestUsers, queryOpsAuditEvents } from './ops/ops-console';
@@ -57,9 +62,10 @@ interface DemoFixture {
 }
 
 let fixture = createFixture();
+let runtimeAdapter: ScopedRuntimeAdapter = createInMemoryScopedRuntimeAdapter(fixture.store);
 
 function getRuntimeAdapter() {
-  return createInMemoryScopedRuntimeAdapter(fixture.store);
+  return runtimeAdapter;
 }
 
 const RUNTIME_PERSISTENCE = buildRuntimePersistenceConfig(process.env);
@@ -74,7 +80,8 @@ const OPS_TOKEN_ENTRIES = buildOpsTokenEntries({
   adminToken: readNonEmptyEnv('NNZ_OPS_ADMIN_TOKEN'),
 });
 let postgresPersistence: PostgresPersistence | undefined;
-let persistenceMode: 'memory' | 'sqlite' | 'postgres' = 'memory';
+let scopedRuntimePersistence: ScopedRuntimePersistence | undefined;
+let persistenceMode: 'memory' | 'sqlite' | 'postgres' | 'scoped-postgres' = 'memory';
 
 const extractionOrchestrator = createExtractionOrchestrator();
 let llmAdapter: LlmAdapter | undefined;
@@ -693,6 +700,19 @@ async function initializePersistence(): Promise<void> {
     throw new Error(RUNTIME_PERSISTENCE.startupBlockReason);
   }
 
+  if (RUNTIME_PERSISTENCE.runtimeMode === 'scoped') {
+    if (!RUNTIME_PERSISTENCE.scopedPostgresUrl) {
+      throw new Error('Scoped runtime mode requires a dedicated Postgres URL.');
+    }
+    console.log(`Scoped Postgres runtime configured via ${RUNTIME_PERSISTENCE.scopedPostgresEnv ?? 'unknown'}.`);
+    scopedRuntimePersistence = createPostgresScopedRuntimePersistence(RUNTIME_PERSISTENCE.scopedPostgresUrl);
+    await scopedRuntimePersistence.ensureReady();
+    runtimeAdapter = scopedRuntimePersistence.adapter;
+    persistenceMode = scopedRuntimePersistence.mode;
+    console.log('Scoped runtime adapter initialized from Postgres tables.');
+    return;
+  }
+
   if (POSTGRES_URL) {
     console.log(`Postgres persistence configured via ${POSTGRES_ENV_SOURCE ?? 'unknown'}.`);
     postgresPersistence = createPostgresPersistence(POSTGRES_URL);
@@ -1163,7 +1183,7 @@ async function sendMessageToUserPersona(runtime: ScopedPersonaRuntimeAdapter, me
 
   await runtime.addConversation({ role: 'ASSISTANT', content: reply });
 
-  if (llmAdapter) {
+  if (llmAdapter && RUNTIME_PERSISTENCE.runtimeMode !== 'scoped') {
     const adapter = llmAdapter;
     setImmediate(async () => {
       try {
@@ -1215,6 +1235,10 @@ function normalizeVisibleText(value: string | undefined, maxLength: number): str
 
 
 async function persistIfEnabled(): Promise<void> {
+  if (RUNTIME_PERSISTENCE.runtimeMode === 'scoped') {
+    return;
+  }
+
   if (postgresPersistence) {
     await postgresPersistence.save(fixture.store).catch((err: unknown) => {
       console.error('Failed to persist store to Postgres:', err instanceof Error ? err.message : String(err));

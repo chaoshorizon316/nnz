@@ -54,6 +54,7 @@ https://github.com/chaoshorizon316/nnz
 2026-07-02 Step 2.21: migration guardrail hardening 已实现；`migration:execute` / `migration:smoke` 会拒绝 `NNZ_POSTGRES_INTEGRATION_URL` 与 `DATABASE_URL` / `NNZ_POSTGRES_URL` 值相同的生产别名误配，pool close failure 只输出固定脱敏错误；本地 typecheck、138 tests + 2 skipped、build:demo 通过
 2026-07-03 Step 2.22: scoped runtime adapter foundation 已实现；新增 InMemory/Postgres 双后端 `ScopedRuntimeAdapter`，覆盖 auth credential、persona、conversation、runtime context、Covenant NODE/SEALED/GRADUATED 的切换接口；本地 typecheck、141 tests + 2 skipped、build:demo 通过
 2026-07-03 Step 2.23: `/api/me/*` 用户端 flow 已接入 InMemory scoped runtime adapter；注册/登录 credential、persona 创建/列表、chat/history、Covenant seal/activate/complete/graduate 走 adapter 形状；默认 snapshot persistence 不变；本地 typecheck、141 tests + 2 skipped、build:demo、API smoke 通过
+2026-07-03 Step 2.24: guarded scoped runtime Postgres adapter mode 已实现；`NNZ_RUNTIME_PERSISTENCE_MODE=scoped` 只读取 `NNZ_POSTGRES_SCOPED_RUNTIME_URL`，启动时确保 scoped schema 并把 `/api/me/*` runtime adapter 指向 Postgres scoped tables；缺专用 URL 仍 fail-fast；本地 typecheck、142 tests + 2 skipped、build:demo、默认 API smoke 通过
 ```
 
 说明：
@@ -196,6 +197,8 @@ npm audit
 2026-07-03 Step 2.22 scoped runtime adapter foundation 结果：新增 `src/runtime/scoped-runtime-adapter.ts` / `src/runtime/scoped-runtime-adapter.test.ts`，建立 `ScopedRuntimeAdapter` / `ScopedPersonaRuntimeAdapter` 接口；InMemory 后端包住现有 `InMemorySoulStore`，Postgres 后端包住 `PostgresScopedSoulRepository` 与逐表 user/persona/credential helper；测试覆盖同名 persona 隔离、auth credential、runtime context 不串 memory、SEALED/NODE/GRADUATED 行为、Postgres pool wrapper 不暴露 URL。本地 `npm run typecheck`、targeted adapter tests、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 23 个测试文件、141 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-03-Step2.22-ScopedRuntimeAdapterFoundation.md`。
 
 2026-07-03 Step 2.23 `/api/me/*` scoped runtime adapter wiring 结果：`src/demo-server.ts` 已把用户端注册/登录 credential、`/api/me` persona list、persona 创建、chat/history，以及 `/api/me` Covenant state/seal/activate-node/complete-node/graduate 改为通过 InMemory `ScopedRuntimeAdapter` 调用；A/B 开发者 demo 和 Ops 仍保留原 store 路径；默认 snapshot/Postgres JSONB 持久化语义不变。本地 `npm run typecheck`、`npm test`、`npm run build:demo` 通过；从 `/tmp` 内存模式启动 127.0.0.1:3117 后 API smoke 覆盖 register、persona create、chat、chat-history、seal、activate-node、complete-node，回复无机制词。记录见 `nnz-mvp-2026-07-03-Step2.23-ApiMeScopedRuntimeAdapter.md`。
+
+2026-07-03 Step 2.24 guarded scoped runtime Postgres mode 结果：新增 `src/runtime/scoped-runtime-persistence.ts` / `src/runtime/scoped-runtime-persistence.test.ts`；`NNZ_RUNTIME_PERSISTENCE_MODE=scoped` 在提供 `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 时不再被 adapter-reserved guard 阻断，启动时确保 scoped schema 并把 `/api/me/*` runtime adapter 指向 Postgres scoped tables；缺专用 URL 仍 fail-fast，且仍忽略 `DATABASE_URL` / `NNZ_POSTGRES_URL`。本地 `npm run typecheck`、targeted scoped runtime persistence/config tests、`npm test`、`npm run build:demo`、默认 `/api/me/*` smoke、scoped missing URL fail-fast smoke 通过；全量为 24 个测试文件、142 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-03-Step2.24-GuardedScopedRuntimePostgresMode.md`。
 
 最新 CI run：
 
@@ -366,6 +369,8 @@ nnz-mvp/src/runtime-persistence-config.ts
 nnz-mvp/src/runtime-persistence-config.test.ts
 nnz-mvp/src/runtime/scoped-runtime-adapter.ts
 nnz-mvp/src/runtime/scoped-runtime-adapter.test.ts
+nnz-mvp/src/runtime/scoped-runtime-persistence.ts
+nnz-mvp/src/runtime/scoped-runtime-persistence.test.ts
 nnz-mvp/src/tools/postgres-disposable-env-guard.ts
 nnz-mvp/src/tools/postgres-scoped-migration-execute-cli.ts
 nnz-mvp/src/tools/postgres-scoped-migration-execute-cli.test.ts
@@ -375,6 +380,7 @@ nnz-mvp/src/ops/ops-console.ts
 nnz-mvp/src/ops/ops-console.test.ts
 nnz-mvp/public/index.html
 nnz-mvp/CLAUDE_CODE_HANDOFF.md
+nnz-mvp-2026-07-03-Step2.24-GuardedScopedRuntimePostgresMode.md
 nnz-mvp-2026-07-03-Step2.23-ApiMeScopedRuntimeAdapter.md
 nnz-mvp-2026-07-03-Step2.22-ScopedRuntimeAdapterFoundation.md
 nnz-mvp-2026-07-02-Step2.21-MigrationGuardrailHardening.md

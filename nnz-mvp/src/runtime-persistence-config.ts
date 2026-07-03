@@ -50,7 +50,7 @@ export function buildRuntimePersistenceConfig(env: EnvSource): RuntimePersistenc
       scopedPostgresEnv,
       scopedPostgresUrl,
       startupBlockReason: scopedPostgresUrl
-        ? `${RUNTIME_PERSISTENCE_MODE_ENV}=scoped is reserved until the demo runtime scoped-table adapter is implemented. Validate scoped tables with migration:smoke first.`
+        ? null
         : `${RUNTIME_PERSISTENCE_MODE_ENV}=scoped requires ${SCOPED_RUNTIME_POSTGRES_ENV}; DATABASE_URL and NNZ_POSTGRES_URL are intentionally ignored for scoped runtime mode.`,
     };
   }

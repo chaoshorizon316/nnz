@@ -13,7 +13,7 @@ import type { CredentialRecord } from '../auth/auth';
 type StoreSnapshot = ReturnType<InMemorySoulStore['serialize']>;
 
 export interface OpsPersistenceInfo {
-  mode: 'memory' | 'sqlite' | 'postgres';
+  mode: 'memory' | 'sqlite' | 'postgres' | 'scoped-postgres';
   runtimeMode: RuntimePersistenceMode;
   requestedRuntimeMode: string | null;
   postgresConfigured: boolean;
