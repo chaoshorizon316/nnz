@@ -244,7 +244,7 @@ npm run build:demo
 npm run demo
 ```
 
-Current verified suite on 2026-07-01: 134 tests plus two skipped opt-in Postgres integration tests across domain scope, scoped repositories, Soul Ops cleanup/overview/audit query/RBAC, runtime persistence config guardrails, SQLite/Postgres snapshot persistence, Postgres scoped repository, snapshot export, snapshot migration planner/row builder/executor/readiness/smoke CLI, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
+Current verified suite on 2026-07-02: 138 tests plus two skipped opt-in Postgres integration tests across domain scope, scoped repositories, Soul Ops cleanup/overview/audit query/RBAC, runtime persistence config guardrails, SQLite/Postgres snapshot persistence, Postgres scoped repository, snapshot export, snapshot migration planner/row builder/executor/readiness/smoke CLI guardrails, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator.
 
 Offline StoreSnapshot export:
 
@@ -282,7 +282,7 @@ npm run migration:execute -- --snapshot <snapshot-json-path>
 npm run migration:execute -- --snapshot <snapshot-json-path> --execute --database-url-env NNZ_POSTGRES_INTEGRATION_URL --confirm EXECUTE_POSTGRES_SCOPED_MIGRATION
 ```
 
-Default mode is a protected dry-run that reads only the explicit local snapshot file and prints sanitized counts. Execution mode refuses `DATABASE_URL` and `NNZ_POSTGRES_URL`; it only reads `NNZ_POSTGRES_INTEGRATION_URL`, requires the explicit confirm string, rejects blocking errors, and rejects warnings unless `--allow-warnings` is passed after review. This is for disposable database validation, not production migration.
+Default mode is a protected dry-run that reads only the explicit local snapshot file and prints sanitized counts. Execution mode refuses `DATABASE_URL` and `NNZ_POSTGRES_URL`; it only reads `NNZ_POSTGRES_INTEGRATION_URL`, rejects it if its value matches `DATABASE_URL` or `NNZ_POSTGRES_URL`, requires the explicit confirm string, rejects blocking errors, and rejects warnings unless `--allow-warnings` is passed after review. Pool close failures are reported with fixed sanitized text. This is for disposable database validation, not production migration.
 
 Disposable Postgres migration smoke:
 
@@ -290,7 +290,7 @@ Disposable Postgres migration smoke:
 npm run migration:smoke -- --database-url-env NNZ_POSTGRES_INTEGRATION_URL --confirm RUN_POSTGRES_SCOPED_MIGRATION_SMOKE
 ```
 
-This command is for disposable database validation only. It creates scoped fixture data, executes the migration twice, reads back through `PostgresScopedSoulRepository`, verifies cross-scope rejection and cascade delete, then attempts fixture cleanup. It refuses `DATABASE_URL` and does not print database URLs or fixture row content.
+This command is for disposable database validation only. It creates scoped fixture data, executes the migration twice, reads back through `PostgresScopedSoulRepository`, verifies cross-scope rejection and cascade delete, then attempts fixture cleanup. It refuses `DATABASE_URL`, rejects `NNZ_POSTGRES_INTEGRATION_URL` when it matches `DATABASE_URL` or `NNZ_POSTGRES_URL`, and does not print database URLs or fixture row content, including pool close failures.
 
 Cloud Soul Ops status on 2026-06-16: Render has `NNZ_OPS_TOKEN` configured. `/ops` returns 200, `/api/ops/overview` returns 401 without token, 403 with a wrong token, and 200 with the configured token. `POST /api/ops/cleanup-test-users` dry-run returns one explicit smoke/test candidate and deletes nothing. The token value is stored only in Render and must not be committed or documented.
 
@@ -300,7 +300,7 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 ## Current State
 
-The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, Step 2.11 scoped migration row builder, Step 2.12 write-side migration executor core, Step 2.13 executor disposable DB integration harness, Step 2.14 client-bound executor transaction, Step 2.15 StoreSnapshot export CLI, Step 2.16 sanitized migration summary, Step 2.17 protected migration execution CLI, Step 2.18 migration readiness CLI, Step 2.19 disposable migration smoke CLI, and Step 2.20 runtime persistence mode guardrail are implemented locally. The 2026-07-01 migration readiness roadmap tracks the remaining Step 2 goals in `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, Step 2.11 scoped migration row builder, Step 2.12 write-side migration executor core, Step 2.13 executor disposable DB integration harness, Step 2.14 client-bound executor transaction, Step 2.15 StoreSnapshot export CLI, Step 2.16 sanitized migration summary, Step 2.17 protected migration execution CLI, Step 2.18 migration readiness CLI, Step 2.19 disposable migration smoke CLI, Step 2.20 runtime persistence mode guardrail, and Step 2.21 migration guardrail hardening are implemented locally. The 2026-07-01 migration readiness roadmap tracks the remaining Step 2 goals in `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`.
 
 Remaining Step 2 goals: run `migration:readiness` on a real local snapshot, run `migration:smoke` against a disposable Postgres database, verify optional role-specific tokens in Render, and implement the actual demo runtime scoped-table adapter behind the new guarded mode.
 

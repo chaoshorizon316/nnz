@@ -2,13 +2,13 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.20。最新已推送提交是：
+Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.21。最新已推送提交是：
 
 ```text
-dff6a47 feat: add disposable migration smoke CLI
+8f2bcd5 runtime persistence mode guardrail
 ```
 
-截至 2026-07-01，迁移链路还剩 **4 个未完成目标**：真实本地 snapshot readiness、一次性 Postgres smoke、Render 角色 token smoke、以及真正的 demo runtime scoped-table adapter。受保护执行入口、readiness/smoke CLI 和 runtime mode guardrail 都已完成本地实现。
+截至 2026-07-02，迁移链路还剩 **4 个未完成目标**：真实本地 snapshot readiness、一次性 Postgres smoke、Render 角色 token smoke、以及真正的 demo runtime scoped-table adapter。受保护执行入口、readiness/smoke CLI、runtime mode guardrail 和 migration guardrail hardening 都已完成本地实现。
 
 ## 已完成基线
 
@@ -26,22 +26,23 @@ dff6a47 feat: add disposable migration smoke CLI
 - Step 2.18：`migration:readiness` CLI 已实现；从显式本地 JSON/SQLite 一次生成 raw snapshot、sanitized report、sanitized summary，不读取任何 DB env。
 - Step 2.19：`migration:smoke` CLI 已实现；用 disposable DB 验证 executor 幂等、repository 读回、scope 隔离、cascade delete 和 fixture cleanup。
 - Step 2.20：runtime persistence mode guardrail 已实现；`NNZ_RUNTIME_PERSISTENCE_MODE=snapshot` 保持默认 snapshot 路径，`scoped` 模式需要 `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 且在 adapter 完成前 fail-fast；`/healthz` 和 Ops overview 只暴露 env key / boolean 诊断。
+- Step 2.21：migration guardrail hardening 已实现；`migration:execute` 与 `migration:smoke` 会拒绝 `NNZ_POSTGRES_INTEGRATION_URL` 与 `DATABASE_URL` / `NNZ_POSTGRES_URL` 值相同的生产别名误配，并对 pool close failure 使用固定脱敏输出。
 
 ## 剩余目标状态
 
 | # | 目标 | 当前状态 | 完成标准 |
 |---|---|---|---|
 | 1 | 真实本地 snapshot dry-run | 本地 readiness CLI 已实现；仍需要可用的本地 SQLite 或 snapshot JSON | 运行 `migration:readiness` 生成 raw snapshot、sanitized report、sanitized summary，审阅 blocking errors、warnings、rowBuild counts |
-| 2 | 一次性 Postgres repository/executor integration run | 本地 smoke CLI 已实现；仍需要 `NNZ_POSTGRES_INTEGRATION_URL`，不能用线上 `DATABASE_URL` | `migration:smoke` 在 disposable DB 上通过，覆盖 executor 幂等、repository 读回、scope 隔离、audit row、级联删除和 cleanup |
+| 2 | 一次性 Postgres repository/executor integration run | 本地 smoke CLI 与 guardrails 已实现；仍需要 `NNZ_POSTGRES_INTEGRATION_URL` 指向一次性库，不能等于线上 `DATABASE_URL` / `NNZ_POSTGRES_URL` | `migration:smoke` 在 disposable DB 上通过，覆盖 executor 幂等、repository 读回、scope 隔离、audit row、级联删除和 cleanup |
 | 3 | 云端角色 token smoke | 需要 Render 配置 viewer/operator/admin token 或用户提供操作窗口 | 验证 viewer 只读、operator 可 dry-run、admin 可 confirm cleanup；不记录 token 明文 |
-| 4 | demo runtime scoped-table adapter | Step 2.20 已加 runtime mode guardrail；真实 adapter 仍未接入 | `/api/me/*`、chat、ops、cleanup、export/delete 都走 scoped tables，仍保持 `userId + personaId` 强隔离 |
+| 4 | demo runtime scoped-table adapter | Step 2.20/2.21 已加 runtime 与 migration guardrails；真实 adapter 仍未接入 | `/api/me/*`、chat、ops、cleanup、export/delete 都走 scoped tables，仍保持 `userId + personaId` 强隔离 |
 
 ## 推荐推进顺序
 
 1. 先做目标 1：拿一个真实本地 snapshot 样本跑 `migration:readiness`。这个步骤只读本地文件，不连数据库，最适合先发现数据形状问题。
 2. 再做目标 2：用一次性 Postgres 测试库实跑 `migration:smoke`。这里必须使用 disposable DB，不能使用 Render 线上库。
 3. 做目标 3：当 Render 角色 token 配好后，补 viewer/operator/admin cloud smoke。
-4. 最后进入目标 4：在 Step 2.20 guardrail 后面接入 demo runtime scoped-table adapter，把持久化路径从 snapshot JSONB 切到 scoped tables。
+4. 最后进入目标 4：在 Step 2.20/2.21 guardrails 后面接入 demo runtime scoped-table adapter，把持久化路径从 snapshot JSONB 切到 scoped tables。
 
 ## 安全边界
 
@@ -52,13 +53,14 @@ dff6a47 feat: add disposable migration smoke CLI
 - `migration:plan -- --summary` 可用于口头同步；`--report` 可用于审阅，但仍只保留 sanitized 结果。
 - `migration:execute` 默认是 dry-run；真正执行必须同时传 `--execute`、`--database-url-env NNZ_POSTGRES_INTEGRATION_URL`、`--confirm EXECUTE_POSTGRES_SCOPED_MIGRATION`。
 - `migration:smoke` 真正连接数据库前必须传 `--database-url-env NNZ_POSTGRES_INTEGRATION_URL` 和 `--confirm RUN_POSTGRES_SCOPED_MIGRATION_SMOKE`。
+- `NNZ_POSTGRES_INTEGRATION_URL` 不能与 `DATABASE_URL` 或 `NNZ_POSTGRES_URL` 的值相同；两个受保护入口都会拒绝这种生产别名误配，且错误信息不打印 URL。
 - `NNZ_RUNTIME_PERSISTENCE_MODE=scoped` 不使用 `DATABASE_URL` / `NNZ_POSTGRES_URL`，只允许通过 `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 表达未来 scoped runtime 连接；当前会 fail-fast，直到 adapter 完成。
 - 任何执行入口都必须保留 `userId + personaId` 作用域边界，不能引入 persona-only 查询。
 - 用户端不可暴露 `SoulVersion`、`SoulSnapshot`、`scope`、`evidence`、`migration` 等后台机制。
 
 ## 当前可继续做的本地工作
 
-- 在 Step 2.20 guardrail 后实现 demo runtime scoped-table adapter；默认仍保持 snapshot persistence。
+- 在 Step 2.20/2.21 guardrails 后实现 demo runtime scoped-table adapter；默认仍保持 snapshot persistence。
 
 ## 当前需要用户或外部环境提供的东西
 

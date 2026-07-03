@@ -68,6 +68,32 @@ describe('Postgres scoped migration smoke CLI', () => {
     expect(result.stderr).toContain('NNZ_POSTGRES_INTEGRATION_URL is not set');
   });
 
+  it('refuses when the disposable env value matches a production database alias', async () => {
+    const poolUrls: string[] = [];
+
+    const result = await runMigrationSmokeCommand(
+      [
+        '--database-url-env',
+        'NNZ_POSTGRES_INTEGRATION_URL',
+        '--confirm',
+        'RUN_POSTGRES_SCOPED_MIGRATION_SMOKE',
+      ],
+      deps({
+        env: {
+          DATABASE_URL: 'postgres://shared-secret',
+          NNZ_POSTGRES_INTEGRATION_URL: ' postgres://shared-secret ',
+        },
+        poolUrls,
+      }),
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('must not match DATABASE_URL');
+    expect(result.stderr).not.toContain('shared-secret');
+    expect(poolUrls).toEqual([]);
+  });
+
   it('runs injected smoke with the allowed env and prints only sanitized checks', async () => {
     const poolUrls: string[] = [];
     const runSmokePools: PostgresScopedMigrationSmokePool[] = [];
@@ -124,6 +150,28 @@ describe('Postgres scoped migration smoke CLI', () => {
     expect(result.stderr).not.toContain('secret row payload');
     expect(result.stderr).not.toContain('disposable-secret');
   });
+
+  it('does not print raw database error details from pool close failures', async () => {
+    const result = await runMigrationSmokeCommand(
+      [
+        '--database-url-env',
+        'NNZ_POSTGRES_INTEGRATION_URL',
+        '--confirm',
+        'RUN_POSTGRES_SCOPED_MIGRATION_SMOKE',
+      ],
+      deps({
+        env: { NNZ_POSTGRES_INTEGRATION_URL: 'postgres://disposable-secret' },
+        closeError: new Error('raw close failure with secret details'),
+      }),
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain('Postgres scoped migration disposable smoke');
+    expect(result.stderr).toContain('failed while closing the database pool');
+    expect(result.stderr).not.toContain('raw close failure');
+    expect(result.stderr).not.toContain('secret details');
+    expect(result.stderr).not.toContain('disposable-secret');
+  });
 });
 
 function deps(options: {
@@ -131,12 +179,13 @@ function deps(options: {
   poolUrls?: string[];
   runSmokePools?: PostgresScopedMigrationSmokePool[];
   smokeError?: unknown;
+  closeError?: unknown;
 }): MigrationSmokeCliDeps {
   return {
     env: options.env,
     createPool: (connectionString) => {
       options.poolUrls?.push(connectionString);
-      return new FakePool();
+      return new FakePool(options.closeError);
     },
     runSmoke: async (pool) => {
       options.runSmokePools?.push(pool);
@@ -147,6 +196,8 @@ function deps(options: {
 }
 
 class FakePool {
+  constructor(private readonly closeError?: unknown) {}
+
   async query<T = unknown>(): Promise<{ rows: T[] }> {
     return { rows: [] };
   }
@@ -156,6 +207,7 @@ class FakePool {
   }
 
   async end(): Promise<void> {
+    if (this.closeError) throw this.closeError;
     return undefined;
   }
 }

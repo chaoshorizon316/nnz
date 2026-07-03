@@ -9,7 +9,7 @@ https://nnz-kego.onrender.com
 
 免费版无请求 15 分钟会休眠，首次访问需等 30–60 秒唤醒。部署细节见 `nnz-mvp-2026-06-04-云托管完成交接.md`。
 
-## 最新 GitHub / CI / 本地状态（2026-07-01）
+## 最新 GitHub / CI / 本地状态（2026-07-02）
 
 GitHub 仓库：
 
@@ -51,6 +51,7 @@ https://github.com/chaoshorizon316/nnz
 2026-07-01 Step 2.18: migration readiness CLI 已实现；`npm run migration:readiness` 从显式本地 JSON/SQLite 一次生成 raw snapshot、sanitized report、sanitized summary，不读取任何 DB env、不连接 Postgres；本地 typecheck、124 tests + 2 skipped、build:demo 通过；真实 snapshot 尚未实跑
 2026-07-01 Step 2.19: disposable migration smoke CLI 已实现；`npm run migration:smoke` 只允许 `NNZ_POSTGRES_INTEGRATION_URL` + 显式 confirm，验证 executor 幂等、repository 读回、scope 隔离、audit row、cascade delete 和 cleanup；本地 typecheck、129 tests + 2 skipped、build:demo 通过；真实 disposable DB 尚未实跑
 2026-07-01 Step 2.20: runtime persistence mode guardrail 已实现；默认 `snapshot` 路径不变，`NNZ_RUNTIME_PERSISTENCE_MODE=scoped` 需要 `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 且在 adapter 完成前 fail-fast；`/healthz` 和 Ops overview 只暴露 env key / boolean 诊断；本地 typecheck、134 tests + 2 skipped、build:demo 通过
+2026-07-02 Step 2.21: migration guardrail hardening 已实现；`migration:execute` / `migration:smoke` 会拒绝 `NNZ_POSTGRES_INTEGRATION_URL` 与 `DATABASE_URL` / `NNZ_POSTGRES_URL` 值相同的生产别名误配，pool close failure 只输出固定脱敏错误；本地 typecheck、138 tests + 2 skipped、build:demo 通过
 ```
 
 说明：
@@ -187,6 +188,8 @@ npm audit
 2026-07-01 Step 2.19 disposable migration smoke CLI 结果：新增 `src/tools/postgres-scoped-migration-smoke-cli.ts` / `src/tools/postgres-scoped-migration-smoke-cli.test.ts`，新增 `migration:smoke` script；必须传 `--database-url-env NNZ_POSTGRES_INTEGRATION_URL` 和 `--confirm RUN_POSTGRES_SCOPED_MIGRATION_SMOKE`；拒绝 `DATABASE_URL` / `NNZ_POSTGRES_URL`；构造双 user/persona fixture，执行 scoped migration 两次验证幂等，通过 repository 读回 runtime/snapshot/memory/conversation/proposal/credential，验证 cross-scope node conversation 拒绝、audit row 写入、user delete cascade、sibling scope preserved，并 finally 清理 fixture users/audit rows。stdout/失败输出不含 DB URL、fixture memory/chat、credential hash、row payload 或 raw DB error details。本地 `npm run typecheck`、targeted 21 tests、`npm test`、`npm run build:demo`、CLI help 通过；全量为 21 个测试文件、129 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-01-Step2.19-DisposableMigrationSmokeCLI.md`。
 
 2026-07-01 Step 2.20 runtime persistence mode guardrail 结果：新增 `src/runtime-persistence-config.ts` / `src/runtime-persistence-config.test.ts`，`src/demo-server.ts` 改为通过配置模块选择 runtime persistence；默认 `snapshot` 路径不变，`scoped` 模式必须使用 `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 且在 adapter 完成前 fail-fast；`/healthz` 和 Ops overview 只返回 `runtimeMode`、env key、boolean 和非敏感状态原因，不返回 URL/token/正文/rows。本地 `npm run typecheck`、targeted runtime config/Ops tests、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 22 个测试文件、134 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-01-Step2.20-RuntimePersistenceModeGuardrail.md`。
+
+2026-07-02 Step 2.21 migration guardrail hardening 结果：新增 `src/tools/postgres-disposable-env-guard.ts`，`migration:execute` 与 `migration:smoke` 共用 disposable DB env value guard；即使命令参数指定 `NNZ_POSTGRES_INTEGRATION_URL`，只要其值与 `DATABASE_URL` 或 `NNZ_POSTGRES_URL` 相同就拒绝执行且不打印 URL；同时 `pool.end()` close failure 改为固定脱敏输出，不泄露 raw database details。本地 `npm run typecheck`、targeted execute/smoke CLI tests、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 22 个测试文件、138 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-02-Step2.21-MigrationGuardrailHardening.md`。
 
 最新 CI run：
 
@@ -355,10 +358,16 @@ nnz-mvp/src/runtime/soul-runtime.test.ts
 nnz-mvp/src/demo-server.ts
 nnz-mvp/src/runtime-persistence-config.ts
 nnz-mvp/src/runtime-persistence-config.test.ts
+nnz-mvp/src/tools/postgres-disposable-env-guard.ts
+nnz-mvp/src/tools/postgres-scoped-migration-execute-cli.ts
+nnz-mvp/src/tools/postgres-scoped-migration-execute-cli.test.ts
+nnz-mvp/src/tools/postgres-scoped-migration-smoke-cli.ts
+nnz-mvp/src/tools/postgres-scoped-migration-smoke-cli.test.ts
 nnz-mvp/src/ops/ops-console.ts
 nnz-mvp/src/ops/ops-console.test.ts
 nnz-mvp/public/index.html
 nnz-mvp/CLAUDE_CODE_HANDOFF.md
+nnz-mvp-2026-07-02-Step2.21-MigrationGuardrailHardening.md
 nnz-mvp-2026-07-01-Step2.20-RuntimePersistenceModeGuardrail.md
 nnz-mvp-2026-07-01-Step2.19-DisposableMigrationSmokeCLI.md
 nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md

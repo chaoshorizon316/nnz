@@ -90,6 +90,36 @@ describe('Postgres scoped migration execute CLI', () => {
     expect(result.stderr).not.toContain('disposable-secret');
   });
 
+  it('refuses execution when the disposable env value matches a production database alias', async () => {
+    const poolUrls: string[] = [];
+
+    const result = await runMigrationExecuteCommand(
+      [
+        '--snapshot',
+        '/tmp/snapshot.json',
+        '--execute',
+        '--database-url-env',
+        'NNZ_POSTGRES_INTEGRATION_URL',
+        '--confirm',
+        EXECUTE_POSTGRES_SCOPED_MIGRATION_CONFIRM,
+      ],
+      deps({
+        snapshot: createSnapshot(),
+        env: {
+          NNZ_POSTGRES_URL: 'postgres://shared-secret',
+          NNZ_POSTGRES_INTEGRATION_URL: ' postgres://shared-secret ',
+        },
+        poolUrls,
+      }),
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('must not match NNZ_POSTGRES_URL');
+    expect(result.stderr).not.toContain('shared-secret');
+    expect(poolUrls).toEqual([]);
+  });
+
   it('refuses execution when the snapshot has blocking errors', async () => {
     const snapshot = createSnapshot();
     snapshot.personas[0]!.userId = 'missing-user';
@@ -216,6 +246,33 @@ describe('Postgres scoped migration execute CLI', () => {
     expect(report).not.toContain('prod-secret');
     expect(report).not.toContain('disposable-secret');
   });
+
+  it('does not print raw database error details from pool close failures', async () => {
+    const result = await runMigrationExecuteCommand(
+      [
+        '--snapshot',
+        '/tmp/snapshot.json',
+        '--execute',
+        '--database-url-env',
+        'NNZ_POSTGRES_INTEGRATION_URL',
+        '--confirm',
+        EXECUTE_POSTGRES_SCOPED_MIGRATION_CONFIRM,
+      ],
+      deps({
+        snapshot: createSnapshot(),
+        env: { NNZ_POSTGRES_INTEGRATION_URL: 'postgres://disposable-secret' },
+        poolEndError: new Error('raw close failure with database secret'),
+      }),
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain('mode: execute');
+    expect(result.stdout).toContain('executed: yes');
+    expect(result.stderr).toContain('failed while closing the database pool');
+    expect(result.stderr).not.toContain('raw close failure');
+    expect(result.stderr).not.toContain('database secret');
+    expect(result.stderr).not.toContain('disposable-secret');
+  });
 });
 
 function deps(options: {
@@ -224,6 +281,7 @@ function deps(options: {
   poolUrls?: string[];
   executeCalls?: unknown[];
   written?: Map<string, string>;
+  poolEndError?: unknown;
 }): MigrationExecuteCliDeps {
   const poolUrls = options.poolUrls ?? [];
   const executeCalls = options.executeCalls ?? [];
@@ -235,7 +293,7 @@ function deps(options: {
     },
     createPool: (connectionString) => {
       poolUrls.push(connectionString);
-      return new FakePool();
+      return new FakePool(options.poolEndError);
     },
     executeMigration: async (pool, _snapshot, migrationOptions) => {
       executeCalls.push({ pool, options: migrationOptions });
@@ -255,6 +313,8 @@ function deps(options: {
 class FakePool {
   endCount = 0;
 
+  constructor(private readonly endError?: unknown) {}
+
   async query<T = unknown>(): Promise<{ rows: T[] }> {
     return { rows: [] };
   }
@@ -265,6 +325,7 @@ class FakePool {
 
   async end(): Promise<void> {
     this.endCount += 1;
+    if (this.endError) throw this.endError;
   }
 }
 

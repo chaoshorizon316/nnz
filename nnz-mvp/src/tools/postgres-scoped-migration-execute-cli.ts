@@ -21,6 +21,11 @@ import {
   createSanitizedSummary,
   parseSnapshotJson,
 } from './postgres-scoped-migration-plan-cli';
+import {
+  DISPOSABLE_POSTGRES_ENV,
+  findDisposablePostgresAliasConflict,
+  readNonEmptyEnv,
+} from './postgres-disposable-env-guard';
 
 const { Pool } = pg;
 
@@ -42,7 +47,7 @@ export interface MigrationExecuteCliDeps {
   ) => Promise<ExecutePostgresScopedMigrationResult>;
 }
 
-const ALLOWED_DATABASE_URL_ENV = 'NNZ_POSTGRES_INTEGRATION_URL';
+const ALLOWED_DATABASE_URL_ENV = DISPOSABLE_POSTGRES_ENV;
 
 const USAGE = `Usage:
   npm run migration:execute -- --snapshot <snapshot-json-path>
@@ -138,8 +143,9 @@ export async function runMigrationExecuteCommand(
       };
     }
 
-    const connectionString = deps.env[ALLOWED_DATABASE_URL_ENV]!;
+    const connectionString = readNonEmptyEnv(deps.env, ALLOWED_DATABASE_URL_ENV)!;
     const pool = deps.createPool(connectionString);
+    let result: MigrationExecuteCliResult = { exitCode: 1, stdout: '', stderr: '' };
     try {
       const execution = await deps.executeMigration(pool, snapshot, migrationOptions(parsedArgs));
       const report = createExecutionReport({
@@ -151,20 +157,28 @@ export async function runMigrationExecuteCommand(
         execution,
       });
       writeReportIfRequested(parsedArgs.reportPath, report, deps);
-      return {
+      result = {
         exitCode: 0,
         stdout: formatExecutionSummary(report),
         stderr: '',
       };
     } catch (error) {
-      return {
+      result = {
         exitCode: 1,
         stdout: '',
         stderr: formatExecutionError(error),
       };
     } finally {
-      await pool.end();
+      const closeError = await closeExecutePool(pool);
+      if (closeError) {
+        result = {
+          exitCode: result.exitCode === 0 ? 1 : result.exitCode,
+          stdout: result.stdout,
+          stderr: `${result.stderr}${closeError}`,
+        };
+      }
     }
+    return result;
   } catch (error) {
     return {
       exitCode: 1,
@@ -276,8 +290,12 @@ function validateExecutionGuardrails(parsedArgs: ParsedArgs, env: Record<string,
   if (parsedArgs.databaseUrlEnv !== ALLOWED_DATABASE_URL_ENV) {
     return `Execution requires --database-url-env ${ALLOWED_DATABASE_URL_ENV}; DATABASE_URL and NNZ_POSTGRES_URL are refused.`;
   }
-  if (!env[ALLOWED_DATABASE_URL_ENV]) {
+  if (!readNonEmptyEnv(env, ALLOWED_DATABASE_URL_ENV)) {
     return `${ALLOWED_DATABASE_URL_ENV} is not set. Use a disposable Postgres database only.`;
+  }
+  const aliasConflict = findDisposablePostgresAliasConflict(env, ALLOWED_DATABASE_URL_ENV);
+  if (aliasConflict) {
+    return `${ALLOWED_DATABASE_URL_ENV} must not match ${aliasConflict}. Use a disposable Postgres database only.`;
   }
   return undefined;
 }
@@ -387,6 +405,15 @@ function sanitizeIssue(issue: PostgresScopedMigrationIssue): Record<string, stri
 function formatExecutionError(error: unknown): string {
   const code = isRecord(error) && typeof error['code'] === 'string' ? ` errorCode=${error['code']}` : '';
   return `Migration execution failed during protected execution.${code}\nNo snapshot rows, private content, credential hashes, database URLs, or raw database error details were printed.\n`;
+}
+
+async function closeExecutePool(pool: PostgresScopedMigrationPool & { end(): Promise<void> }): Promise<string> {
+  try {
+    await pool.end();
+    return '';
+  } catch {
+    return 'Migration execution failed while closing the database pool.\nNo snapshot rows, private content, credential hashes, database URLs, or raw database error details were printed.\n';
+  }
 }
 
 function shouldUseSsl(connectionString: string): boolean {

@@ -14,10 +14,15 @@ import {
 } from '../domain/postgres-scoped-soul-repository';
 import { InMemorySoulStore } from '../domain/soul-store';
 import type { NodeEvent, Persona, User } from '../domain/types';
+import {
+  DISPOSABLE_POSTGRES_ENV,
+  findDisposablePostgresAliasConflict,
+  readNonEmptyEnv,
+} from './postgres-disposable-env-guard';
 
 const { Pool } = pg;
 
-const ALLOWED_DATABASE_URL_ENV = 'NNZ_POSTGRES_INTEGRATION_URL';
+const ALLOWED_DATABASE_URL_ENV = DISPOSABLE_POSTGRES_ENV;
 const SMOKE_CONFIRM = 'RUN_POSTGRES_SCOPED_MIGRATION_SMOKE';
 
 const USAGE = `Usage:
@@ -81,23 +86,32 @@ export async function runMigrationSmokeCommand(
     return { exitCode: 1, stdout: '', stderr: `${guardrailError}\n\n${USAGE}\n` };
   }
 
-  const pool = deps.createPool(deps.env[ALLOWED_DATABASE_URL_ENV]!);
+  const pool = deps.createPool(readNonEmptyEnv(deps.env, ALLOWED_DATABASE_URL_ENV)!);
+  let result: MigrationSmokeCliResult = { exitCode: 1, stdout: '', stderr: '' };
   try {
-    const result = await deps.runSmoke(pool);
-    return {
+    const smokeResult = await deps.runSmoke(pool);
+    result = {
       exitCode: 0,
-      stdout: formatSmokeSummary(result),
+      stdout: formatSmokeSummary(smokeResult),
       stderr: '',
     };
   } catch (error) {
-    return {
+    result = {
       exitCode: 1,
       stdout: '',
       stderr: formatSmokeError(error),
     };
   } finally {
-    await pool.end();
+    const closeError = await closeSmokePool(pool);
+    if (closeError) {
+      result = {
+        exitCode: result.exitCode === 0 ? 1 : result.exitCode,
+        stdout: result.stdout,
+        stderr: `${result.stderr}${closeError}`,
+      };
+    }
   }
+  return result;
 }
 
 export async function runPostgresScopedMigrationSmoke(
@@ -237,8 +251,12 @@ function validateGuardrails(parsedArgs: ParsedArgs, env: Record<string, string |
   if (parsedArgs.databaseUrlEnv !== ALLOWED_DATABASE_URL_ENV) {
     return `Smoke requires --database-url-env ${ALLOWED_DATABASE_URL_ENV}; DATABASE_URL and NNZ_POSTGRES_URL are refused.`;
   }
-  if (!env[ALLOWED_DATABASE_URL_ENV]) {
+  if (!readNonEmptyEnv(env, ALLOWED_DATABASE_URL_ENV)) {
     return `${ALLOWED_DATABASE_URL_ENV} is not set. Use a disposable Postgres database only.`;
+  }
+  const aliasConflict = findDisposablePostgresAliasConflict(env, ALLOWED_DATABASE_URL_ENV);
+  if (aliasConflict) {
+    return `${ALLOWED_DATABASE_URL_ENV} must not match ${aliasConflict}. Use a disposable Postgres database only.`;
   }
   return undefined;
 }
@@ -258,6 +276,15 @@ function formatSmokeSummary(result: PostgresScopedMigrationSmokeResult): string 
 function formatSmokeError(error: unknown): string {
   const code = isRecord(error) && typeof error['code'] === 'string' ? ` errorCode=${error['code']}` : '';
   return `Postgres scoped migration smoke failed.${code}\nNo database URL, fixture memory text, chat content, credential hash, row payload, or raw database error details were printed.\n`;
+}
+
+async function closeSmokePool(pool: PostgresScopedMigrationSmokePool): Promise<string> {
+  try {
+    await pool.end();
+    return '';
+  } catch {
+    return 'Postgres scoped migration smoke failed while closing the database pool.\nNo database URL, fixture memory text, chat content, credential hash, row payload, or raw database error details were printed.\n';
+  }
 }
 
 interface SnapshotFixture {
