@@ -13,6 +13,7 @@ import { createPostgresPersistence, type PostgresPersistence } from './domain/po
 import { CovenantStateError, NotFoundError, OwnershipError } from './domain/errors';
 import { InMemorySoulStore } from './domain/soul-store';
 import type {
+  ConversationMessage,
   MemoryItem,
   NodeEvent,
   OpsAuditAction,
@@ -25,6 +26,10 @@ import type {
 } from './domain/types';
 import { generateLlmReply } from './runtime/llm-reply';
 import { GRADUATED_REPLY, SEALED_REPLY, generateSoulReply } from './runtime/soul-runtime';
+import {
+  createInMemoryScopedRuntimeAdapter,
+  type ScopedPersonaRuntimeAdapter,
+} from './runtime/scoped-runtime-adapter';
 import { extractToken, hashPassword, signToken, verifyPassword, verifyToken } from './auth/auth';
 import { checkDailyLimit, checkMessageSafety, incrementDailyCount } from './runtime/soul-guard';
 import { buildOpsOverview, cleanupTestUsers, queryOpsAuditEvents } from './ops/ops-console';
@@ -52,6 +57,10 @@ interface DemoFixture {
 }
 
 let fixture = createFixture();
+
+function getRuntimeAdapter() {
+  return createInMemoryScopedRuntimeAdapter(fixture.store);
+}
 
 const RUNTIME_PERSISTENCE = buildRuntimePersistenceConfig(process.env);
 const DB_PATH = RUNTIME_PERSISTENCE.sqlitePath;
@@ -201,13 +210,13 @@ const server = createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/me') {
       const authUser = requireAuth(req, res);
       if (!authUser) return;
-      return sendJson(res, buildMeResponse(authUser));
+      return sendJson(res, await buildMeResponse(authUser));
     }
 
     if (req.method === 'GET' && url.pathname === '/api/me/personas') {
       const authUser = requireAuth(req, res);
       if (!authUser) return;
-      return sendJson(res, { personas: listUserPersonaSummaries(authUser.userId) });
+      return sendJson(res, { personas: await listUserPersonaSummaries(authUser.userId) });
     }
 
     if (req.method === 'POST' && url.pathname === '/api/me/persona') {
@@ -233,11 +242,11 @@ const server = createServer(async (req, res) => {
       if (!personaId) {
         return sendJson(res, { error: '请先选择要对话的人。' }, 400);
       }
-      const scope = { userId: authUser.userId, personaId };
-      if (!ensureUserPersonaAccess(res, scope.userId, scope.personaId)) return;
+      const runtime = await requireUserPersonaRuntime(res, authUser.userId, personaId);
+      if (!runtime) return;
       return sendJson(res, {
-        persona: summarizeUserPersona(scope),
-        messages: serializeUserMessages(scope),
+        persona: await summarizeUserPersona(runtime),
+        messages: await serializeUserMessages(runtime),
       });
     }
 
@@ -252,8 +261,9 @@ const server = createServer(async (req, res) => {
       if (!message) {
         return sendJson(res, { error: '请输入想说的话。' }, 400);
       }
-      if (!ensureUserPersonaAccess(res, authUser.userId, body.personaId)) return;
-      const reply = await sendMessageToUserPersona(authUser.userId, body.personaId, message);
+      const runtime = await requireUserPersonaRuntime(res, authUser.userId, body.personaId);
+      if (!runtime) return;
+      const reply = await sendMessageToUserPersona(runtime, message);
       return sendJson(res, reply);
     }
 
@@ -264,9 +274,9 @@ const server = createServer(async (req, res) => {
       if (!personaId) {
         return sendJson(res, { error: '请提供 personaId。' }, 400);
       }
-      if (!ensureUserPersonaAccess(res, authUser.userId, personaId)) return;
-      const scope = { userId: authUser.userId, personaId };
-      const session = fixture.store.getRuntimeSession(scope);
+      const runtime = await requireUserPersonaRuntime(res, authUser.userId, personaId);
+      if (!runtime) return;
+      const session = await runtime.getRuntimeSession();
       return sendJson(res, { state: session.state, nodeContext: session.nodeContext ?? null });
     }
 
@@ -275,10 +285,10 @@ const server = createServer(async (req, res) => {
       if (!authUser) return;
       const body = await readJsonBody<{ personaId?: string }>(req);
       if (!body.personaId) return sendJson(res, { error: '请提供 personaId。' }, 400);
-      if (!ensureUserPersonaAccess(res, authUser.userId, body.personaId)) return;
-      const scope = { userId: authUser.userId, personaId: body.personaId };
+      const runtime = await requireUserPersonaRuntime(res, authUser.userId, body.personaId);
+      if (!runtime) return;
       try {
-        const { session } = fixture.store.sealSoul(scope);
+        const { session } = await runtime.sealSoul();
         await persistIfEnabled();
         return sendJson(res, { state: session.state });
       } catch (error) {
@@ -295,10 +305,10 @@ const server = createServer(async (req, res) => {
       const body = await readJsonBody<{ personaId?: string; nodeName?: string }>(req);
       if (!body.personaId) return sendJson(res, { error: '请提供 personaId。' }, 400);
       const nodeName = normalizeVisibleText(body.nodeName, 20) || '重要时刻';
-      if (!ensureUserPersonaAccess(res, authUser.userId, body.personaId)) return;
-      const scope = { userId: authUser.userId, personaId: body.personaId };
+      const runtime = await requireUserPersonaRuntime(res, authUser.userId, body.personaId);
+      if (!runtime) return;
       try {
-        const { session } = fixture.store.activateNode(scope, nodeName);
+        const { session } = await runtime.activateNode(nodeName);
         await persistIfEnabled();
         return sendJson(res, { state: session.state, nodeName: session.nodeContext?.nodeName });
       } catch (error) {
@@ -314,10 +324,10 @@ const server = createServer(async (req, res) => {
       if (!authUser) return;
       const body = await readJsonBody<{ personaId?: string }>(req);
       if (!body.personaId) return sendJson(res, { error: '请提供 personaId。' }, 400);
-      if (!ensureUserPersonaAccess(res, authUser.userId, body.personaId)) return;
-      const scope = { userId: authUser.userId, personaId: body.personaId };
+      const runtime = await requireUserPersonaRuntime(res, authUser.userId, body.personaId);
+      if (!runtime) return;
       try {
-        const session = fixture.store.completeNode(scope);
+        const session = await runtime.completeNode();
         await persistIfEnabled();
         return sendJson(res, { state: session.state });
       } catch (error) {
@@ -333,10 +343,10 @@ const server = createServer(async (req, res) => {
       if (!authUser) return;
       const body = await readJsonBody<{ personaId?: string }>(req);
       if (!body.personaId) return sendJson(res, { error: '请提供 personaId。' }, 400);
-      if (!ensureUserPersonaAccess(res, authUser.userId, body.personaId)) return;
-      const scope = { userId: authUser.userId, personaId: body.personaId };
+      const runtime = await requireUserPersonaRuntime(res, authUser.userId, body.personaId);
+      if (!runtime) return;
       try {
-        const session = fixture.store.graduateSoul(scope);
+        const session = await runtime.graduateSoul();
         await persistIfEnabled();
         return sendJson(res, { state: session.state });
       } catch (error) {
@@ -465,7 +475,8 @@ async function handleRegister(res: ServerResponse, email: string, password: stri
     return;
   }
 
-  const existing = fixture.store.getCredentialByEmail(email);
+  const runtimeAdapter = getRuntimeAdapter();
+  const existing = await runtimeAdapter.getCredentialByEmail(email);
   if (existing) {
     res.writeHead(409, { 'content-type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ error: '该邮箱已注册。' }));
@@ -473,8 +484,8 @@ async function handleRegister(res: ServerResponse, email: string, password: stri
   }
 
   const passwordHash = await hashPassword(password);
-  const user = fixture.store.createUser(email); // displayName = email for now
-  fixture.store.storeCredential(user.id, email, passwordHash);
+  const user = await runtimeAdapter.createUser(email); // displayName = email for now
+  await runtimeAdapter.storeCredential(user.id, email, passwordHash);
   await persistIfEnabled();
 
   const token = signToken({ userId: user.id, email });
@@ -483,7 +494,7 @@ async function handleRegister(res: ServerResponse, email: string, password: stri
 }
 
 async function handleLogin(res: ServerResponse, email: string, password: string): Promise<void> {
-  const cred = fixture.store.getCredentialByEmail(email);
+  const cred = await getRuntimeAdapter().getCredentialByEmail(email);
   if (!cred) {
     res.writeHead(401, { 'content-type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ error: '邮箱或密码错误。' }));
@@ -644,18 +655,23 @@ function parseIntegerParam(value: string | null): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function ensureUserPersonaAccess(res: ServerResponse, userId: string, personaId: string): boolean {
+async function requireUserPersonaRuntime(
+  res: ServerResponse,
+  userId: string,
+  personaId: string,
+): Promise<ScopedPersonaRuntimeAdapter | null> {
+  const runtime = getRuntimeAdapter().forPersona({ userId, personaId });
   try {
-    fixture.store.getPersonaForUser(userId, personaId);
-    return true;
+    await runtime.getPersona();
+    return runtime;
   } catch (error) {
     if (error instanceof OwnershipError) {
       sendJson(res, { error: '没有权限访问这段对话。' }, 403);
-      return false;
+      return null;
     }
     if (error instanceof NotFoundError) {
       sendJson(res, { error: '没有找到这段对话。' }, 404);
-      return false;
+      return null;
     }
     throw error;
   }
@@ -957,6 +973,56 @@ function isDuplicateMessage(scope: { userId: string; personaId: string }, text: 
   return false;
 }
 
+async function applyUserRuntimeSafetyGuard(
+  runtime: ScopedPersonaRuntimeAdapter,
+  message: string,
+): Promise<{ blocked: boolean; reply?: string }> {
+  const safetyCheck = checkMessageSafety(message);
+  if (safetyCheck.blocked) {
+    await runtime.addMemory({
+      type: 'RISK',
+      content: `安全护栏触发：用户消息包含敏感内容。原文："${message.slice(0, 80)}"`,
+      confidence: 1,
+      enabledForSoul: false,
+    });
+    return safetyCheck;
+  }
+
+  const session = await runtime.getRuntimeSession();
+  if (session.state === 'ACTIVE' || session.state === 'NODE') {
+    const limitCheck = checkDailyLimit(session);
+    if (limitCheck.blocked) {
+      return limitCheck;
+    }
+    incrementDailyCount(session);
+  }
+
+  return { blocked: false };
+}
+
+async function getLastUserRuntimeAssistantReply(runtime: ScopedPersonaRuntimeAdapter): Promise<string | undefined> {
+  const conversations = await runtime.listConversations();
+  for (let i = conversations.length - 1; i >= 0; i--) {
+    if (conversations[i]!.role === 'ASSISTANT') {
+      return conversations[i]!.content;
+    }
+  }
+  return undefined;
+}
+
+async function isDuplicateUserRuntimeMessage(
+  runtime: ScopedPersonaRuntimeAdapter,
+  text: string,
+): Promise<boolean> {
+  const conversations = await runtime.listConversations();
+  for (let i = conversations.length - 1; i >= 0; i--) {
+    if (conversations[i]!.role === 'USER') {
+      return conversations[i]!.content === text;
+    }
+  }
+  return false;
+}
+
 interface UserPersonaSummary {
   id: string;
   displayName: string;
@@ -966,31 +1032,43 @@ interface UserPersonaSummary {
   messageCount: number;
 }
 
-function buildMeResponse(authUser: { userId: string; email: string }) {
+interface SerializedUserMessage {
+  role: ConversationMessage['role'];
+  content: string;
+  createdAt: Date;
+}
+
+async function buildMeResponse(authUser: { userId: string; email: string }) {
   return {
     email: authUser.email,
-    personas: listUserPersonaSummaries(authUser.userId),
+    personas: await listUserPersonaSummaries(authUser.userId),
   };
 }
 
-function listUserPersonaSummaries(userId: string): UserPersonaSummary[] {
-  return fixture.store.listPersonasForUser(userId).map((persona) => {
-    const scope = { userId, personaId: persona.id };
+async function listUserPersonaSummaries(userId: string): Promise<UserPersonaSummary[]> {
+  const runtimeAdapter = getRuntimeAdapter();
+  const personas = await runtimeAdapter.listPersonasForUser(userId);
+  return Promise.all(personas.map(async (persona) => {
+    const runtime = runtimeAdapter.forPersona({ userId, personaId: persona.id });
+    const [memory, conversations] = await Promise.all([
+      runtime.listMemory(),
+      runtime.listConversations(),
+    ]);
     return {
       id: persona.id,
       displayName: persona.displayName,
       relationship: persona.relationship,
       createdAt: persona.createdAt,
-      memoryCount: fixture.store.listMemory(scope).length,
-      messageCount: fixture.store.listConversations(scope).length,
+      memoryCount: memory.length,
+      messageCount: conversations.length,
     };
-  });
+  }));
 }
 
 async function createUserPersona(
   userId: string,
   input: { displayName?: string; relationship?: string; description?: string; petPhrase?: string; traits?: Record<string, string> },
-): Promise<{ persona: UserPersonaSummary; messages: ReturnType<typeof serializeUserMessages> }> {
+): Promise<{ persona: UserPersonaSummary; messages: SerializedUserMessage[] }> {
   const displayName = normalizeVisibleText(input.displayName, 24);
   const relationship = normalizeVisibleText(input.relationship, 24);
   const description = normalizeVisibleText(input.description, 600);
@@ -1000,15 +1078,16 @@ async function createUserPersona(
     throw new Error('请填写称呼和关系。');
   }
 
-  const persona = fixture.store.createPersona({
+  const runtimeAdapter = getRuntimeAdapter();
+  const persona = await runtimeAdapter.createPersona({
     userId,
     displayName,
     relationship,
     type: 'DECEASED',
   });
   const scope = { userId, personaId: persona.id };
-  fixture.store.createSoulVersion({
-    ...scope,
+  const runtime = runtimeAdapter.forPersona(scope);
+  await runtime.createSoulVersion({
     kernelJson: {
       identityCore: {
         displayName,
@@ -1024,8 +1103,7 @@ async function createUserPersona(
   });
 
   if (description) {
-    fixture.store.addMemory({
-      ...scope,
+    await runtime.addMemory({
       type: 'DESCRIPTION',
       content: description,
       confidence: 0.85,
@@ -1036,36 +1114,35 @@ async function createUserPersona(
   await persistIfEnabled();
 
   return {
-    persona: summarizeUserPersona(scope),
-    messages: serializeUserMessages(scope),
+    persona: await summarizeUserPersona(runtime),
+    messages: await serializeUserMessages(runtime),
   };
 }
 
-async function sendMessageToUserPersona(userId: string, personaId: string, message: string) {
-  const persona = fixture.store.getPersonaForUser(userId, personaId);
-  const scope = { userId, personaId: persona.id };
+async function sendMessageToUserPersona(runtime: ScopedPersonaRuntimeAdapter, message: string) {
+  const scope = runtime.scope;
   const text = message.trim();
   if (!text) {
     throw new Error('请输入想说的话。');
   }
 
-  const guard = applySafetyGuard(scope, text);
-  const duplicate = isDuplicateMessage(scope, text);
-  fixture.store.addConversation({ ...scope, role: 'USER', content: text });
+  const guard = await applyUserRuntimeSafetyGuard(runtime, text);
+  const duplicate = await isDuplicateUserRuntimeMessage(runtime, text);
+  await runtime.addConversation({ role: 'USER', content: text });
 
   let reply: string;
   if (duplicate) {
-    reply = getLastAssistantReply(scope) ?? '嗯，我听见了。';
+    reply = await getLastUserRuntimeAssistantReply(runtime) ?? '嗯，我听见了。';
   } else if (guard.blocked && guard.reply) {
     reply = guard.reply;
   } else {
     try {
-      const ctx = fixture.store.getRuntimeContext(scope);
+      const ctx = await runtime.getRuntimeContext();
       if (llmAdapter) {
         reply = await generateLlmReply(llmAdapter, {
           soul: ctx.soul,
           memories: ctx.memories,
-          recentConversations: fixture.store.listConversations(scope),
+          recentConversations: await runtime.listConversations(),
           message: text,
         });
       } else {
@@ -1084,7 +1161,7 @@ async function sendMessageToUserPersona(userId: string, personaId: string, messa
     }
   }
 
-  fixture.store.addConversation({ ...scope, role: 'ASSISTANT', content: reply });
+  await runtime.addConversation({ role: 'ASSISTANT', content: reply });
 
   if (llmAdapter) {
     const adapter = llmAdapter;
@@ -1101,26 +1178,31 @@ async function sendMessageToUserPersona(userId: string, personaId: string, messa
   await persistIfEnabled();
 
   return {
-    persona: summarizeUserPersona(scope),
-    messages: serializeUserMessages(scope),
+    persona: await summarizeUserPersona(runtime),
+    messages: await serializeUserMessages(runtime),
     reply,
   };
 }
 
-function summarizeUserPersona(scope: UserPersonaScope): UserPersonaSummary {
-  const persona = fixture.store.getPersonaForUser(scope.userId, scope.personaId);
+async function summarizeUserPersona(runtime: ScopedPersonaRuntimeAdapter): Promise<UserPersonaSummary> {
+  const [persona, memory, conversations] = await Promise.all([
+    runtime.getPersona(),
+    runtime.listMemory(),
+    runtime.listConversations(),
+  ]);
   return {
     id: persona.id,
     displayName: persona.displayName,
     relationship: persona.relationship,
     createdAt: persona.createdAt,
-    memoryCount: fixture.store.listMemory(scope).length,
-    messageCount: fixture.store.listConversations(scope).length,
+    memoryCount: memory.length,
+    messageCount: conversations.length,
   };
 }
 
-function serializeUserMessages(scope: UserPersonaScope) {
-  return fixture.store.listConversations(scope).map((message) => ({
+async function serializeUserMessages(runtime: ScopedPersonaRuntimeAdapter): Promise<SerializedUserMessage[]> {
+  const conversations = await runtime.listConversations();
+  return conversations.map((message) => ({
     role: message.role,
     content: message.content,
     createdAt: message.createdAt,
