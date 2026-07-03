@@ -1,3 +1,8 @@
+import {
+  findPostgresEnvAliasConflict,
+  readNonEmptyEnv,
+} from './postgres-env-alias-guard';
+
 export const RUNTIME_PERSISTENCE_MODE_ENV = 'NNZ_RUNTIME_PERSISTENCE_MODE';
 export const SCOPED_RUNTIME_POSTGRES_ENV = 'NNZ_POSTGRES_SCOPED_RUNTIME_URL';
 
@@ -21,9 +26,9 @@ export interface RuntimePersistenceConfig {
 type EnvSource = Record<string, string | undefined>;
 
 export function buildRuntimePersistenceConfig(env: EnvSource): RuntimePersistenceConfig {
-  const requestedRuntimeMode = readNonEmptyEnv(env, RUNTIME_PERSISTENCE_MODE_ENV);
-  const sqlitePath = readNonEmptyEnv(env, 'NNZ_DB_PATH');
-  const scopedPostgresUrl = readNonEmptyEnv(env, SCOPED_RUNTIME_POSTGRES_ENV);
+  const requestedRuntimeMode = readNonEmptyEnv(env, RUNTIME_PERSISTENCE_MODE_ENV) ?? null;
+  const sqlitePath = readNonEmptyEnv(env, 'NNZ_DB_PATH') ?? null;
+  const scopedPostgresUrl = readNonEmptyEnv(env, SCOPED_RUNTIME_POSTGRES_ENV) ?? null;
   const scopedPostgresEnv = scopedPostgresUrl ? SCOPED_RUNTIME_POSTGRES_ENV : null;
 
   if (requestedRuntimeMode && !isRuntimePersistenceMode(requestedRuntimeMode)) {
@@ -41,6 +46,7 @@ export function buildRuntimePersistenceConfig(env: EnvSource): RuntimePersistenc
 
   const runtimeMode: RuntimePersistenceMode = requestedRuntimeMode === 'scoped' ? 'scoped' : 'snapshot';
   if (runtimeMode === 'scoped') {
+    const scopedAliasConflict = findPostgresEnvAliasConflict(env, SCOPED_RUNTIME_POSTGRES_ENV);
     return {
       runtimeMode,
       requestedRuntimeMode,
@@ -49,9 +55,7 @@ export function buildRuntimePersistenceConfig(env: EnvSource): RuntimePersistenc
       snapshotPostgresUrl: null,
       scopedPostgresEnv,
       scopedPostgresUrl,
-      startupBlockReason: scopedPostgresUrl
-        ? null
-        : `${RUNTIME_PERSISTENCE_MODE_ENV}=scoped requires ${SCOPED_RUNTIME_POSTGRES_ENV}; DATABASE_URL and NNZ_POSTGRES_URL are intentionally ignored for scoped runtime mode.`,
+      startupBlockReason: getScopedStartupBlockReason(scopedPostgresUrl, scopedAliasConflict),
     };
   }
 
@@ -72,11 +76,6 @@ function isRuntimePersistenceMode(value: string): value is RuntimePersistenceMod
   return value === 'snapshot' || value === 'scoped';
 }
 
-function readNonEmptyEnv(env: EnvSource, key: string): string | null {
-  const value = env[key]?.trim();
-  return value ? value : null;
-}
-
 function readFirstConfiguredEnv(
   env: EnvSource,
   keys: readonly SnapshotPostgresEnvKey[],
@@ -84,6 +83,19 @@ function readFirstConfiguredEnv(
   for (const key of keys) {
     const value = readNonEmptyEnv(env, key);
     if (value) return { key, value };
+  }
+  return null;
+}
+
+function getScopedStartupBlockReason(
+  scopedPostgresUrl: string | null,
+  scopedAliasConflict: string | undefined,
+): string | null {
+  if (!scopedPostgresUrl) {
+    return `${RUNTIME_PERSISTENCE_MODE_ENV}=scoped requires ${SCOPED_RUNTIME_POSTGRES_ENV}; DATABASE_URL and NNZ_POSTGRES_URL are intentionally ignored for scoped runtime mode.`;
+  }
+  if (scopedAliasConflict) {
+    return `${SCOPED_RUNTIME_POSTGRES_ENV} must not match ${scopedAliasConflict}; DATABASE_URL and NNZ_POSTGRES_URL are intentionally ignored for scoped runtime mode.`;
   }
   return null;
 }

@@ -84,4 +84,30 @@ describe('runtime persistence config', () => {
     expect(config.snapshotPostgresUrl).toBeNull();
     expect(config.startupBlockReason).toBeNull();
   });
+
+  it('blocks scoped mode when the dedicated runtime URL aliases DATABASE_URL', () => {
+    const config = buildRuntimePersistenceConfig({
+      [RUNTIME_PERSISTENCE_MODE_ENV]: 'scoped',
+      [SCOPED_RUNTIME_POSTGRES_ENV]: ' postgres://shared-secret ',
+      DATABASE_URL: 'postgres://shared-secret',
+    });
+
+    expect(config.runtimeMode).toBe('scoped');
+    expect(config.scopedPostgresEnv).toBe(SCOPED_RUNTIME_POSTGRES_ENV);
+    expect(config.scopedPostgresUrl).toBe('postgres://shared-secret');
+    expect(config.startupBlockReason).toContain(`${SCOPED_RUNTIME_POSTGRES_ENV} must not match DATABASE_URL`);
+    expect(config.startupBlockReason).not.toContain('shared-secret');
+  });
+
+  it('blocks scoped mode when the dedicated runtime URL aliases NNZ_POSTGRES_URL', () => {
+    const config = buildRuntimePersistenceConfig({
+      [RUNTIME_PERSISTENCE_MODE_ENV]: 'scoped',
+      [SCOPED_RUNTIME_POSTGRES_ENV]: 'postgres://shared-secret',
+      NNZ_POSTGRES_URL: ' postgres://shared-secret ',
+    });
+
+    expect(config.runtimeMode).toBe('scoped');
+    expect(config.startupBlockReason).toContain(`${SCOPED_RUNTIME_POSTGRES_ENV} must not match NNZ_POSTGRES_URL`);
+    expect(config.startupBlockReason).not.toContain('shared-secret');
+  });
 });
