@@ -8,12 +8,17 @@ import {
   createPostgresScopedRuntimeAdapter,
   type ScopedRuntimeAdapter,
 } from './scoped-runtime-adapter';
+import {
+  createPostgresScopedOpsStoreFromPool,
+  type PostgresScopedOpsStore,
+} from '../ops/postgres-scoped-ops-store';
 
 const { Pool } = pg;
 
 export interface ScopedRuntimePersistence {
   mode: 'scoped-postgres';
   adapter: ScopedRuntimeAdapter;
+  ops: PostgresScopedOpsStore;
   ensureReady(): Promise<void>;
   close(): Promise<void>;
 }
@@ -34,6 +39,7 @@ export function createPostgresScopedRuntimePersistenceFromPool(
   return {
     mode: 'scoped-postgres',
     adapter: createPostgresScopedRuntimeAdapter(pool),
+    ops: createPostgresScopedOpsStoreFromPool(pool),
     async ensureReady(): Promise<void> {
       if (ready) return;
       await ensureSchema();

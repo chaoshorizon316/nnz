@@ -17,6 +17,7 @@ import type {
   MemoryItem,
   NodeEvent,
   OpsAuditAction,
+  OpsAuditOutcome,
   Persona,
   RuntimeSession,
   SoulUpdateProposal,
@@ -137,7 +138,7 @@ const server = createServer(async (req, res) => {
           path: url.pathname,
         });
         return sendJson(res, {
-          ...buildOpsOverview(fixture.store, getOpsPersistenceInfo()),
+          ...await buildCurrentOpsOverview(),
           principal,
           permissions: buildOpsPermissions(principal.role),
         });
@@ -153,7 +154,7 @@ const server = createServer(async (req, res) => {
           offset: query.offset ?? null,
         }, query.targetUserId ? [query.targetUserId] : []);
         return sendJson(res, {
-          ...queryOpsAuditEvents(fixture.store, query),
+          ...await queryCurrentOpsAuditEvents(query),
           principal,
           permissions: buildOpsPermissions(principal.role),
         });
@@ -164,7 +165,7 @@ const server = createServer(async (req, res) => {
         const dryRun = body.dryRun !== false;
         const requiredRole: OpsRole = dryRun ? 'operator' : 'admin';
         if (!roleAllows(principal.role, requiredRole)) {
-          const preview = cleanupTestUsers(fixture.store, true);
+          const preview = await cleanupCurrentTestUsers(true);
           await recordOpsAudit(principal, dryRun ? 'CLEANUP_DRY_RUN' : 'CLEANUP_DELETE', 'DENIED', {
             reason: 'insufficient-role',
             requiredRole,
@@ -179,7 +180,7 @@ const server = createServer(async (req, res) => {
         }
 
         if (!dryRun && body.confirm !== 'DELETE_TEST_USERS') {
-          const preview = cleanupTestUsers(fixture.store, true);
+          const preview = await cleanupCurrentTestUsers(true);
           await recordOpsAudit(principal, 'CLEANUP_DELETE', 'DENIED', {
             reason: 'missing-confirmation',
             candidateUsers: preview.plan.totals.users,
@@ -190,7 +191,7 @@ const server = createServer(async (req, res) => {
           }, 400);
         }
 
-        const result = cleanupTestUsers(fixture.store, dryRun);
+        const result = await cleanupCurrentTestUsers(dryRun);
         await recordOpsAudit(principal, dryRun ? 'CLEANUP_DRY_RUN' : 'CLEANUP_DELETE', 'SUCCESS', {
           dryRun,
           candidateUsers: result.plan.totals.users,
@@ -567,12 +568,12 @@ async function requireOpsAccess(req: IncomingMessage, res: ServerResponse): Prom
 
 async function recordOpsAudit(
   principal: OpsPrincipal | null,
-  action: Parameters<InMemorySoulStore['recordOpsAuditEvent']>[0]['action'],
-  outcome: Parameters<InMemorySoulStore['recordOpsAuditEvent']>[0]['outcome'],
-  metadata: Parameters<InMemorySoulStore['recordOpsAuditEvent']>[0]['metadata'] = {},
+  action: OpsAuditAction,
+  outcome: OpsAuditOutcome,
+  metadata: Record<string, string | number | boolean | null> = {},
   targetUserIds: string[] = [],
 ): Promise<void> {
-  fixture.store.recordOpsAuditEvent({
+  const event = {
     action,
     outcome,
     actor: principal?.actor ?? 'ops:anonymous',
@@ -581,8 +582,46 @@ async function recordOpsAudit(
       ...metadata,
       actorRole: principal?.role ?? 'anonymous',
     },
-  });
+  };
+  const scopedOps = getScopedOpsStore();
+  if (scopedOps) await scopedOps.recordOpsAuditEvent(event);
+  else fixture.store.recordOpsAuditEvent(event);
   await persistIfEnabled();
+}
+
+function getScopedOpsStore() {
+  return scopedRuntimePersistence?.ops;
+}
+
+async function buildCurrentOpsOverview() {
+  const overview = buildOpsOverview(fixture.store, getOpsPersistenceInfo());
+  const scopedOps = getScopedOpsStore();
+  if (!scopedOps) return overview;
+
+  const [cleanupPlan, audit] = await Promise.all([
+    scopedOps.buildTestUserCleanupPlan(),
+    scopedOps.getAuditOverview(20),
+  ]);
+  return {
+    ...overview,
+    cleanupPlan,
+    audit,
+    totals: {
+      ...overview.totals,
+      testUsers: cleanupPlan.totals.users,
+      opsAuditEvents: audit.total,
+    },
+  };
+}
+
+async function queryCurrentOpsAuditEvents(query: ReturnType<typeof parseOpsAuditQuery>) {
+  const scopedOps = getScopedOpsStore();
+  return scopedOps ? scopedOps.queryOpsAuditEvents(query) : queryOpsAuditEvents(fixture.store, query);
+}
+
+async function cleanupCurrentTestUsers(dryRun: boolean) {
+  const scopedOps = getScopedOpsStore();
+  return scopedOps ? scopedOps.cleanupTestUsers(dryRun) : cleanupTestUsers(fixture.store, dryRun);
 }
 
 function getOpsRequestToken(req: IncomingMessage): string | null {
