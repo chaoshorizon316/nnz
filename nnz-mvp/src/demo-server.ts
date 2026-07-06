@@ -594,24 +594,10 @@ function getScopedOpsStore() {
 }
 
 async function buildCurrentOpsOverview() {
-  const overview = buildOpsOverview(fixture.store, getOpsPersistenceInfo());
   const scopedOps = getScopedOpsStore();
-  if (!scopedOps) return overview;
-
-  const [cleanupPlan, audit] = await Promise.all([
-    scopedOps.buildTestUserCleanupPlan(),
-    scopedOps.getAuditOverview(20),
-  ]);
-  return {
-    ...overview,
-    cleanupPlan,
-    audit,
-    totals: {
-      ...overview.totals,
-      testUsers: cleanupPlan.totals.users,
-      opsAuditEvents: audit.total,
-    },
-  };
+  return scopedOps
+    ? scopedOps.buildOverview(getOpsPersistenceInfo())
+    : buildOpsOverview(fixture.store, getOpsPersistenceInfo());
 }
 
 async function queryCurrentOpsAuditEvents(query: ReturnType<typeof parseOpsAuditQuery>) {

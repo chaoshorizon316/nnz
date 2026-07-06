@@ -1,11 +1,23 @@
 import { randomUUID } from 'node:crypto';
 
+import type { CredentialRecord } from '../auth/auth';
 import type { QueryablePool } from '../domain/postgres-scoped-soul-repository';
+import { InMemorySoulStore } from '../domain/soul-store';
 import type {
+  ConversationMessage,
+  MemoryItem,
+  NodeEvent,
   OpsAuditAction,
   OpsAuditEvent,
   OpsAuditOutcome,
+  Persona,
+  RuntimeSession,
+  SoulSnapshot,
+  SoulUpdateProposal,
+  SoulVersion,
+  User,
 } from '../domain/types';
+import { buildOpsOverview } from './ops-console';
 import type {
   OpsAuditOverview,
   OpsAuditQuery,
@@ -14,6 +26,8 @@ import type {
   OpsCleanupReceipt,
   OpsCleanupResult,
   OpsCleanupUser,
+  OpsOverview,
+  OpsPersistenceInfo,
 } from './ops-console';
 
 interface UserCredentialRow {
@@ -21,6 +35,110 @@ interface UserCredentialRow {
   display_name: string;
   created_at: string | Date;
   email: string | null;
+}
+
+interface UserRow {
+  id: string;
+  display_name: string;
+  created_at: string | Date;
+}
+
+interface PersonaRow {
+  id: string;
+  user_id: string;
+  display_name: string;
+  relationship: string;
+  type: Persona['type'];
+  created_at: string | Date;
+}
+
+interface MemoryRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  type: MemoryItem['type'];
+  source: MemoryItem['source'];
+  content: string;
+  confidence: number | string;
+  sensitivity: MemoryItem['sensitivity'];
+  enabled_for_soul: boolean;
+  enabled_for_runtime: boolean;
+  enabled_for_soul_update: boolean;
+  evidence_ids: unknown;
+  created_by: MemoryItem['createdBy'];
+  state: MemoryItem['state'];
+  created_at: string | Date;
+}
+
+interface SoulVersionRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  version: number | string;
+  kernel_json: unknown;
+  status: SoulVersion['status'];
+  knowledge_cutoff: string | Date | null;
+  created_at: string | Date;
+}
+
+interface SoulSnapshotRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  soul_version_id: string;
+  kernel_json: unknown;
+  memory_ids: unknown;
+  sealed_at: string | Date;
+}
+
+interface SoulUpdateProposalRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  field_path: string;
+  old_value: unknown;
+  new_value: unknown;
+  evidence_ids: unknown;
+  status: SoulUpdateProposal['status'];
+  created_at: string | Date;
+}
+
+interface NodeEventRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  name: string;
+  status: NodeEvent['status'];
+  start_at: string | Date;
+  end_at: string | Date;
+}
+
+interface ConversationRow {
+  id: string;
+  user_id: string;
+  persona_id: string;
+  node_id: string | null;
+  role: ConversationMessage['role'];
+  content: string;
+  created_at: string | Date;
+}
+
+interface RuntimeSessionRow {
+  user_id: string;
+  persona_id: string;
+  state: RuntimeSession['state'];
+  soul_snapshot_id: string | null;
+  node_id: string | null;
+  node_name: string | null;
+  daily_message_count: number | string | null;
+  last_message_date: string | null;
+}
+
+interface CredentialRow {
+  user_id: string;
+  email: string;
+  password_hash: string;
+  created_at: string | Date;
 }
 
 interface CountRow {
@@ -47,6 +165,7 @@ interface RecordOpsAuditEventInput {
 }
 
 export interface PostgresScopedOpsStore {
+  buildOverview(persistence: OpsPersistenceInfo): Promise<OpsOverview>;
   buildTestUserCleanupPlan(): Promise<OpsCleanupPlan>;
   cleanupTestUsers(dryRun?: boolean): Promise<OpsCleanupResult>;
   recordOpsAuditEvent(input: RecordOpsAuditEventInput): Promise<OpsAuditEvent>;
@@ -57,6 +176,7 @@ export interface PostgresScopedOpsStore {
 
 export function createPostgresScopedOpsStoreFromPool(pool: QueryablePool): PostgresScopedOpsStore {
   return {
+    buildOverview: (persistence) => buildPostgresScopedOpsOverview(pool, persistence),
     buildTestUserCleanupPlan: () => buildPostgresScopedTestUserCleanupPlan(pool),
     cleanupTestUsers: (dryRun = true) => cleanupPostgresScopedTestUsers(pool, dryRun),
     recordOpsAuditEvent: (input) => recordPostgresScopedOpsAuditEvent(pool, input),
@@ -64,6 +184,81 @@ export function createPostgresScopedOpsStoreFromPool(pool: QueryablePool): Postg
     queryOpsAuditEvents: (query = {}) => queryPostgresScopedOpsAuditEvents(pool, query),
     getAuditOverview: (limit = 20) => getPostgresScopedAuditOverview(pool, limit),
   };
+}
+
+async function buildPostgresScopedOpsOverview(
+  pool: QueryablePool,
+  persistence: OpsPersistenceInfo,
+): Promise<OpsOverview> {
+  const store = await loadPostgresScopedOpsSnapshot(pool);
+  return buildOpsOverview(store, persistence);
+}
+
+async function loadPostgresScopedOpsSnapshot(pool: QueryablePool): Promise<InMemorySoulStore> {
+  const [
+    users,
+    personas,
+    soulVersions,
+    soulSnapshots,
+    memoryItems,
+    soulUpdateProposals,
+    nodeEvents,
+    conversationMessages,
+    sessions,
+    credentials,
+    opsAuditEvents,
+  ] = await Promise.all([
+    pool.query<UserRow>('SELECT id, display_name, created_at FROM nnz_users'),
+    pool.query<PersonaRow>('SELECT id, user_id, display_name, relationship, type, created_at FROM nnz_personas'),
+    pool.query<SoulVersionRow>(
+      `SELECT id, user_id, persona_id, version, kernel_json, status, knowledge_cutoff, created_at
+       FROM nnz_soul_versions`,
+    ),
+    pool.query<SoulSnapshotRow>(
+      `SELECT id, user_id, persona_id, soul_version_id, kernel_json, memory_ids, sealed_at
+       FROM nnz_soul_snapshots`,
+    ),
+    pool.query<MemoryRow>(
+      `SELECT id, user_id, persona_id, type, source, content, confidence, sensitivity,
+        enabled_for_soul, enabled_for_runtime, enabled_for_soul_update,
+        evidence_ids, created_by, state, created_at
+       FROM nnz_memory_items`,
+    ),
+    pool.query<SoulUpdateProposalRow>(
+      `SELECT id, user_id, persona_id, field_path, old_value, new_value, evidence_ids, status, created_at
+       FROM nnz_soul_update_proposals`,
+    ),
+    pool.query<NodeEventRow>('SELECT id, user_id, persona_id, name, status, start_at, end_at FROM nnz_node_events'),
+    pool.query<ConversationRow>(
+      'SELECT id, user_id, persona_id, node_id, role, content, created_at FROM nnz_conversation_messages',
+    ),
+    pool.query<RuntimeSessionRow>(
+      `SELECT user_id, persona_id, state, soul_snapshot_id, node_id, node_name,
+        daily_message_count, last_message_date
+       FROM nnz_runtime_sessions`,
+    ),
+    pool.query<CredentialRow>('SELECT user_id, email, password_hash, created_at FROM nnz_credentials'),
+    pool.query<OpsAuditRow>(
+      `SELECT id, action, outcome, actor, target_user_ids, metadata, created_at
+       FROM nnz_ops_audit_events`,
+    ),
+  ]);
+
+  const store = new InMemorySoulStore();
+  store.deserialize({
+    users: users.rows.map(mapUserRow),
+    personas: personas.rows.map(mapPersonaRow),
+    soulVersions: soulVersions.rows.map(mapSoulVersionRow),
+    soulSnapshots: soulSnapshots.rows.map(mapSoulSnapshotRow),
+    memoryItems: memoryItems.rows.map(mapMemoryRow),
+    soulUpdateProposals: soulUpdateProposals.rows.map(mapSoulUpdateProposalRow),
+    nodeEvents: nodeEvents.rows.map(mapNodeEventRow),
+    conversationMessages: conversationMessages.rows.map(mapConversationRow),
+    sessions: sessions.rows.map(mapRuntimeSessionRowForSnapshot),
+    credentials: credentials.rows.map(mapCredentialRow),
+    opsAuditEvents: opsAuditEvents.rows.map(mapOpsAuditRow),
+  });
+  return store;
 }
 
 async function buildPostgresScopedTestUserCleanupPlan(pool: QueryablePool): Promise<OpsCleanupPlan> {
@@ -319,9 +514,177 @@ function mapOpsAuditRow(row: OpsAuditRow): OpsAuditEvent {
   };
 }
 
+function mapUserRow(row: UserRow): User {
+  return {
+    id: row.id,
+    displayName: row.display_name,
+    createdAt: toDate(row.created_at),
+  };
+}
+
+function mapPersonaRow(row: PersonaRow): Persona {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    displayName: row.display_name,
+    relationship: row.relationship,
+    type: row.type,
+    createdAt: toDate(row.created_at),
+  };
+}
+
+function mapSoulVersionRow(row: SoulVersionRow): SoulVersion {
+  const soulVersion: SoulVersion = {
+    id: row.id,
+    userId: row.user_id,
+    personaId: row.persona_id,
+    version: Number(row.version),
+    kernelJson: normalizeJsonObject(row.kernel_json),
+    status: row.status,
+    createdAt: toDate(row.created_at),
+  };
+  if (row.knowledge_cutoff) {
+    soulVersion.knowledgeCutoff = toDate(row.knowledge_cutoff);
+  }
+  return soulVersion;
+}
+
+function mapSoulSnapshotRow(row: SoulSnapshotRow): SoulSnapshot {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    personaId: row.persona_id,
+    soulVersionId: row.soul_version_id,
+    kernelJson: normalizeJsonObject(row.kernel_json),
+    memoryIds: normalizeStringArray(row.memory_ids),
+    sealedAt: toDate(row.sealed_at),
+  };
+}
+
+function mapMemoryRow(row: MemoryRow): MemoryItem {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    personaId: row.persona_id,
+    type: row.type,
+    source: row.source,
+    content: row.content,
+    confidence: Number(row.confidence),
+    sensitivity: row.sensitivity,
+    enabledForSoul: row.enabled_for_soul,
+    enabledForRuntime: row.enabled_for_runtime,
+    enabledForSoulUpdate: row.enabled_for_soul_update,
+    evidenceIds: normalizeStringArray(row.evidence_ids),
+    createdBy: row.created_by,
+    state: row.state,
+    createdAt: toDate(row.created_at),
+  };
+}
+
+function mapSoulUpdateProposalRow(row: SoulUpdateProposalRow): SoulUpdateProposal {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    personaId: row.persona_id,
+    fieldPath: row.field_path,
+    oldValue: normalizeJsonValue(row.old_value),
+    newValue: normalizeJsonValue(row.new_value),
+    evidenceIds: normalizeStringArray(row.evidence_ids),
+    status: row.status,
+    createdAt: toDate(row.created_at),
+  };
+}
+
+function mapNodeEventRow(row: NodeEventRow): NodeEvent {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    personaId: row.persona_id,
+    name: row.name,
+    status: row.status,
+    startAt: toDate(row.start_at),
+    endAt: toDate(row.end_at),
+  };
+}
+
+function mapConversationRow(row: ConversationRow): ConversationMessage {
+  const message: ConversationMessage = {
+    id: row.id,
+    userId: row.user_id,
+    personaId: row.persona_id,
+    role: row.role,
+    content: row.content,
+    createdAt: toDate(row.created_at),
+  };
+  if (row.node_id) {
+    message.nodeId = row.node_id;
+  }
+  return message;
+}
+
+function mapRuntimeSessionRowForSnapshot(row: RuntimeSessionRow): {
+  scopeKey: string;
+  userId: string;
+  personaId: string;
+  state: string;
+  soulSnapshotId?: string;
+  nodeId?: string;
+  nodeName?: string;
+  dailyMessageCount?: number;
+  lastMessageDate?: string;
+} {
+  const session: {
+    scopeKey: string;
+    userId: string;
+    personaId: string;
+    state: string;
+    soulSnapshotId?: string;
+    nodeId?: string;
+    nodeName?: string;
+    dailyMessageCount?: number;
+    lastMessageDate?: string;
+  } = {
+    scopeKey: `${row.user_id}:${row.persona_id}`,
+    userId: row.user_id,
+    personaId: row.persona_id,
+    state: row.state,
+  };
+  if (row.soul_snapshot_id) session.soulSnapshotId = row.soul_snapshot_id;
+  if (row.node_id && row.node_name) {
+    session.nodeId = row.node_id;
+    session.nodeName = row.node_name;
+  }
+  if (row.daily_message_count !== null) session.dailyMessageCount = Number(row.daily_message_count);
+  if (row.last_message_date !== null) session.lastMessageDate = row.last_message_date;
+  return session;
+}
+
+function mapCredentialRow(row: CredentialRow): CredentialRecord {
+  return {
+    userId: row.user_id,
+    email: row.email,
+    passwordHash: row.password_hash,
+    createdAt: toDate(row.created_at).toISOString(),
+  };
+}
+
 function normalizeStringArray(value: unknown): string[] {
   const parsed = typeof value === 'string' ? JSON.parse(value) : value;
   return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+}
+
+function normalizeJsonObject(value: unknown): Record<string, unknown> {
+  const parsed = normalizeJsonValue(value);
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+}
+
+function normalizeJsonValue(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
 }
 
 function normalizeMetadata(value: unknown): Record<string, string | number | boolean | null> {

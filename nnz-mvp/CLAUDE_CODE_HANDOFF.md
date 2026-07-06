@@ -1274,12 +1274,12 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.26。最新已推送提交是 `7a17fe0 feat: add scoped runtime smoke guard`；当前本地新增 scoped Ops cleanup/audit cutover slice，尚待用户推送。迁移 readiness 还剩 4 个目标未完全收口：
+Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.27。最新已推送提交是 `82558ff feat: add scoped ops cleanup audit store`；当前本地新增 scoped Ops overview aggregation，尚待用户推送。迁移 readiness 还剩 4 个目标未完全收口：
 
 1. 用真实本地 snapshot 样本跑 `migration:readiness`，生成 raw snapshot、sanitized report、sanitized summary。
 2. 用一次性 Postgres 测试库跑 `migration:smoke`。
 3. 在 Render 验证可选角色 token 的 viewer/operator/admin 权限边界。
-4. 用 disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 跑 `runtime:smoke` 与 `/api/me/*` scoped Postgres smoke，并扩展后续 full Ops overview/export/delete flow。
+4. 用 disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 跑 `runtime:smoke` 与 `/api/me/*` scoped Postgres smoke，并扩展后续用户 export/delete flow。
 
 当前不需要每个小步骤都停下来等 push；应按上面目标连续开发和验证。遇到真实 snapshot、`NNZ_POSTGRES_INTEGRATION_URL`、Render role tokens 这类外部输入点时再做明确 checkpoint。完整路线图见 `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`。
 
@@ -1326,7 +1326,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`、`nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`、`nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md`、`nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`、`nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md`、`nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md`、`nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md`、`nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`、`nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md`、`nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md`、`nnz-mvp-2026-07-01-Step2.19-DisposableMigrationSmokeCLI.md`、`nnz-mvp-2026-07-01-Step2.20-RuntimePersistenceModeGuardrail.md`、`nnz-mvp-2026-07-02-Step2.21-MigrationGuardrailHardening.md`、`nnz-mvp-2026-07-03-Step2.22-ScopedRuntimeAdapterFoundation.md`、`nnz-mvp-2026-07-03-Step2.23-ApiMeScopedRuntimeAdapter.md`、`nnz-mvp-2026-07-03-Step2.24-GuardedScopedRuntimePostgresMode.md`、`nnz-mvp-2026-07-03-Step2.25-ScopedRuntimeSmokeGuard.md` 和 `nnz-mvp-2026-07-03-Step2.26-ScopedOpsCleanupAudit.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口；而是按 4 个未完全收口目标推进：真实 snapshot readiness、一次性 Postgres migration smoke、云端角色 token smoke，以及真实 scoped Postgres runtime smoke 与后续 full Ops overview/export/delete flow。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`、`nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`、`nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md`、`nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`、`nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md`、`nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md`、`nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md`、`nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`、`nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md`、`nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md`、`nnz-mvp-2026-07-01-Step2.19-DisposableMigrationSmokeCLI.md`、`nnz-mvp-2026-07-01-Step2.20-RuntimePersistenceModeGuardrail.md`、`nnz-mvp-2026-07-02-Step2.21-MigrationGuardrailHardening.md`、`nnz-mvp-2026-07-03-Step2.22-ScopedRuntimeAdapterFoundation.md`、`nnz-mvp-2026-07-03-Step2.23-ApiMeScopedRuntimeAdapter.md`、`nnz-mvp-2026-07-03-Step2.24-GuardedScopedRuntimePostgresMode.md`、`nnz-mvp-2026-07-03-Step2.25-ScopedRuntimeSmokeGuard.md`、`nnz-mvp-2026-07-03-Step2.26-ScopedOpsCleanupAudit.md` 和 `nnz-mvp-2026-07-06-Step2.27-ScopedOpsOverview.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口；而是按 4 个未完全收口目标推进：真实 snapshot readiness、一次性 Postgres migration smoke、云端角色 token smoke，以及真实 scoped Postgres runtime smoke 与后续用户 export/delete flow。
 
 ## 16.2.1 2026-06-23 Step 2.5 Postgres scoped repository
 
@@ -1990,6 +1990,31 @@ scoped Ops store 覆盖：
 npm test -- src/ops/postgres-scoped-ops-store.test.ts src/runtime/scoped-runtime-persistence.test.ts src/ops/ops-console.test.ts --reporter verbose: 9 tests passed
 npm run typecheck: passed
 npm test: 26 个测试文件、154 tests passed；2 个 integration 文件 skipped
+npm run build:demo: passed
+```
+
+## 16.2.23 2026-07-06 Step 2.27 scoped Ops overview aggregation
+
+已完成 scoped mode 下 `/api/ops/overview` 的 users/personas/maturity 聚合切换：
+
+- `src/ops/postgres-scoped-ops-store.ts` 新增 `buildOverview(persistence)`。
+- overview 从 scoped Postgres tables 读取 users/personas/soul_versions/snapshots/memory/proposals/nodes/conversations/sessions/credentials/audit。
+- 后台内部重建临时 `InMemorySoulStore` snapshot，并复用现有 `buildOpsOverview()` 与 Soul maturity 算法。
+- `src/demo-server.ts` scoped mode 下 `/api/ops/overview` 不再从 demo fixture store 聚合 users/personas/maturity。
+- snapshot / SQLite / JSONB snapshot mode 行为不变。
+
+安全边界：
+
+- 读取路径仍以 `userId + personaId` 组织 scoped rows；没有引入 persona-only owner 查询。
+- overview 返回摘要、counts、maturity、audit，不返回 memory/chat 正文或 credential hash。
+- JSONB scalar string 兼容普通 JS string 与 JSON string，避免真实 pg 行为差异导致 overview 失败。
+
+验证：
+
+```text
+npm test -- src/ops/postgres-scoped-ops-store.test.ts --reporter verbose: 4 tests passed
+npm run typecheck: passed
+npm test: 26 个测试文件、155 tests passed；2 个 integration 文件 skipped
 npm run build:demo: passed
 ```
 
