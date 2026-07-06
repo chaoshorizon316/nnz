@@ -17,6 +17,7 @@
     "migration:smoke": "node --import tsx src/tools/postgres-scoped-migration-smoke-cli.ts",
     "runtime:http-smoke": "node --import tsx src/tools/postgres-scoped-runtime-http-smoke-cli.ts",
     "runtime:smoke": "node --import tsx src/tools/postgres-scoped-runtime-smoke-cli.ts",
+    "runtime:smoke-suite": "node --import tsx src/tools/postgres-scoped-runtime-smoke-suite-cli.ts",
     "snapshot:export": "node --import tsx src/tools/store-snapshot-export-cli.ts"
   },
   "engines": {
