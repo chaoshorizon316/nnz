@@ -353,6 +353,18 @@ export class PostgresScopedSoulRepository {
     return mapSoulSnapshotRow(row);
   }
 
+  async listSoulSnapshots(): Promise<SoulSnapshot[]> {
+    await this.ensureBoundPersona();
+    const result = await this.pool.query<SoulSnapshotRow>(
+      `SELECT *
+       FROM nnz_soul_snapshots
+       WHERE user_id = $1 AND persona_id = $2
+       ORDER BY sealed_at ASC, id ASC`,
+      [this.scopeValue.userId, this.scopeValue.personaId],
+    );
+    return result.rows.map(mapSoulSnapshotRow);
+  }
+
   async addMemory(input: PostgresScopedAddMemoryInput): Promise<MemoryItem> {
     await this.ensureBoundPersona();
     const memory = createMemory({ ...input, ...this.scopeValue });

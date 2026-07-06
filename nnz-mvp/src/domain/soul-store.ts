@@ -173,6 +173,12 @@ export class InMemorySoulStore {
     return this.listSoulVersionsAll(scope);
   }
 
+  listSoulSnapshots(scopeInput: OptionalScope): SoulSnapshot[] {
+    const scope = this.requireScope(scopeInput);
+    this.requirePersonaOwnership(scope);
+    return this.listSoulSnapshotsAll(scope);
+  }
+
   createSoulSnapshot(scopeInput: OptionalScope): SoulSnapshot {
     const scope = this.requireScope(scopeInput);
     this.requirePersonaOwnership(scope);
@@ -400,7 +406,7 @@ export class InMemorySoulStore {
     const runtimeMemories = this.listRuntimeMemory(scope);
     const soulUpdateMemories = this.listSoulUpdateMemory(scope);
     const proposals = this.listSoulUpdateProposals(scope);
-    const snapshots = this.listSoulSnapshots(scope);
+    const snapshots = this.listSoulSnapshotsAll(scope);
     const nodes = this.listNodes(scope);
     const conversations = this.listConversations(scope);
     const session = this.getRuntimeSession(scope);
@@ -857,7 +863,7 @@ export class InMemorySoulStore {
       .sort((left, right) => left.version - right.version);
   }
 
-  private listSoulSnapshots(scope: UserPersonaScope): SoulSnapshot[] {
+  private listSoulSnapshotsAll(scope: UserPersonaScope): SoulSnapshot[] {
     return [...this.soulSnapshots.values()]
       .filter((snapshot) => snapshot.userId === scope.userId && snapshot.personaId === scope.personaId)
       .sort((left, right) => left.sealedAt.getTime() - right.sealedAt.getTime());

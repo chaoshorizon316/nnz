@@ -71,6 +71,10 @@ export class ScopedSoulRepository {
     return this.store.getSoulSnapshot(this.scopeValue, snapshotId);
   }
 
+  listSoulSnapshots(): SoulSnapshot[] {
+    return this.store.listSoulSnapshots(this.scopeValue);
+  }
+
   addMemory(input: ScopedAddMemoryInput): MemoryItem {
     return this.store.addMemory({ ...input, ...this.scopeValue });
   }

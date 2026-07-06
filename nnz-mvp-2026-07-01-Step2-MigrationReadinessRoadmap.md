@@ -2,15 +2,15 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.27。最新已推送提交是：
+Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.28。最新已推送提交是：
 
 ```text
-82558ff feat: add scoped ops cleanup audit store
+c7e1ce4 feat: add scoped ops overview aggregation
 ```
 
-当前本地新增 Step 2.27 scoped Ops overview aggregation，尚待下一次合并 push。
+当前本地新增 Step 2.28 user data export/delete cutover，尚待下一次合并 push。
 
-截至 2026-07-06，迁移链路还剩 **4 个目标未完全收口**：真实本地 snapshot readiness、一次性 Postgres smoke、Render 角色 token smoke、以及真实 scoped runtime DB smoke 与后续用户 export/delete 收口。受保护执行入口、readiness/smoke CLI、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover，以及 scoped Ops overview aggregation 都已完成本地实现。
+截至 2026-07-06，迁移链路还剩 **4 个目标未完全收口**：真实本地 snapshot readiness、一次性 Postgres smoke、Render 角色 token smoke、以及真实 scoped runtime DB smoke。受保护执行入口、readiness/smoke CLI、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation，以及用户 export/delete cutover 都已完成本地实现。
 
 ## 已完成基线
 
@@ -35,6 +35,7 @@ Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Ste
 - Step 2.25：`NNZ_POSTGRES_SCOPED_RUNTIME_URL` 已加生产别名误配防护；新增 `runtime:smoke`，只允许专用 scoped runtime URL + 显式 confirm，并用 scoped runtime adapter 验证 credential/persona/runtime context/Covenant/cross-scope/cascade/cleanup，输出全脱敏。
 - Step 2.26：scoped mode 下 Ops cleanup/audit 第一段已切到 scoped Postgres；`/api/ops/cleanup-test-users` dry-run/confirm 与 audit write/query 可走 `nnz_*` scoped tables；full Ops overview user/persona maturity 与用户 export/delete 仍待后续。
 - Step 2.27：scoped mode 下 `/api/ops/overview` users/personas/maturity aggregation 已切到 scoped Postgres；后台内部复用现有 maturity 算法，不返回 memory/chat/hash 正文。
+- Step 2.28：用户数据 export/delete 已接入 `ScopedRuntimeAdapter`；`GET /api/me/export` 导出当前登录用户自己的完整数据档案但不含 credential hash 或后台 OpsAudit，`POST /api/me/delete` 需要 `DELETE_MY_DATA` 确认并只删除当前登录用户；scoped Postgres mode 下通过 `nnz_users` FK cascade 清理 scoped tables。
 
 ## 剩余目标状态
 
@@ -43,14 +44,14 @@ Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Ste
 | 1 | 真实本地 snapshot dry-run | 本地 readiness CLI 已实现；仍需要可用的本地 SQLite 或 snapshot JSON | 运行 `migration:readiness` 生成 raw snapshot、sanitized report、sanitized summary，审阅 blocking errors、warnings、rowBuild counts |
 | 2 | 一次性 Postgres repository/executor integration run | 本地 smoke CLI 与 guardrails 已实现；仍需要 `NNZ_POSTGRES_INTEGRATION_URL` 指向一次性库，不能等于线上 `DATABASE_URL` / `NNZ_POSTGRES_URL` | `migration:smoke` 在 disposable DB 上通过，覆盖 executor 幂等、repository 读回、scope 隔离、audit row、级联删除和 cleanup |
 | 3 | 云端角色 token smoke | 需要 Render 配置 viewer/operator/admin token 或用户提供操作窗口 | 验证 viewer 只读、operator 可 dry-run、admin 可 confirm cleanup；不记录 token 明文 |
-| 4 | demo runtime scoped-table adapter | Step 2.20/2.21 已加 runtime 与 migration guardrails；Step 2.22 已建立 adapter foundation；Step 2.23 已把 `/api/me/*` auth/persona/chat/Covenant flow 接到 InMemory adapter；Step 2.24 已接 guarded scoped Postgres runtime mode；Step 2.25 已补 `runtime:smoke`；Step 2.26 已补 scoped Ops cleanup/audit；Step 2.27 已补 scoped Ops overview；真实 scoped DB smoke、用户 export/delete 后续仍待切换 | `/api/me/*`、chat、ops、cleanup、export/delete 都走 scoped tables，仍保持 `userId + personaId` 强隔离 |
+| 4 | demo runtime scoped-table adapter | Step 2.20/2.21 已加 runtime 与 migration guardrails；Step 2.22 已建立 adapter foundation；Step 2.23 已把 `/api/me/*` auth/persona/chat/Covenant flow 接到 InMemory adapter；Step 2.24 已接 guarded scoped Postgres runtime mode；Step 2.25 已补 `runtime:smoke`；Step 2.26 已补 scoped Ops cleanup/audit；Step 2.27 已补 scoped Ops overview；Step 2.28 已补用户 export/delete；真实 scoped DB smoke 与 HTTP smoke 仍待实跑 | `/api/me/*`、chat、ops、cleanup、export/delete 都走 scoped tables，仍保持 `userId + personaId` 强隔离 |
 
 ## 推荐推进顺序
 
 1. 先做目标 1：拿一个真实本地 snapshot 样本跑 `migration:readiness`。这个步骤只读本地文件，不连数据库，最适合先发现数据形状问题。
 2. 再做目标 2：用一次性 Postgres 测试库实跑 `migration:smoke`。这里必须使用 disposable DB，不能使用 Render 线上库。
 3. 做目标 3：当 Render 角色 token 配好后，补 viewer/operator/admin cloud smoke。
-4. 最后继续目标 4：用 disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 先跑 `runtime:smoke`，再跑 `/api/me/*` scoped Postgres smoke，然后扩展 Ops/cleanup/export/delete。
+4. 最后继续目标 4：用 disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 先跑 `runtime:smoke`，再跑 `/api/me/*` scoped Postgres smoke，覆盖注册、创建、聊天、Covenant、导出和删除。
 
 ## 安全边界
 
@@ -69,7 +70,7 @@ Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Ste
 
 ## 当前可继续做的本地工作
 
-- 用 disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 跑 `runtime:smoke` 与 `/api/me/*` scoped Postgres smoke；默认仍保持 snapshot persistence。
+- 用 disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 跑 `runtime:smoke` 与 `/api/me/*` scoped Postgres HTTP smoke；默认仍保持 snapshot persistence。
 
 ## 当前需要用户或外部环境提供的东西
 

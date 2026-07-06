@@ -221,6 +221,24 @@ const server = createServer(async (req, res) => {
       return sendJson(res, await buildMeResponse(authUser));
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/me/export') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      return sendJson(res, { export: await getRuntimeAdapter().exportUserData(authUser.userId) });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/me/delete') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      const body = await readJsonBody<{ confirm?: string }>(req);
+      if (body.confirm !== 'DELETE_MY_DATA') {
+        return sendJson(res, { error: '请确认后再删除全部数据。' }, 400);
+      }
+      const result = await getRuntimeAdapter().deleteUserData(authUser.userId);
+      await persistIfEnabled();
+      return sendJson(res, { result });
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/me/personas') {
       const authUser = requireAuth(req, res);
       if (!authUser) return;

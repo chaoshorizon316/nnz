@@ -368,7 +368,11 @@
           </div>
           <div id="h5AuthSignedIn" class="hidden">
             <p class="text-sm text-warm-600">已登录：<span id="h5UserEmail" class="font-medium text-warm-800"></span></p>
-            <button onclick="h5Logout()" class="mt-3 px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">退出</button>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button onclick="h5ExportData()" class="px-4 py-2 border border-sage-200 text-sage-600 text-sm font-medium rounded-full hover:bg-sage-50 transition-colors">导出</button>
+              <button onclick="h5DeleteAllData()" class="px-4 py-2 border border-red-200 text-red-500 text-sm font-medium rounded-full hover:bg-red-50 transition-colors">删除全部数据</button>
+              <button onclick="h5Logout()" class="px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">退出</button>
+            </div>
           </div>
           <p id="h5AuthStatus" class="text-xs text-sage-600 h-4"></p>
         </div>
@@ -1441,6 +1445,49 @@ function h5Logout(reload = true) {
   localStorage.removeItem('nnz_h5_token');
   localStorage.removeItem('nnz_h5_persona_id');
   if (reload) location.reload();
+}
+
+async function h5ExportData() {
+  if (!h5Token) {
+    h5SetStatus('h5AuthStatus', '请先登录。');
+    return;
+  }
+  try {
+    const data = await h5Request('/api/me/export');
+    const payload = JSON.stringify(data.export, null, 2);
+    const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'nianzain-data-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    h5SetStatus('h5AuthStatus', '已开始导出。');
+  } catch (error) {
+    h5SetStatus('h5AuthStatus', error.message || '导出失败。');
+  }
+}
+
+async function h5DeleteAllData() {
+  if (!h5Token) {
+    h5SetStatus('h5AuthStatus', '请先登录。');
+    return;
+  }
+  const confirmText = prompt('输入“删除”确认清除全部数据。');
+  if (confirmText !== '删除') return;
+  try {
+    await h5Request('/api/me/delete', {
+      method: 'POST',
+      body: { confirm: 'DELETE_MY_DATA' },
+    });
+    h5SetStatus('h5AuthStatus', '已删除全部数据。');
+    h5Logout(false);
+    setTimeout(() => location.reload(), 500);
+  } catch (error) {
+    h5SetStatus('h5AuthStatus', error.message || '删除失败。');
+  }
 }
 
 function h5UpdatePersonaList(personas) {

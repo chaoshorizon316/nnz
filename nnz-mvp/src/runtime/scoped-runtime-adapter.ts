@@ -1,5 +1,5 @@
 import type { CredentialRecord } from '../auth/auth';
-import { CovenantStateError } from '../domain/errors';
+import { CovenantStateError, NotFoundError } from '../domain/errors';
 import {
   createPostgresPersona,
   createPostgresScopedSoulRepositoryFromPool,
@@ -21,6 +21,7 @@ import type {
   RuntimeContext,
   RuntimeSession,
   SoulSnapshot,
+  SoulUpdateProposal,
   SoulVersion,
   User,
   UserPersonaScope,
@@ -33,12 +34,53 @@ export interface ScopedRuntimeCreatePersonaInput {
   type: PersonaType;
 }
 
+export interface UserDataExportCredential {
+  email: string;
+  createdAt: string;
+}
+
+export interface UserDataExportTotals {
+  users: number;
+  personas: number;
+  soulVersions: number;
+  soulSnapshots: number;
+  memoryItems: number;
+  soulUpdateProposals: number;
+  nodeEvents: number;
+  conversationMessages: number;
+  sessions: number;
+  credentials: number;
+}
+
+export interface UserDataExport {
+  exportedAt: string;
+  user: User;
+  credential: UserDataExportCredential | null;
+  personas: Persona[];
+  soulVersions: SoulVersion[];
+  soulSnapshots: SoulSnapshot[];
+  memoryItems: MemoryItem[];
+  soulUpdateProposals: SoulUpdateProposal[];
+  nodeEvents: NodeEvent[];
+  conversationMessages: ConversationMessage[];
+  sessions: RuntimeSession[];
+  totals: UserDataExportTotals;
+}
+
+export interface DeleteUserDataResult {
+  userId: string;
+  deletedAt: string;
+  deleted: UserDataExportTotals;
+}
+
 export interface ScopedRuntimeAdapter {
   createUser(displayName: string): Promise<User>;
   storeCredential(userId: string, email: string, passwordHash: string): Promise<void>;
   getCredentialByEmail(email: string): Promise<CredentialRecord | undefined>;
   createPersona(input: ScopedRuntimeCreatePersonaInput): Promise<Persona>;
   listPersonasForUser(userId: string): Promise<Persona[]>;
+  exportUserData(userId: string): Promise<UserDataExport>;
+  deleteUserData(userId: string): Promise<DeleteUserDataResult>;
   forPersona(scope: UserPersonaScope): ScopedPersonaRuntimeAdapter;
 }
 
@@ -68,6 +110,8 @@ interface ScopedRuntimeDriver {
   getCredentialByEmail(email: string): Promise<CredentialRecord | undefined>;
   createPersona(input: ScopedRuntimeCreatePersonaInput): Promise<Persona>;
   listPersonasForUser(userId: string): Promise<Persona[]>;
+  exportUserData(userId: string): Promise<UserDataExport>;
+  deleteUserData(userId: string): Promise<DeleteUserDataResult>;
   bind(scope: UserPersonaScope): ScopedPersonaRuntimeRepository;
 }
 
@@ -97,6 +141,28 @@ interface CredentialRow {
   created_at: string | Date;
 }
 
+interface UserRow {
+  id: string;
+  display_name: string;
+  created_at: string | Date;
+}
+
+interface CredentialExportRow {
+  email: string;
+  created_at: string | Date;
+}
+
+interface RuntimeSessionRow {
+  user_id: string;
+  persona_id: string;
+  state: RuntimeSession['state'];
+  soul_snapshot_id: string | null;
+  node_id: string | null;
+  node_name: string | null;
+  daily_message_count: number | string | null;
+  last_message_date: string | null;
+}
+
 export function createScopedRuntimeAdapter(driver: ScopedRuntimeDriver): ScopedRuntimeAdapter {
   return {
     createUser: (displayName) => driver.createUser(displayName),
@@ -104,6 +170,8 @@ export function createScopedRuntimeAdapter(driver: ScopedRuntimeDriver): ScopedR
     getCredentialByEmail: (email) => driver.getCredentialByEmail(email),
     createPersona: (input) => driver.createPersona(input),
     listPersonasForUser: (userId) => driver.listPersonasForUser(userId),
+    exportUserData: (userId) => driver.exportUserData(userId),
+    deleteUserData: (userId) => driver.deleteUserData(userId),
     forPersona: (scope) => createScopedPersonaRuntimeAdapter(driver.bind(scope)),
   };
 }
@@ -117,6 +185,8 @@ export function createInMemoryScopedRuntimeAdapter(store: InMemorySoulStore): Sc
     getCredentialByEmail: async (email) => store.getCredentialByEmail(email),
     createPersona: async (input) => store.createPersona(input),
     listPersonasForUser: async (userId) => store.listPersonasForUser(userId),
+    exportUserData: async (userId) => exportInMemoryUserData(store, userId),
+    deleteUserData: async (userId) => deleteInMemoryUserData(store, userId),
     bind: (scope) => new InMemoryScopedPersonaRuntimeRepository(store, scope),
   });
 }
@@ -128,8 +198,253 @@ export function createPostgresScopedRuntimeAdapter(pool: QueryableClient): Scope
     getCredentialByEmail: (email) => getPostgresCredentialByEmail(pool, email),
     createPersona: (input) => createPostgresPersona(pool, input),
     listPersonasForUser: (userId) => listPostgresPersonasForUser(pool, userId),
+    exportUserData: (userId) => exportPostgresUserData(pool, userId),
+    deleteUserData: (userId) => deletePostgresUserData(pool, userId),
     bind: (scope) => createPostgresScopedSoulRepositoryFromPool(pool, scope),
   });
+}
+
+async function exportInMemoryUserData(store: InMemorySoulStore, userId: string): Promise<UserDataExport> {
+  const snapshot = store.serialize();
+  const user = snapshot.users.find((candidate) => candidate.id === userId);
+  if (!user) {
+    throw new NotFoundError(`User ${userId} was not found.`);
+  }
+
+  const personas = store.listPersonasForUser(userId);
+  const soulVersions: SoulVersion[] = [];
+  const soulSnapshots: SoulSnapshot[] = [];
+  const memoryItems: MemoryItem[] = [];
+  const soulUpdateProposals: SoulUpdateProposal[] = [];
+  const nodeEvents: NodeEvent[] = [];
+  const conversationMessages: ConversationMessage[] = [];
+
+  for (const persona of personas) {
+    const scope = { userId, personaId: persona.id };
+    soulVersions.push(...store.listSoulVersions(scope));
+    soulSnapshots.push(...store.listSoulSnapshots(scope));
+    memoryItems.push(...store.listMemory(scope));
+    soulUpdateProposals.push(...store.listSoulUpdateProposals(scope));
+    nodeEvents.push(...store.listNodes(scope));
+    conversationMessages.push(...store.listConversations(scope));
+  }
+
+  const personaIds = new Set(personas.map((persona) => persona.id));
+  const sessions = snapshot.sessions
+    .filter((session) => session.userId === userId && personaIds.has(session.personaId))
+    .map(mapSerializedSession);
+  const credentialRecord = snapshot.credentials.find((credential) => credential.userId === userId);
+  const exportData = buildUserDataExport({
+    user,
+    credential: credentialRecord
+      ? { email: credentialRecord.email, createdAt: credentialRecord.createdAt }
+      : null,
+    personas,
+    soulVersions,
+    soulSnapshots,
+    memoryItems,
+    soulUpdateProposals,
+    nodeEvents,
+    conversationMessages,
+    sessions,
+  });
+  return exportData;
+}
+
+async function deleteInMemoryUserData(store: InMemorySoulStore, userId: string): Promise<DeleteUserDataResult> {
+  const exportData = await exportInMemoryUserData(store, userId);
+  store.deleteUserScopedData(userId);
+  return buildDeleteUserDataResult(exportData);
+}
+
+async function exportPostgresUserData(pool: QueryableClient, userId: string): Promise<UserDataExport> {
+  const userResult = await pool.query<UserRow>(
+    `SELECT *
+     FROM nnz_users
+     WHERE id = $1`,
+    [userId],
+  );
+  const userRow = userResult.rows[0];
+  if (!userRow) {
+    throw new NotFoundError(`User ${userId} was not found.`);
+  }
+
+  const personas = await listPostgresPersonasForUser(pool, userId);
+  const credentialResult = await pool.query<CredentialExportRow>(
+    `SELECT email, created_at
+     FROM nnz_credentials
+     WHERE user_id = $1`,
+    [userId],
+  );
+
+  const scopedExports = await Promise.all(personas.map(async (persona) => {
+    const scope = { userId, personaId: persona.id };
+    const repository = createPostgresScopedSoulRepositoryFromPool(pool, scope);
+    const [
+      soulVersions,
+      soulSnapshots,
+      memoryItems,
+      soulUpdateProposals,
+      nodeEvents,
+      conversationMessages,
+      sessions,
+    ] = await Promise.all([
+      repository.listSoulVersions(),
+      repository.listSoulSnapshots(),
+      repository.listMemory(),
+      repository.listSoulUpdateProposals(),
+      repository.listNodes(),
+      repository.listConversations(),
+      listPostgresRuntimeSessionsForScope(pool, scope),
+    ]);
+    return {
+      soulVersions,
+      soulSnapshots,
+      memoryItems,
+      soulUpdateProposals,
+      nodeEvents,
+      conversationMessages,
+      sessions,
+    };
+  }));
+
+  const credentialRow = credentialResult.rows[0];
+  return buildUserDataExport({
+    user: mapPostgresUserRow(userRow),
+    credential: credentialRow
+      ? { email: credentialRow.email, createdAt: toIsoString(credentialRow.created_at) }
+      : null,
+    personas,
+    soulVersions: scopedExports.flatMap((item) => item.soulVersions),
+    soulSnapshots: scopedExports.flatMap((item) => item.soulSnapshots),
+    memoryItems: scopedExports.flatMap((item) => item.memoryItems),
+    soulUpdateProposals: scopedExports.flatMap((item) => item.soulUpdateProposals),
+    nodeEvents: scopedExports.flatMap((item) => item.nodeEvents),
+    conversationMessages: scopedExports.flatMap((item) => item.conversationMessages),
+    sessions: scopedExports.flatMap((item) => item.sessions),
+  });
+}
+
+async function deletePostgresUserData(pool: QueryableClient, userId: string): Promise<DeleteUserDataResult> {
+  const exportData = await exportPostgresUserData(pool, userId);
+  await pool.query(
+    `DELETE FROM nnz_users
+     WHERE id = $1`,
+    [userId],
+  );
+  return buildDeleteUserDataResult(exportData);
+}
+
+async function listPostgresRuntimeSessionsForScope(
+  pool: QueryableClient,
+  scope: UserPersonaScope,
+): Promise<RuntimeSession[]> {
+  const result = await pool.query<RuntimeSessionRow>(
+    `SELECT user_id, persona_id, state, soul_snapshot_id, node_id, node_name,
+            daily_message_count, last_message_date
+     FROM nnz_runtime_sessions
+     WHERE user_id = $1 AND persona_id = $2
+     ORDER BY user_id ASC, persona_id ASC`,
+    [scope.userId, scope.personaId],
+  );
+  return result.rows.map(mapPostgresRuntimeSessionRow);
+}
+
+function buildUserDataExport(input: Omit<UserDataExport, 'exportedAt' | 'totals'>): UserDataExport {
+  const exportData: UserDataExport = {
+    exportedAt: new Date().toISOString(),
+    ...input,
+    totals: {
+      users: 1,
+      personas: input.personas.length,
+      soulVersions: input.soulVersions.length,
+      soulSnapshots: input.soulSnapshots.length,
+      memoryItems: input.memoryItems.length,
+      soulUpdateProposals: input.soulUpdateProposals.length,
+      nodeEvents: input.nodeEvents.length,
+      conversationMessages: input.conversationMessages.length,
+      sessions: input.sessions.length,
+      credentials: input.credential ? 1 : 0,
+    },
+  };
+  return exportData;
+}
+
+function buildDeleteUserDataResult(exportData: UserDataExport): DeleteUserDataResult {
+  return {
+    userId: exportData.user.id,
+    deletedAt: new Date().toISOString(),
+    deleted: { ...exportData.totals },
+  };
+}
+
+function mapSerializedSession(session: {
+  userId: string;
+  personaId: string;
+  state: string;
+  soulSnapshotId?: string;
+  nodeId?: string;
+  nodeName?: string;
+  dailyMessageCount?: number;
+  lastMessageDate?: string;
+}): RuntimeSession {
+  const mapped: RuntimeSession = {
+    userId: session.userId,
+    personaId: session.personaId,
+    state: session.state as RuntimeSession['state'],
+  };
+  if (session.soulSnapshotId) {
+    mapped.soulSnapshotId = session.soulSnapshotId;
+  }
+  if (session.nodeId && session.nodeName) {
+    mapped.nodeContext = {
+      nodeId: session.nodeId,
+      nodeName: session.nodeName,
+    };
+  }
+  if (session.dailyMessageCount !== undefined) {
+    mapped.dailyMessageCount = session.dailyMessageCount;
+  }
+  if (session.lastMessageDate !== undefined) {
+    mapped.lastMessageDate = session.lastMessageDate;
+  }
+  return mapped;
+}
+
+function mapPostgresUserRow(row: UserRow): User {
+  return {
+    id: row.id,
+    displayName: row.display_name,
+    createdAt: toDate(row.created_at),
+  };
+}
+
+function mapPostgresRuntimeSessionRow(row: RuntimeSessionRow): RuntimeSession {
+  const session: RuntimeSession = {
+    userId: row.user_id,
+    personaId: row.persona_id,
+    state: row.state,
+  };
+  if (row.soul_snapshot_id) {
+    session.soulSnapshotId = row.soul_snapshot_id;
+  }
+  if (row.node_id && row.node_name) {
+    session.nodeContext = {
+      nodeId: row.node_id,
+      nodeName: row.node_name,
+    };
+  }
+  if (row.daily_message_count !== null) {
+    session.dailyMessageCount = Number(row.daily_message_count);
+  }
+  if (row.last_message_date !== null) {
+    session.lastMessageDate = row.last_message_date;
+  }
+  return session;
+}
+
+function toIsoString(value: string | Date): string {
+  return toDate(value).toISOString();
 }
 
 function createScopedPersonaRuntimeAdapter(

@@ -1,6 +1,6 @@
 # nnz-mvp 当前状态与交接指南
 
-> 更新：2026-07-03
+> 更新：2026-07-06
 > 覆盖：Soul 作用域、Covenant 状态机、Memory 分层、Soul Ops、安全护栏、Render demo、LLM 对话、自动化提取管线、SQLite 持久化、登录注册、官网首页
 
 ## 2026-06-22 GitHub / CI / 本地状态
@@ -52,18 +52,19 @@ https://github.com/chaoshorizon316/nnz
 2026-07-03 Step 2.25: scoped runtime smoke guard 已实现；`NNZ_POSTGRES_SCOPED_RUNTIME_URL` 会拒绝与 `DATABASE_URL` / `NNZ_POSTGRES_URL` 同值的生产别名误配；新增 `runtime:smoke`，只允许专用 scoped URL + 显式 confirm，验证 credential/persona/runtime context/Covenant/cross-scope/cascade/cleanup，输出脱敏；本地 typecheck、151 tests + 2 skipped、build:demo 通过
 2026-07-03 Step 2.26: scoped Ops cleanup/audit cutover slice 已实现；scoped mode 下 Ops cleanup dry-run/confirm 与 audit write/query 可走 scoped Postgres tables，同一个 scoped runtime pool；本地 typecheck、154 tests + 2 skipped、build:demo 通过
 2026-07-06 Step 2.27: scoped Ops overview aggregation 已实现；scoped mode 下 `/api/ops/overview` users/personas/maturity 聚合走 scoped Postgres tables，并复用现有 maturity 算法；本地 typecheck、155 tests + 2 skipped、build:demo 通过
+2026-07-06 Step 2.28: user data export/delete cutover 已实现；`/api/me/export` 与 `/api/me/delete` 走 `ScopedRuntimeAdapter`，scoped mode 下可用 Postgres scoped tables，导出不含 credential hash/后台审计，删除只删当前登录用户；本地 typecheck、157 tests、build:demo、API smoke 通过
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main + local Step 2.27 scoped Ops overview aggregation changes pending
+main...origin/main + local Step 2.28 user data export/delete cutover changes pending
 ```
 
 最新提交：
 
 ```text
-82558ff feat: add scoped ops cleanup audit store
+c7e1ce4 feat: add scoped ops overview aggregation
 ```
 
 最新云端 Soul Ops 记录：
@@ -100,6 +101,10 @@ nnz-mvp-2026-07-02-Step2.21-MigrationGuardrailHardening.md
 nnz-mvp-2026-07-03-Step2.22-ScopedRuntimeAdapterFoundation.md
 nnz-mvp-2026-07-03-Step2.23-ApiMeScopedRuntimeAdapter.md
 nnz-mvp-2026-07-03-Step2.24-GuardedScopedRuntimePostgresMode.md
+nnz-mvp-2026-07-03-Step2.25-ScopedRuntimeSmokeGuard.md
+nnz-mvp-2026-07-03-Step2.26-ScopedOpsCleanupAudit.md
+nnz-mvp-2026-07-06-Step2.27-ScopedOpsOverview.md
+nnz-mvp-2026-07-06-Step2.28-UserDataExportDelete.md
 ```
 
 ## 2026-06-22 工作区注意
@@ -520,7 +525,7 @@ npm test         # 13 files, 87 tests passed; 1 integration file skipped by defa
 npm run build:demo
 ```
 
-下一步：Step 2 migration readiness 还剩 4 个未完成目标。优先用真实本地 snapshot 样本运行 `migration:readiness` 生成 raw snapshot、sanitized report、sanitized summary；随后用一次性测试库运行 `NNZ_POSTGRES_INTEGRATION_URL=... npm run migration:smoke -- --database-url-env NNZ_POSTGRES_INTEGRATION_URL --confirm RUN_POSTGRES_SCOPED_MIGRATION_SMOKE`；Render 侧再验证可选角色 token（viewer/operator/admin）；最后用 disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 运行 `runtime:smoke` 和 `/api/me/*` scoped Postgres smoke，再推进用户 export/delete flow。token/连接串明文不得写入仓库或文档。
+下一步：Step 2 migration readiness 还剩 4 个未完成目标。优先用真实本地 snapshot 样本运行 `migration:readiness` 生成 raw snapshot、sanitized report、sanitized summary；随后用一次性测试库运行 `NNZ_POSTGRES_INTEGRATION_URL=... npm run migration:smoke -- --database-url-env NNZ_POSTGRES_INTEGRATION_URL --confirm RUN_POSTGRES_SCOPED_MIGRATION_SMOKE`；Render 侧再验证可选角色 token（viewer/operator/admin）；最后用 disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 运行 `runtime:smoke` 和 `/api/me/*` scoped Postgres smoke，覆盖注册、创建、聊天、Covenant、导出和删除。token/连接串明文不得写入仓库或文档。
 
 ### 后续：微信 / H5 用户端雏形
 
@@ -632,4 +637,4 @@ npm run build:demo
 npm audit        # 0 vulnerabilities
 ```
 
-当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。2026-06-16 已完成 Render `NNZ_OPS_TOKEN` 配置和云端 `/ops` smoke，并完成 Step 2.1 Soul Ops 审计日志。2026-06-17 已完成 Step 2.2 Soul Ops RBAC 与删除回执；同日 Step 2.3 已完成 Audit 查询接口和 `/ops` Audit tab，并已推送通过 GitHub Actions / Render 基础 smoke。2026-06-23 已完成 Step 2.5 Postgres scoped repository 最小旁路切片。2026-06-24 已完成 Step 2.6 Postgres scoped Covenant 主链旁路切片；同日 Step 2.7 已补齐 Proposal/Credential/OpsAudit 旁路表。2026-06-25 已新增 opt-in 真实 Postgres integration test harness，并完成 snapshot -> scoped tables 离线迁移预检 planner。2026-06-26 已补本地 dry-run CLI、scoped migration row builder、executor core 和 executor disposable DB integration harness。2026-06-29 已补 StoreSnapshot export CLI。2026-06-30 已补 migration dry-run sanitized summary。2026-07-01 已整理 migration readiness roadmap，并已补 protected migration execution CLI、migration readiness CLI、disposable migration smoke CLI 和 runtime persistence mode guardrail。2026-07-02 已按产品进程审计修补 migration guardrails。2026-07-03 已补 scoped runtime adapter foundation、`/api/me/*` InMemory adapter wiring、guarded scoped runtime Postgres mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover slice；2026-07-06 已补 scoped Ops overview aggregation；当前剩余 4 个目标未完全收口：真实 snapshot readiness、一次性 Postgres smoke、云端角色 token smoke、真实 scoped Postgres runtime smoke 与后续用户 export/delete flow。
+当前修复已推送并通过 GitHub Actions / Render smoke。2026-06-10 已实现并云端验证首页 H5 真实用户私有 Soul 验证入口；2026-06-11 已完成 Render Postgres 接入和重启后持久化 smoke；同日 Step 1 已完成后台测试数据清理和独立 `/ops` Soul Ops 后台雏形。2026-06-16 已完成 Render `NNZ_OPS_TOKEN` 配置和云端 `/ops` smoke，并完成 Step 2.1 Soul Ops 审计日志。2026-06-17 已完成 Step 2.2 Soul Ops RBAC 与删除回执；同日 Step 2.3 已完成 Audit 查询接口和 `/ops` Audit tab，并已推送通过 GitHub Actions / Render 基础 smoke。2026-06-23 已完成 Step 2.5 Postgres scoped repository 最小旁路切片。2026-06-24 已完成 Step 2.6 Postgres scoped Covenant 主链旁路切片；同日 Step 2.7 已补齐 Proposal/Credential/OpsAudit 旁路表。2026-06-25 已新增 opt-in 真实 Postgres integration test harness，并完成 snapshot -> scoped tables 离线迁移预检 planner。2026-06-26 已补本地 dry-run CLI、scoped migration row builder、executor core 和 executor disposable DB integration harness。2026-06-29 已补 StoreSnapshot export CLI。2026-06-30 已补 migration dry-run sanitized summary。2026-07-01 已整理 migration readiness roadmap，并已补 protected migration execution CLI、migration readiness CLI、disposable migration smoke CLI 和 runtime persistence mode guardrail。2026-07-02 已按产品进程审计修补 migration guardrails。2026-07-03 已补 scoped runtime adapter foundation、`/api/me/*` InMemory adapter wiring、guarded scoped runtime Postgres mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover slice；2026-07-06 已补 scoped Ops overview aggregation 和 user data export/delete cutover；当前剩余 4 个目标未完全收口：真实 snapshot readiness、一次性 Postgres smoke、云端角色 token smoke、真实 scoped Postgres runtime smoke。

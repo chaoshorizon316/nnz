@@ -193,7 +193,7 @@ NNZ_POSTGRES_SCOPED_RUNTIME_URL=postgres://...
 ```
 
 This mode intentionally ignores `DATABASE_URL` and `NNZ_POSTGRES_URL` and requires the dedicated scoped runtime env key. Without that key it fails fast instead of falling back to snapshot Postgres. It also rejects `NNZ_POSTGRES_SCOPED_RUNTIME_URL` when its value matches `DATABASE_URL` or `NNZ_POSTGRES_URL`.
-With Step 2.24-2.27, the guarded scoped mode initializes the scoped Postgres schema and routes `/api/me/*` runtime calls through the Postgres scoped runtime adapter when `NNZ_POSTGRES_SCOPED_RUNTIME_URL` is present. Scoped mode also has Ops cleanup/audit and overview cutover slices: cleanup dry-run/confirm, Ops audit query/write, and `/api/ops/overview` user/persona/maturity aggregation can use scoped Postgres tables. Validate scoped tables with `migration:smoke` and scoped runtime behavior with `runtime:smoke` before any production switch; default runtime remains `snapshot`, and user export/delete are not yet cut over to scoped tables.
+With Step 2.24-2.28, the guarded scoped mode initializes the scoped Postgres schema and routes `/api/me/*` runtime calls through the Postgres scoped runtime adapter when `NNZ_POSTGRES_SCOPED_RUNTIME_URL` is present. Scoped mode also has Ops cleanup/audit/overview cutover slices and user data sovereignty endpoints: cleanup dry-run/confirm, Ops audit query/write, `/api/ops/overview` user/persona/maturity aggregation, and `/api/me/export` / `/api/me/delete` can use scoped Postgres tables. Validate scoped tables with `migration:smoke` and scoped runtime behavior with `runtime:smoke` before any production switch; default runtime remains `snapshot`.
 
 SQLite demo persistence can be enabled with:
 
@@ -224,11 +224,15 @@ It uses auth-aware endpoints that read `userId` from the JWT:
 
 ```text
 GET /api/me
+GET /api/me/export
+POST /api/me/delete
 GET /api/me/personas
 POST /api/me/persona
 GET /api/me/chat-history?personaId=...
 POST /api/me/chat
 ```
+
+`GET /api/me/export` returns the authenticated user's own data archive, including their personas, Soul versions, snapshots, memories, proposals, nodes, conversations, sessions, and account email metadata. It intentionally excludes credential password hashes and admin-only Ops audit internals. `POST /api/me/delete` requires `confirm:"DELETE_MY_DATA"` and deletes only the authenticated user's scoped data; in scoped Postgres mode this is a `nnz_users` delete with scoped FK cascade.
 
 The developer page `/demo` still exists for A/B scope-isolation checks. Do not expose `/demo` internals as the user product surface. Admin governance belongs under `/ops`.
 
@@ -245,7 +249,7 @@ npm run build:demo
 npm run demo
 ```
 
-Current verified suite on 2026-07-06: 26 test files / 155 tests plus two skipped opt-in Postgres integration tests across domain scope, scoped repositories, scoped runtime adapter/persistence, scoped Ops cleanup/audit/overview, Soul Ops cleanup/overview/audit query/RBAC, runtime persistence config guardrails, SQLite/Postgres snapshot persistence, Postgres scoped repository, snapshot export, snapshot migration planner/row builder/executor/readiness/smoke CLI guardrails, scoped runtime smoke CLI guardrails, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator. Local `/api/me/*` smoke also passes for register, persona creation, chat, history, seal, activate node, and complete node.
+Current verified suite on 2026-07-06: 26 test files / 157 tests plus two skipped opt-in Postgres integration tests across domain scope, scoped repositories, scoped runtime adapter/persistence, scoped user export/delete, scoped Ops cleanup/audit/overview, Soul Ops cleanup/overview/audit query/RBAC, runtime persistence config guardrails, SQLite/Postgres snapshot persistence, Postgres scoped repository, snapshot export, snapshot migration planner/row builder/executor/readiness/smoke CLI guardrails, scoped runtime smoke CLI guardrails, auth, runtime, LLM prompt contract, safety guard, LLM adapter, and extraction orchestrator. Local `/api/me/*` smoke also passes for register, persona creation, chat, history, seal, activate node, and complete node.
 
 Offline StoreSnapshot export:
 
@@ -309,8 +313,8 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 ## Current State
 
-The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, Step 2.11 scoped migration row builder, Step 2.12 write-side migration executor core, Step 2.13 executor disposable DB integration harness, Step 2.14 client-bound executor transaction, Step 2.15 StoreSnapshot export CLI, Step 2.16 sanitized migration summary, Step 2.17 protected migration execution CLI, Step 2.18 migration readiness CLI, Step 2.19 disposable migration smoke CLI, Step 2.20 runtime persistence mode guardrail, Step 2.21 migration guardrail hardening, Step 2.22 scoped runtime adapter foundation, Step 2.23 `/api/me/*` InMemory adapter wiring, Step 2.24 guarded scoped runtime Postgres adapter mode, Step 2.25 scoped runtime smoke guard, Step 2.26 scoped Ops cleanup/audit cutover slice, and Step 2.27 scoped Ops overview aggregation are implemented locally. The 2026-07-01 migration readiness roadmap tracks the remaining Step 2 goals in `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging, Step 2.2 RBAC/deletion receipts, Step 2.3 audit query UI/API, Step 2.4 in-memory `ScopedSoulRepository`, Step 2.5 minimal `PostgresScopedSoulRepository`, Step 2.6 scoped Covenant lifecycle tables, Step 2.7 proposal/credential/audit tables, Step 2.8 opt-in real Postgres integration test harness, Step 2.9 snapshot migration planner, Step 2.10 local dry-run CLI, Step 2.11 scoped migration row builder, Step 2.12 write-side migration executor core, Step 2.13 executor disposable DB integration harness, Step 2.14 client-bound executor transaction, Step 2.15 StoreSnapshot export CLI, Step 2.16 sanitized migration summary, Step 2.17 protected migration execution CLI, Step 2.18 migration readiness CLI, Step 2.19 disposable migration smoke CLI, Step 2.20 runtime persistence mode guardrail, Step 2.21 migration guardrail hardening, Step 2.22 scoped runtime adapter foundation, Step 2.23 `/api/me/*` InMemory adapter wiring, Step 2.24 guarded scoped runtime Postgres adapter mode, Step 2.25 scoped runtime smoke guard, Step 2.26 scoped Ops cleanup/audit cutover slice, Step 2.27 scoped Ops overview aggregation, and Step 2.28 user data export/delete cutover are implemented locally. The 2026-07-01 migration readiness roadmap tracks the remaining Step 2 goals in `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`.
 
-Remaining Step 2 goals: run `migration:readiness` on a real local snapshot, run `migration:smoke` against a disposable Postgres database, verify optional role-specific tokens in Render, and complete real scoped Postgres runtime smoke plus later user export/delete cutover.
+Remaining Step 2 goals: run `migration:readiness` on a real local snapshot, run `migration:smoke` against a disposable Postgres database, verify optional role-specific tokens in Render, and complete real scoped Postgres runtime smoke including `/api/me/*` user data export/delete.
 
-Next engineering steps: run `runtime:smoke` and then `/api/me/*` against a disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL`; keep production migration validation on explicit local files plus `NNZ_POSTGRES_INTEGRATION_URL` only.
+Next engineering steps: run `runtime:smoke` and then `/api/me/*` including export/delete against a disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL`; keep production migration validation on explicit local files plus `NNZ_POSTGRES_INTEGRATION_URL` only.

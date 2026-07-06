@@ -9,7 +9,7 @@ https://nnz-kego.onrender.com
 
 免费版无请求 15 分钟会休眠，首次访问需等 30–60 秒唤醒。部署细节见 `nnz-mvp-2026-06-04-云托管完成交接.md`。
 
-## 最新 GitHub / CI / 本地状态（2026-07-03）
+## 最新 GitHub / CI / 本地状态（2026-07-06）
 
 GitHub 仓库：
 
@@ -58,6 +58,7 @@ https://github.com/chaoshorizon316/nnz
 2026-07-03 Step 2.25: scoped runtime smoke guard 已实现；`NNZ_POSTGRES_SCOPED_RUNTIME_URL` 会拒绝与 `DATABASE_URL` / `NNZ_POSTGRES_URL` 同值的生产别名误配；新增 `runtime:smoke`，只允许专用 scoped URL + 显式 confirm，验证 credential/persona/runtime context/Covenant/cross-scope/cascade/cleanup，输出脱敏；本地 typecheck、151 tests + 2 skipped、build:demo 通过
 2026-07-03 Step 2.26: scoped Ops cleanup/audit cutover slice 已实现；scoped mode 下 Ops cleanup dry-run/confirm 与 audit write/query 可走 scoped Postgres tables，同一个 scoped runtime pool；本地 typecheck、154 tests + 2 skipped、build:demo 通过
 2026-07-06 Step 2.27: scoped Ops overview aggregation 已实现；scoped mode 下 `/api/ops/overview` users/personas/maturity 聚合走 scoped Postgres tables，并复用现有 maturity 算法；本地 typecheck、155 tests + 2 skipped、build:demo 通过
+2026-07-06 Step 2.28: user data export/delete cutover 已实现；`/api/me/export` 与 `/api/me/delete` 走 `ScopedRuntimeAdapter`，scoped mode 下可用 Postgres scoped tables；导出不含 credential hash/后台审计，删除只删当前登录用户；本地 typecheck、157 tests、build:demo、API smoke 通过
 ```
 
 说明：
@@ -208,6 +209,8 @@ npm audit
 2026-07-03 Step 2.26 scoped Ops cleanup/audit cutover 结果：新增 `src/ops/postgres-scoped-ops-store.ts` / `.test.ts`，`src/runtime/scoped-runtime-persistence.ts` 暴露同 pool 的 `ops` store，`src/demo-server.ts` 在 scoped mode 下把 Ops cleanup dry-run/confirm、Ops audit write/query 接到 scoped Postgres tables；snapshot mode 仍走原 `InMemorySoulStore` helper。cleanup 通过 `nnz_users` 删除触发 scoped FK cascade，counts 使用 scoped table join，避免 persona-only 查询。注意：scoped mode full Ops overview 的 user/persona maturity 大表尚未切完，当前只替换 cleanup plan 与 audit overview。 本地 `npm run typecheck`、targeted scoped Ops tests、`npm test`、`npm run build:demo` 通过；全量为 26 个测试文件、154 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-03-Step2.26-ScopedOpsCleanupAudit.md`。
 
 2026-07-06 Step 2.27 scoped Ops overview aggregation 结果：`src/ops/postgres-scoped-ops-store.ts` 新增 `buildOverview(persistence)`，从 scoped Postgres tables 读取 users/personas/soul_versions/snapshots/memory/proposals/nodes/conversations/sessions/credentials/audit，在后台内部重建临时 `InMemorySoulStore` snapshot，并复用现有 `buildOpsOverview()` 与 maturity 算法；`src/demo-server.ts` scoped mode 下 `/api/ops/overview` 不再从 demo fixture store 聚合 users/personas/maturity。overview 返回摘要、counts、maturity、audit，不返回 memory/chat 正文或 credential hash。本地 `npm run typecheck`、targeted scoped Ops overview tests、`npm test`、`npm run build:demo` 通过；全量为 26 个测试文件、155 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-06-Step2.27-ScopedOpsOverview.md`。
+
+2026-07-06 Step 2.28 user data export/delete cutover 结果：`src/runtime/scoped-runtime-adapter.ts` 新增 `exportUserData()` / `deleteUserData()` 与统一 `UserDataExport` 结构；InMemory 与 Postgres scoped runtime adapter 均支持当前登录用户导出/删除。`src/demo-server.ts` 新增 `GET /api/me/export` 和 `POST /api/me/delete`，删除需要 `confirm:"DELETE_MY_DATA"`；`public/index.html` 登录态新增“导出”和“删除全部数据”。导出包含当前用户自己的 persona、Soul、snapshot、memory、proposal、node、conversation、session 和账号邮箱元数据，不包含 credential hash 或后台 OpsAudit；Postgres 读取按每个 persona 的 `userId + personaId` 绑定查询，删除通过 `DELETE FROM nnz_users WHERE id = $1` 触发 scoped FK cascade。本地 `npm run typecheck`、`npm test`、`npm run build:demo`、`git diff --check`、`/api/me` export/delete smoke 均通过。记录见 `nnz-mvp-2026-07-06-Step2.28-UserDataExportDelete.md`。
 
 最新 CI run：
 
