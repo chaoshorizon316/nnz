@@ -56,18 +56,19 @@ https://github.com/chaoshorizon316/nnz
 2026-07-06 Step 2.29: scoped runtime HTTP smoke CLI 已实现；新增 `runtime:http-smoke`，用 disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 启动真实 demo server 并跑 `/api/me/*` register/persona/chat/history/Covenant/export/delete HTTP 链路；清空 child `NNZ_LLM_*`、拒绝生产别名误配并输出脱敏；本地 typecheck、165 tests + 2 skipped、build:demo、CLI help 通过
 2026-07-06 Step 2.30: scoped runtime smoke suite 已实现；新增 `runtime:smoke-suite`，把 direct adapter smoke、`build:demo`、HTTP `/api/me/*` smoke 合并成一个受保护命令；本地 typecheck、175 tests + 2 skipped、build:demo、CLI help 通过
 2026-07-06 Step 2.31: migration validation suite 已实现；新增 `migration:validation-suite`，先跑真实 snapshot readiness，干净后再跑 disposable Postgres migration smoke；本地 typecheck、183 tests + 2 skipped、build:demo、CLI help 通过
+2026-07-06 Step 2.32: Ops role token smoke CLI 已实现；新增 `ops:role-smoke`，验证 viewer/operator/admin token 权限边界，默认非破坏性，确认删除 smoke 需要第二道 confirm；本地 typecheck、190 tests + 2 skipped、build:demo、CLI help 通过
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main + local Step 2.31 migration validation suite changes pending
+main...origin/main + local Step 2.32 Ops role token smoke changes pending
 ```
 
 最新提交：
 
 ```text
-27a5a47 feat: add scoped runtime smoke suite
+28b61ff feat: add migration validation suite
 ```
 
 最新云端 Soul Ops 记录：
@@ -111,6 +112,7 @@ nnz-mvp-2026-07-06-Step2.28-UserDataExportDelete.md
 nnz-mvp-2026-07-06-Step2.29-ScopedRuntimeHttpSmoke.md
 nnz-mvp-2026-07-06-Step2.30-ScopedRuntimeSmokeSuite.md
 nnz-mvp-2026-07-06-Step2.31-MigrationValidationSuite.md
+nnz-mvp-2026-07-06-Step2.32-OpsRoleTokenSmoke.md
 ```
 
 ## 2026-06-22 工作区注意
