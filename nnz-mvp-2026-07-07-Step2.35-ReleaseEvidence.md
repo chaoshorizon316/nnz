@@ -67,5 +67,5 @@ git diff --check: passed
 
 ## 下一步
 
-1. push Step 2.35。
+1. Step 2.35 已推送为 `2711618 feat: add release validation evidence output`。
 2. 外部输入齐备后运行带 `--evidence-out` 的 `release:validation-suite`。

@@ -2,15 +2,15 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.35。最新已推送提交是：
+Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.36。最新已推送提交是：
 
 ```text
-a09f198 feat: add release validation suite
+2711618 feat: add release validation evidence output
 ```
 
-当前本地新增 Step 2.35 release validation evidence option，已完成本地全量验证，尚待下一次合并 push。
+当前本地新增 Step 2.36 sensitive local release safety，已完成本地全量验证，尚待下一次合并 push。
 
-截至 2026-07-07，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、以及本地可选 release evidence JSON 都已完成实现；真实 DB/Render 执行仍需要 disposable URL、snapshot 路径或 token env。
+截至 2026-07-07，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、以及本地 `.env.example` 都已完成实现；真实 DB/Render 执行仍需要 disposable URL、snapshot 路径或 token env。
 
 ## 已完成基线
 
@@ -42,7 +42,8 @@ a09f198 feat: add release validation suite
 - Step 2.32：`ops:role-smoke` CLI 已实现；默认非破坏性地验证 missing/invalid token、viewer read-only、operator dry-run、admin dry-run 与 admin delete confirmation boundary，确认删除 smoke 需要额外 `--include-delete --delete-confirm RUN_OPS_ROLE_TOKEN_DELETE_SMOKE`。
 - Step 2.33：`release:preflight` CLI 已实现；不读取 snapshot 内容、不连接数据库、不触网，只检查 snapshot/SQLite 输入、disposable DB env、role token env、scoped runtime DB env 是否具备，并输出脱敏状态。
 - Step 2.34：`release:validation-suite` CLI 已实现；要求 `RUN_NNZ_RELEASE_VALIDATION_SUITE`，先跑 preflight，再串 `migration:validation-suite`、默认非破坏性 `ops:role-smoke`、`runtime:smoke-suite`，失败时不拼接子命令 raw output。
-- Step 2.35：`release:validation-suite -- --evidence-out <path>` 本地已实现；确认执行后成功或 stage 失败都会写脱敏 evidence JSON，只记录 stage 状态、env key 名和本地产物类别，不记录 snapshot 路径、DB URL、token、用户内容、child output、server log 或 raw error details。
+- Step 2.35：`release:validation-suite -- --evidence-out <path>` 已实现并推送；确认执行后成功或 stage 失败都会写脱敏 evidence JSON，只记录 stage 状态、env key 名和本地产物类别，不记录 snapshot 路径、DB URL、token、用户内容、child output、server log 或 raw error details。
+- Step 2.36：sensitive local release safety 本地已实现；`.gitignore` 显式忽略 SQLite/DB、raw/report/summary/evidence JSON、migration/release/snapshot artifact 目录；`nnz-mvp/.env.example` 提供空 env key 和 disposable DB 安全注释，降低真实 snapshot/readiness/evidence 产物误提交和外部实跑误配置风险。
 
 ## 剩余目标状态
 
@@ -85,7 +86,7 @@ a09f198 feat: add release validation suite
 
 ## 当前可继续做的本地工作
 
-- push Step 2.35。
+- push Step 2.36。
 - 之后用真实外部输入跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`；默认仍保持 snapshot persistence，scoped runtime 只在 disposable DB smoke 中验证。
 
 ## 当前需要用户或外部环境提供的东西

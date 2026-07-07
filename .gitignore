@@ -16,6 +16,27 @@ coverage/
 *.pem
 *.key
 
+# Sensitive local data and release artifacts
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*snapshot*.json
+*migration*report*.json
+*migration*summary*.json
+*readiness*report*.json
+*readiness*summary*.json
+*release*evidence*.json
+*validation*evidence*.json
+raw.json
+report.json
+summary.json
+evidence.json
+migration-artifacts/
+release-artifacts/
+snapshot-exports/
+
 # Logs
 *.log
 npm-debug.log*
