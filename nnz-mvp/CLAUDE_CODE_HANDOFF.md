@@ -1274,7 +1274,7 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.37。最新已推送提交是 `426d721 feat: add h5 graduation export and safety support`；H5 graduation export + safety support UX 已完成本地验证并推送。当前本地新增 Step 2.38 H5/API onboarding consent UX，已完成验证，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
+Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.38。最新已推送提交是 `59e8119 feat: add h5 onboarding consent gate`；H5 onboarding consent UX 已完成本地验证并推送。当前本地新增 Step 2.39 H5 account deletion inline confirmation，已完成验证，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
 
 1. 注入真实本地 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Render role token env、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`。
 2. 跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`，它会串 preflight、migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite，并写脱敏上线 evidence。

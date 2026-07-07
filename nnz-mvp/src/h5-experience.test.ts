@@ -60,4 +60,17 @@ describe('H5 experience lifecycle controls', () => {
     expect(showCreatePanel).toContain('h5ConsentAccepted');
     expect(showCreatePanel).toContain('consent.checked = false;');
   });
+
+  it('uses inline confirmation for account deletion without exposing backend confirmation text', () => {
+    const openDelete = functionBody('h5OpenDeleteConfirm', false);
+    const confirmDelete = functionBody('h5ConfirmDeleteAllData');
+
+    expect(html).toContain('id="h5DeleteConfirmPanel"');
+    expect(html).toContain('输入“删除”确认');
+    expect(html).toContain('建议先导出一份数据档案');
+    expect(html).not.toContain('prompt(');
+    expect(openDelete).toContain("panel.classList.remove('hidden');");
+    expect(confirmDelete).toContain("confirmText !== '删除'");
+    expect(confirmDelete).toContain("body: { confirm: 'DELETE_MY_DATA' }");
+  });
 });

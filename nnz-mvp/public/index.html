@@ -370,8 +370,16 @@
             <p class="text-sm text-warm-600">已登录：<span id="h5UserEmail" class="font-medium text-warm-800"></span></p>
             <div class="mt-3 flex flex-wrap gap-2">
               <button onclick="h5ExportData()" class="px-4 py-2 border border-sage-200 text-sage-600 text-sm font-medium rounded-full hover:bg-sage-50 transition-colors">导出</button>
-              <button onclick="h5DeleteAllData()" class="px-4 py-2 border border-red-200 text-red-500 text-sm font-medium rounded-full hover:bg-red-50 transition-colors">删除全部数据</button>
+              <button onclick="h5OpenDeleteConfirm()" class="px-4 py-2 border border-red-200 text-red-500 text-sm font-medium rounded-full hover:bg-red-50 transition-colors">删除全部数据</button>
               <button onclick="h5Logout()" class="px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">退出</button>
+            </div>
+            <div id="h5DeleteConfirmPanel" class="hidden mt-3 rounded-xl border border-red-100 bg-red-50/80 p-3">
+              <p class="text-xs text-red-700 leading-relaxed">删除会清除当前账号下的全部记忆、对话和创建内容，完成后无法恢复。建议先导出一份数据档案。</p>
+              <div class="mt-3 flex flex-col sm:flex-row gap-2">
+                <input id="h5DeleteConfirmPhrase" type="text" autocomplete="off" placeholder="输入“删除”确认" class="flex-1 px-3 py-2 text-sm border border-red-200 rounded-full outline-none focus:border-red-300 bg-white text-red-700">
+                <button onclick="h5ConfirmDeleteAllData()" class="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-full hover:bg-red-600 transition-colors">确认删除</button>
+                <button onclick="h5CancelDeleteConfirm()" class="px-4 py-2 border border-red-200 text-red-600 text-sm font-medium rounded-full hover:bg-white transition-colors">取消</button>
+              </div>
             </div>
           </div>
           <p id="h5AuthStatus" class="text-xs text-sage-600 min-h-[1rem]"></p>
@@ -1484,13 +1492,38 @@ function h5DownloadDataArchive(exportData, statusText = '已开始导出。') {
   h5SetStatus('h5AuthStatus', statusText);
 }
 
-async function h5DeleteAllData() {
+function h5OpenDeleteConfirm() {
   if (!h5Token) {
     h5SetStatus('h5AuthStatus', '请先登录。');
     return;
   }
-  const confirmText = prompt('输入“删除”确认清除全部数据。');
-  if (confirmText !== '删除') return;
+  const panel = document.getElementById('h5DeleteConfirmPanel');
+  const input = document.getElementById('h5DeleteConfirmPhrase');
+  if (!panel || !input) return;
+  panel.classList.remove('hidden');
+  input.value = '';
+  h5SetStatus('h5AuthStatus', '删除前建议先导出数据档案。');
+  input.focus();
+}
+
+function h5CancelDeleteConfirm() {
+  document.getElementById('h5DeleteConfirmPanel')?.classList.add('hidden');
+  const input = document.getElementById('h5DeleteConfirmPhrase');
+  if (input) input.value = '';
+  h5SetStatus('h5AuthStatus', '');
+}
+
+async function h5ConfirmDeleteAllData() {
+  if (!h5Token) {
+    h5SetStatus('h5AuthStatus', '请先登录。');
+    return;
+  }
+  const confirmText = document.getElementById('h5DeleteConfirmPhrase')?.value.trim();
+  if (confirmText !== '删除') {
+    h5SetStatus('h5AuthStatus', '请输入“删除”后再确认。');
+    document.getElementById('h5DeleteConfirmPhrase')?.focus();
+    return;
+  }
   try {
     await h5Request('/api/me/delete', {
       method: 'POST',
