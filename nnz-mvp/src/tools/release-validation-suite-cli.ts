@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,13 +30,14 @@ const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 3147;
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_SERVER_ENTRY = 'dist-cjs/demo-server.js';
+const EVIDENCE_KIND = 'nnz-release-validation-evidence';
 
 const USAGE = `Usage:
-  npm run release:validation-suite -- --from-json <snapshot-or-wrapper-json-path> --snapshot-out <raw-snapshot-json-path> --report-out <sanitized-report-json-path> --summary-out <sanitized-summary-json-path> --confirm RUN_NNZ_RELEASE_VALIDATION_SUITE
-  npm run release:validation-suite -- --from-sqlite <sqlite-db-path> --snapshot-out <raw-snapshot-json-path> --report-out <sanitized-report-json-path> --summary-out <sanitized-summary-json-path> --confirm RUN_NNZ_RELEASE_VALIDATION_SUITE
+  npm run release:validation-suite -- --from-json <snapshot-or-wrapper-json-path> --snapshot-out <raw-snapshot-json-path> --report-out <sanitized-report-json-path> --summary-out <sanitized-summary-json-path> --confirm RUN_NNZ_RELEASE_VALIDATION_SUITE [--evidence-out <sanitized-evidence-json-path>]
+  npm run release:validation-suite -- --from-sqlite <sqlite-db-path> --snapshot-out <raw-snapshot-json-path> --report-out <sanitized-report-json-path> --summary-out <sanitized-summary-json-path> --confirm RUN_NNZ_RELEASE_VALIDATION_SUITE [--evidence-out <sanitized-evidence-json-path>]
 
 Runs release preflight, migration validation suite, non-destructive Ops role token smoke, and scoped runtime smoke suite in order.
-This command does not run confirmed Ops cleanup deletion and does not print database URLs, token values, snapshot contents, user content, child command output, server logs, or raw error details.`;
+This command does not run confirmed Ops cleanup deletion and does not print database URLs, token values, snapshot contents, user content, child command output, server logs, raw error details, or evidence output paths.`;
 
 export interface ReleaseValidationSuiteCliResult {
   exitCode: number;
@@ -49,6 +51,8 @@ export interface ReleaseValidationSuiteCliDeps {
   runMigrationValidation: (args: string[]) => Promise<MigrationValidationSuiteCliResult>;
   runOpsRoleSmoke: (args: string[]) => Promise<OpsRoleSmokeCliResult>;
   runRuntimeSmokeSuite: (args: string[]) => Promise<ScopedRuntimeSmokeSuiteCliResult>;
+  writeTextFile: (path: string, contents: string) => void;
+  now: () => Date;
 }
 
 type ParsedArgs = {
@@ -66,8 +70,35 @@ type ParsedArgs = {
   serverEntry: string;
   timeoutMs: number;
   skipBuild: boolean;
+  evidenceOut?: string;
   error?: string;
 };
+
+type ReleaseStageName = 'releasePreflight' | 'migrationValidationSuite' | 'opsRoleSmoke' | 'runtimeSmokeSuite';
+type ReleaseStageStatus = 'passed' | 'failed' | 'not_run';
+
+interface ReleaseEvidence {
+  kind: typeof EVIDENCE_KIND;
+  generatedAt: string;
+  status: 'passed' | 'failed';
+  failedStage?: ReleaseStageName;
+  stages: Array<{ name: ReleaseStageName; status: ReleaseStageStatus }>;
+  inputs: {
+    snapshotSource: 'json' | 'sqlite';
+    migrationDatabaseEnv: typeof MIGRATION_DATABASE_URL_ENV;
+    opsBaseUrlConfigured: true;
+    opsRoleTokenEnvs: ['NNZ_OPS_VIEWER_TOKEN', 'NNZ_OPS_OPERATOR_TOKEN', 'NNZ_OPS_ADMIN_TOKEN'];
+    runtimeDatabaseEnv: typeof RUNTIME_DATABASE_URL_ENV;
+    runtimeDemoBuild: 'required' | 'skipped';
+  };
+  outputs: {
+    rawSnapshot: 'sensitive-local-artifact';
+    sanitizedReport: 'sanitized-local-artifact';
+    sanitizedSummary: 'sanitized-local-artifact';
+  };
+  destructiveOpsCleanup: 'not-run';
+  redaction: string[];
+}
 
 const DEFAULT_DEPS: ReleaseValidationSuiteCliDeps = {
   env: process.env,
@@ -75,6 +106,8 @@ const DEFAULT_DEPS: ReleaseValidationSuiteCliDeps = {
   runMigrationValidation: (args) => runMigrationValidationSuiteCommand(args),
   runOpsRoleSmoke: (args) => runOpsRoleSmokeCommand(args),
   runRuntimeSmokeSuite: (args) => runScopedRuntimeSmokeSuiteCommand(args),
+  writeTextFile: (path, contents) => writeFileSync(path, contents, 'utf8'),
+  now: () => new Date(),
 };
 
 export async function runReleaseValidationSuiteCommand(
@@ -94,22 +127,31 @@ export async function runReleaseValidationSuiteCommand(
 
   const preflightResult = await deps.runPreflight(buildPreflightArgs(parsedArgs));
   if (preflightResult.exitCode !== 0) {
-    return failSuite('release preflight');
+    return failSuite('release preflight', parsedArgs, deps, 'releasePreflight');
   }
 
   const migrationResult = await deps.runMigrationValidation(buildMigrationValidationArgs(parsedArgs));
   if (migrationResult.exitCode !== 0) {
-    return failSuite('migration validation suite');
+    return failSuite('migration validation suite', parsedArgs, deps, 'migrationValidationSuite');
   }
 
   const opsResult = await deps.runOpsRoleSmoke(buildOpsRoleSmokeArgs(parsedArgs));
   if (opsResult.exitCode !== 0) {
-    return failSuite('Ops role token smoke');
+    return failSuite('Ops role token smoke', parsedArgs, deps, 'opsRoleSmoke');
   }
 
   const runtimeResult = await deps.runRuntimeSmokeSuite(buildRuntimeSmokeSuiteArgs(parsedArgs));
   if (runtimeResult.exitCode !== 0) {
-    return failSuite('scoped runtime smoke suite');
+    return failSuite('scoped runtime smoke suite', parsedArgs, deps, 'runtimeSmokeSuite');
+  }
+
+  const evidenceError = writeReleaseEvidence(parsedArgs, deps, 'passed');
+  if (evidenceError) {
+    return {
+      exitCode: 1,
+      stdout: '',
+      stderr: 'NNZ release validation suite passed, but release evidence output could not be written.\nNo evidence output path, database URL, token value, snapshot content, user content, cleanup receipt, child command output, server log, or raw error details were printed.\n',
+    };
   }
 
   return {
@@ -133,11 +175,12 @@ function parseArgs(args: string[]): ParsedArgs {
   let serverEntry = DEFAULT_SERVER_ENTRY;
   let timeoutMs = DEFAULT_TIMEOUT_MS;
   let skipBuild = false;
+  let evidenceOut: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]!;
     if (arg === '--help' || arg === '-h') {
-      return createParsedArgs({ help: true, force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild });
+      return createParsedArgs({ help: true, force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild, evidenceOut });
     }
     if (arg === '--force') {
       force = true;
@@ -149,11 +192,11 @@ function parseArgs(args: string[]): ParsedArgs {
     }
     if (arg === '--from-json' || arg === '--from-sqlite') {
       if (source) {
-        return errorResult('Pass exactly one input source: --from-json or --from-sqlite.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild });
+        return errorResult('Pass exactly one input source: --from-json or --from-sqlite.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild, evidenceOut });
       }
       const value = args[index + 1];
       if (!value || value.startsWith('--')) {
-        return errorResult(`Missing path after ${arg}.`, { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild });
+        return errorResult(`Missing path after ${arg}.`, { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild, evidenceOut });
       }
       source = arg === '--from-json' ? 'json' : 'sqlite';
       inputPath = value;
@@ -170,10 +213,11 @@ function parseArgs(args: string[]): ParsedArgs {
       || arg === '--port'
       || arg === '--server-entry'
       || arg === '--timeout-ms'
+      || arg === '--evidence-out'
     ) {
       const value = args[index + 1];
       if (!value || value.startsWith('--')) {
-        return errorResult(`Missing value after ${arg}.`, { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild });
+        return errorResult(`Missing value after ${arg}.`, { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild, evidenceOut });
       }
       if (arg === '--snapshot-out') snapshotOut = value;
       if (arg === '--report-out') reportOut = value;
@@ -181,10 +225,11 @@ function parseArgs(args: string[]): ParsedArgs {
       if (arg === '--confirm') confirm = value;
       if (arg === '--ops-base-url') opsBaseUrl = value;
       if (arg === '--host') host = value;
+      if (arg === '--evidence-out') evidenceOut = value;
       if (arg === '--port') {
         const parsed = Number(value);
         if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65_535) {
-          return errorResult('--port must be an integer from 1 to 65535.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild });
+          return errorResult('--port must be an integer from 1 to 65535.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild, evidenceOut });
         }
         port = parsed;
       }
@@ -192,20 +237,20 @@ function parseArgs(args: string[]): ParsedArgs {
       if (arg === '--timeout-ms') {
         const parsed = Number(value);
         if (!Number.isInteger(parsed) || parsed < 1_000 || parsed > 120_000) {
-          return errorResult('--timeout-ms must be an integer from 1000 to 120000.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild });
+          return errorResult('--timeout-ms must be an integer from 1000 to 120000.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild, evidenceOut });
         }
         timeoutMs = parsed;
       }
       index += 1;
       continue;
     }
-    return errorResult(`Unknown argument: ${arg}.`, { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild });
+    return errorResult(`Unknown argument: ${arg}.`, { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild, evidenceOut });
   }
 
-  if (!source || !inputPath) return errorResult('Missing input source. Pass --from-json or --from-sqlite.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild });
-  if (!snapshotOut) return errorResult('Missing raw snapshot output path. Pass --snapshot-out <raw-snapshot-json-path>.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild });
-  if (!reportOut) return errorResult('Missing sanitized report output path. Pass --report-out <sanitized-report-json-path>.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild });
-  if (!summaryOut) return errorResult('Missing sanitized summary output path. Pass --summary-out <sanitized-summary-json-path>.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild });
+  if (!source || !inputPath) return errorResult('Missing input source. Pass --from-json or --from-sqlite.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild, evidenceOut });
+  if (!snapshotOut) return errorResult('Missing raw snapshot output path. Pass --snapshot-out <raw-snapshot-json-path>.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild, evidenceOut });
+  if (!reportOut) return errorResult('Missing sanitized report output path. Pass --report-out <sanitized-report-json-path>.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild, evidenceOut });
+  if (!summaryOut) return errorResult('Missing sanitized summary output path. Pass --summary-out <sanitized-summary-json-path>.', { force, opsBaseUrl, host, port, serverEntry, timeoutMs, skipBuild, evidenceOut });
 
   return {
     help: false,
@@ -221,6 +266,7 @@ function parseArgs(args: string[]): ParsedArgs {
     serverEntry,
     timeoutMs,
     skipBuild,
+    ...(evidenceOut ? { evidenceOut } : {}),
     ...(confirm ? { confirm } : {}),
   };
 }
@@ -234,6 +280,7 @@ function createParsedArgs(input: {
   serverEntry: string;
   timeoutMs: number;
   skipBuild: boolean;
+  evidenceOut: string | undefined;
   error?: string;
 }): ParsedArgs {
   return {
@@ -250,6 +297,7 @@ function createParsedArgs(input: {
     serverEntry: input.serverEntry,
     timeoutMs: input.timeoutMs,
     skipBuild: input.skipBuild,
+    ...(input.evidenceOut ? { evidenceOut: input.evidenceOut } : {}),
     ...(input.error ? { error: input.error } : {}),
   };
 }
@@ -264,6 +312,7 @@ function errorResult(
     serverEntry: string;
     timeoutMs: number;
     skipBuild: boolean;
+    evidenceOut: string | undefined;
   },
 ): ParsedArgs {
   return createParsedArgs({ help: false, ...defaults, error });
@@ -343,16 +392,96 @@ function formatSuiteSummary(parsedArgs: ParsedArgs): string {
     '- opsRoleTokenEnvs: configured',
     '- runtimeDatabaseEnv: NNZ_POSTGRES_SCOPED_RUNTIME_URL',
     `- runtimeDemoBuild: ${parsedArgs.skipBuild ? 'skipped' : 'yes'}`,
+    `- releaseEvidence: ${parsedArgs.evidenceOut ? 'written' : 'not-requested'}`,
   ];
   return `${lines.join('\n')}\n`;
 }
 
-function failSuite(stage: string): ReleaseValidationSuiteCliResult {
+function failSuite(
+  stage: string,
+  parsedArgs: ParsedArgs,
+  deps: ReleaseValidationSuiteCliDeps,
+  failedStage: ReleaseStageName,
+): ReleaseValidationSuiteCliResult {
+  const evidenceError = writeReleaseEvidence(parsedArgs, deps, 'failed', failedStage);
   return {
     exitCode: 1,
     stdout: '',
-    stderr: `NNZ release validation suite failed during ${stage}.\nNo database URL, token value, snapshot content, user content, cleanup receipt, child command output, server log, or raw error details were printed.\n`,
+    stderr: `NNZ release validation suite failed during ${stage}.\nNo database URL, token value, snapshot content, user content, cleanup receipt, child command output, server log, raw error details, or evidence output path were printed.\n${evidenceError ? 'Release evidence output could not be written.\n' : ''}`,
   };
+}
+
+function writeReleaseEvidence(
+  parsedArgs: ParsedArgs,
+  deps: ReleaseValidationSuiteCliDeps,
+  status: ReleaseEvidence['status'],
+  failedStage?: ReleaseStageName,
+): string | undefined {
+  if (!parsedArgs.evidenceOut) return undefined;
+  try {
+    const evidence = buildReleaseEvidence(parsedArgs, deps, status, failedStage);
+    deps.writeTextFile(parsedArgs.evidenceOut, `${JSON.stringify(evidence, null, 2)}\n`);
+    return undefined;
+  } catch {
+    return 'write-failed';
+  }
+}
+
+function buildReleaseEvidence(
+  parsedArgs: ParsedArgs,
+  deps: ReleaseValidationSuiteCliDeps,
+  status: ReleaseEvidence['status'],
+  failedStage?: ReleaseStageName,
+): ReleaseEvidence {
+  return {
+    kind: EVIDENCE_KIND,
+    generatedAt: deps.now().toISOString(),
+    status,
+    ...(failedStage ? { failedStage } : {}),
+    stages: buildStageEvidence(status, failedStage),
+    inputs: {
+      snapshotSource: parsedArgs.source,
+      migrationDatabaseEnv: MIGRATION_DATABASE_URL_ENV,
+      opsBaseUrlConfigured: true,
+      opsRoleTokenEnvs: ['NNZ_OPS_VIEWER_TOKEN', 'NNZ_OPS_OPERATOR_TOKEN', 'NNZ_OPS_ADMIN_TOKEN'],
+      runtimeDatabaseEnv: RUNTIME_DATABASE_URL_ENV,
+      runtimeDemoBuild: parsedArgs.skipBuild ? 'skipped' : 'required',
+    },
+    outputs: {
+      rawSnapshot: 'sensitive-local-artifact',
+      sanitizedReport: 'sanitized-local-artifact',
+      sanitizedSummary: 'sanitized-local-artifact',
+    },
+    destructiveOpsCleanup: 'not-run',
+    redaction: [
+      'snapshot input path omitted',
+      'raw snapshot output path omitted',
+      'sanitized report output path omitted',
+      'sanitized summary output path omitted',
+      'database URLs omitted',
+      'token values omitted',
+      'user content omitted',
+      'child command output omitted',
+      'server logs omitted',
+      'raw error details omitted',
+    ],
+  };
+}
+
+function buildStageEvidence(
+  status: ReleaseEvidence['status'],
+  failedStage?: ReleaseStageName,
+): ReleaseEvidence['stages'] {
+  const stages: ReleaseStageName[] = ['releasePreflight', 'migrationValidationSuite', 'opsRoleSmoke', 'runtimeSmokeSuite'];
+  if (status === 'passed') {
+    return stages.map((name) => ({ name, status: 'passed' }));
+  }
+  const failedIndex = failedStage ? stages.indexOf(failedStage) : -1;
+  return stages.map((name, index) => {
+    if (index < failedIndex) return { name, status: 'passed' };
+    if (index === failedIndex) return { name, status: 'failed' };
+    return { name, status: 'not_run' };
+  });
 }
 
 const currentFilePath = process.argv[1] ? resolve(process.argv[1]) : '';

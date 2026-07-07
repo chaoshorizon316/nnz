@@ -8,6 +8,7 @@ import {
 describe('NNZ release validation suite CLI', () => {
   it('requires explicit release confirmation before running any stage', async () => {
     const calls: string[] = [];
+    const writtenFiles = new Map<string, string>();
 
     const result = await runReleaseValidationSuiteCommand(
       [
@@ -19,14 +20,17 @@ describe('NNZ release validation suite CLI', () => {
         'report.json',
         '--summary-out',
         'summary.json',
+        '--evidence-out',
+        '/private/evidence.json',
       ],
-      deps({ calls }),
+      deps({ calls, writtenFiles }),
     );
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe('');
     expect(result.stderr).toContain('RUN_NNZ_RELEASE_VALIDATION_SUITE');
     expect(calls).toEqual([]);
+    expect(writtenFiles.size).toBe(0);
   });
 
   it('runs preflight, migration, ops, and runtime suites with translated safe args', async () => {
@@ -59,6 +63,8 @@ describe('NNZ release validation suite CLI', () => {
         '--timeout-ms',
         '2000',
         '--force',
+        '--evidence-out',
+        '/private/release-evidence.json',
       ],
       deps({ calls, preflightArgs, migrationArgs, opsArgs, runtimeArgs }),
     );
@@ -115,9 +121,72 @@ describe('NNZ release validation suite CLI', () => {
     expect(result.stdout).toContain('migrationValidationSuite: yes');
     expect(result.stdout).toContain('opsRoleSmoke: yes');
     expect(result.stdout).toContain('runtimeSmokeSuite: yes');
+    expect(result.stdout).toContain('releaseEvidence: written');
+    expect(result.stdout).not.toContain('/private/release-evidence.json');
     expect(result.stdout).not.toContain('postgres://secret');
     expect(result.stdout).not.toContain('token-secret');
     expect(result.stdout).not.toContain('private memory');
+  });
+
+  it('writes sanitized release evidence after all stages pass', async () => {
+    const writtenFiles = new Map<string, string>();
+
+    const result = await runReleaseValidationSuiteCommand(
+      [
+        '--from-json',
+        '/private/snapshot-secret.json',
+        '--snapshot-out',
+        '/private/raw-secret.json',
+        '--report-out',
+        '/private/report-secret.json',
+        '--summary-out',
+        '/private/summary-secret.json',
+        '--confirm',
+        'RUN_NNZ_RELEASE_VALIDATION_SUITE',
+        '--evidence-out',
+        '/private/evidence-secret.json',
+        '--skip-build',
+      ],
+      deps({ writtenFiles }),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe('');
+    const evidenceText = writtenFiles.get('/private/evidence-secret.json');
+    expect(evidenceText).toBeDefined();
+    const evidence = JSON.parse(evidenceText!) as {
+      kind: string;
+      generatedAt: string;
+      status: string;
+      stages: Array<{ name: string; status: string }>;
+      inputs: { snapshotSource: string; runtimeDemoBuild: string };
+      destructiveOpsCleanup: string;
+      redaction: string[];
+    };
+    expect(evidence).toMatchObject({
+      kind: 'nnz-release-validation-evidence',
+      generatedAt: '2026-07-07T00:00:00.000Z',
+      status: 'passed',
+      inputs: {
+        snapshotSource: 'json',
+        runtimeDemoBuild: 'skipped',
+      },
+      destructiveOpsCleanup: 'not-run',
+    });
+    expect(evidence.stages).toEqual([
+      { name: 'releasePreflight', status: 'passed' },
+      { name: 'migrationValidationSuite', status: 'passed' },
+      { name: 'opsRoleSmoke', status: 'passed' },
+      { name: 'runtimeSmokeSuite', status: 'passed' },
+    ]);
+    expect(evidence.redaction).toContain('database URLs omitted');
+    expect(evidenceText).not.toContain('/private/snapshot-secret.json');
+    expect(evidenceText).not.toContain('/private/raw-secret.json');
+    expect(evidenceText).not.toContain('/private/report-secret.json');
+    expect(evidenceText).not.toContain('/private/summary-secret.json');
+    expect(evidenceText).not.toContain('/private/evidence-secret.json');
+    expect(evidenceText).not.toContain('postgres://secret');
+    expect(evidenceText).not.toContain('token-secret');
   });
 
   it('supports skipping runtime build while still running all stages', async () => {
@@ -147,11 +216,13 @@ describe('NNZ release validation suite CLI', () => {
 
   it('stops before validation stages when preflight is blocked', async () => {
     const calls: string[] = [];
+    const writtenFiles = new Map<string, string>();
 
     const result = await runReleaseValidationSuiteCommand(
-      validArgs(),
+      [...validArgs(), '--evidence-out', '/private/failed-evidence.json'],
       deps({
         calls,
+        writtenFiles,
         preflightResult: {
           exitCode: 1,
           stdout: 'raw preflight output with postgres://secret and token-secret',
@@ -165,7 +236,25 @@ describe('NNZ release validation suite CLI', () => {
     expect(result.stderr).toContain('release preflight');
     expect(result.stderr).not.toContain('postgres://secret');
     expect(result.stderr).not.toContain('token-secret');
+    expect(result.stderr).not.toContain('/private/failed-evidence.json');
     expect(calls).toEqual(['preflight']);
+    const evidenceText = writtenFiles.get('/private/failed-evidence.json');
+    expect(evidenceText).toBeDefined();
+    const evidence = JSON.parse(evidenceText!) as {
+      status: string;
+      failedStage: string;
+      stages: Array<{ name: string; status: string }>;
+    };
+    expect(evidence.status).toBe('failed');
+    expect(evidence.failedStage).toBe('releasePreflight');
+    expect(evidence.stages).toEqual([
+      { name: 'releasePreflight', status: 'failed' },
+      { name: 'migrationValidationSuite', status: 'not_run' },
+      { name: 'opsRoleSmoke', status: 'not_run' },
+      { name: 'runtimeSmokeSuite', status: 'not_run' },
+    ]);
+    expect(evidenceText).not.toContain('postgres://secret');
+    expect(evidenceText).not.toContain('token-secret');
   });
 
   it('stops before ops and runtime when migration validation fails', async () => {
@@ -232,6 +321,23 @@ describe('NNZ release validation suite CLI', () => {
     expect(calls).toEqual(['preflight', 'migration', 'ops', 'runtime']);
   });
 
+  it('reports evidence write failure without printing the evidence path', async () => {
+    const result = await runReleaseValidationSuiteCommand(
+      [...validArgs(), '--evidence-out', '/private/evidence-secret.json'],
+      deps({
+        writeTextFile: () => {
+          throw new Error('raw filesystem failure at /private/evidence-secret.json');
+        },
+      }),
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('release evidence output could not be written');
+    expect(result.stderr).not.toContain('/private/evidence-secret.json');
+    expect(result.stderr).not.toContain('raw filesystem failure');
+  });
+
   it('validates numeric options before any stage runs', async () => {
     const calls: string[] = [];
 
@@ -280,6 +386,8 @@ function deps(options: {
   migrationArgs?: string[][];
   opsArgs?: string[][];
   runtimeArgs?: string[][];
+  writtenFiles?: Map<string, string>;
+  writeTextFile?: (path: string, contents: string) => void;
   preflightResult?: { exitCode: number; stdout: string; stderr: string };
   migrationResult?: { exitCode: number; stdout: string; stderr: string };
   opsResult?: { exitCode: number; stdout: string; stderr: string };
@@ -307,5 +415,9 @@ function deps(options: {
       options.runtimeArgs?.push(args);
       return options.runtimeResult ?? { exitCode: 0, stdout: 'runtime ok', stderr: '' };
     },
+    writeTextFile: options.writeTextFile ?? ((path, contents) => {
+      options.writtenFiles?.set(path, contents);
+    }),
+    now: () => new Date('2026-07-07T00:00:00.000Z'),
   };
 }

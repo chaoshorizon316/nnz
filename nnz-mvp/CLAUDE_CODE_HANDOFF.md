@@ -1274,10 +1274,10 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.34。最新已推送提交是 `7c3b1c5 feat: add release preflight`；当前本地新增 release validation suite CLI，尚待用户推送。现在还剩 1 个总外部实跑入口未执行：
+Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.35。最新已推送提交是 `a09f198 feat: add release validation suite`；当前本地新增 release validation evidence option，已完成本地全量验证，尚待用户推送。现在还剩 1 个总外部实跑入口未执行：
 
 1. 注入真实本地 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Render role token env、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`。
-2. 跑 `release:validation-suite`，它会串 preflight、migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite。
+2. 跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`，它会串 preflight、migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite，并写脱敏上线 evidence。
 3. 如果 suite 停在某个 stage，用对应单项命令做 focused diagnosis，修复后回到总 suite。
 
 当前不需要每个小步骤都停下来等 push；应按上面目标连续开发和验证。遇到真实 snapshot、`NNZ_POSTGRES_INTEGRATION_URL`、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`、Render role tokens 这类外部输入点时再做明确 checkpoint。完整路线图见 `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`。
@@ -1325,7 +1325,7 @@ Postgres persistence configured via DATABASE_URL.
 LLM adapter initialized for extraction pipeline.
 ```
 
-接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`、`nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`、`nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md`、`nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`、`nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md`、`nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md`、`nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md`、`nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`、`nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md`、`nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md`、`nnz-mvp-2026-07-01-Step2.19-DisposableMigrationSmokeCLI.md`、`nnz-mvp-2026-07-01-Step2.20-RuntimePersistenceModeGuardrail.md`、`nnz-mvp-2026-07-02-Step2.21-MigrationGuardrailHardening.md`、`nnz-mvp-2026-07-03-Step2.22-ScopedRuntimeAdapterFoundation.md`、`nnz-mvp-2026-07-03-Step2.23-ApiMeScopedRuntimeAdapter.md`、`nnz-mvp-2026-07-03-Step2.24-GuardedScopedRuntimePostgresMode.md`、`nnz-mvp-2026-07-03-Step2.25-ScopedRuntimeSmokeGuard.md`、`nnz-mvp-2026-07-03-Step2.26-ScopedOpsCleanupAudit.md`、`nnz-mvp-2026-07-06-Step2.27-ScopedOpsOverview.md`、`nnz-mvp-2026-07-06-Step2.28-UserDataExportDelete.md`、`nnz-mvp-2026-07-06-Step2.29-ScopedRuntimeHttpSmoke.md`、`nnz-mvp-2026-07-06-Step2.30-ScopedRuntimeSmokeSuite.md`、`nnz-mvp-2026-07-06-Step2.31-MigrationValidationSuite.md`、`nnz-mvp-2026-07-06-Step2.32-OpsRoleTokenSmoke.md`、`nnz-mvp-2026-07-07-Step2.33-ReleasePreflight.md` 和 `nnz-mvp-2026-07-07-Step2.34-ReleaseValidationSuite.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口；而是注入外部输入后跑 `release:validation-suite`，再按失败 stage 做 focused diagnosis。
+接手时先看 `nnz-mvp-2026-06-11-Render-Postgres-排查记录.md`、`nnz-mvp-2026-06-11-Step1-SoulOps独立后台与测试清理.md`、`nnz-mvp-2026-06-16-SoulOps云端启用记录.md`、`nnz-mvp-2026-06-16-Step2.1-SoulOps审计日志.md`、`nnz-mvp-2026-06-17-Step2.2-SoulOps-RBAC与删除回执.md`、`nnz-mvp-2026-06-17-Step2.3-SoulOps-Audit查询与角色云端验证.md`、`nnz-mvp-2026-06-17-Step2.3-推送后云端验收记录.md`、`nnz-mvp-2026-06-23-Step2.5-PostgresScopedRepository计划.md`、`nnz-mvp-2026-06-24-Step2.6-PostgresScopedCovenant计划.md`、`nnz-mvp-2026-06-24-Step2.7-PostgresScoped剩余表计划.md`、`nnz-mvp-2026-06-25-Step2.8-PostgresIntegration测试计划.md`、`nnz-mvp-2026-06-25-Step2.9-SnapshotToScopedTables迁移预检.md`、`nnz-mvp-2026-06-26-Step2.10-SnapshotDryRunCLI.md`、`nnz-mvp-2026-06-26-Step2.11-ScopedMigrationRows.md`、`nnz-mvp-2026-06-26-Step2.12-ScopedMigrationExecutor.md`、`nnz-mvp-2026-06-26-Step2.13-ExecutorIntegrationHarness.md`、`nnz-mvp-2026-06-26-Step2.14-ExecutorClientTransaction.md`、`nnz-mvp-2026-06-29-Step2.15-StoreSnapshotExportCLI.md`、`nnz-mvp-2026-06-30-Step2.16-SanitizedMigrationSummary.md`、`nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`、`nnz-mvp-2026-07-01-Step2.17-ProtectedMigrationExecuteCLI.md`、`nnz-mvp-2026-07-01-Step2.18-MigrationReadinessCLI.md`、`nnz-mvp-2026-07-01-Step2.19-DisposableMigrationSmokeCLI.md`、`nnz-mvp-2026-07-01-Step2.20-RuntimePersistenceModeGuardrail.md`、`nnz-mvp-2026-07-02-Step2.21-MigrationGuardrailHardening.md`、`nnz-mvp-2026-07-03-Step2.22-ScopedRuntimeAdapterFoundation.md`、`nnz-mvp-2026-07-03-Step2.23-ApiMeScopedRuntimeAdapter.md`、`nnz-mvp-2026-07-03-Step2.24-GuardedScopedRuntimePostgresMode.md`、`nnz-mvp-2026-07-03-Step2.25-ScopedRuntimeSmokeGuard.md`、`nnz-mvp-2026-07-03-Step2.26-ScopedOpsCleanupAudit.md`、`nnz-mvp-2026-07-06-Step2.27-ScopedOpsOverview.md`、`nnz-mvp-2026-07-06-Step2.28-UserDataExportDelete.md`、`nnz-mvp-2026-07-06-Step2.29-ScopedRuntimeHttpSmoke.md`、`nnz-mvp-2026-07-06-Step2.30-ScopedRuntimeSmokeSuite.md`、`nnz-mvp-2026-07-06-Step2.31-MigrationValidationSuite.md`、`nnz-mvp-2026-07-06-Step2.32-OpsRoleTokenSmoke.md`、`nnz-mvp-2026-07-07-Step2.33-ReleasePreflight.md`、`nnz-mvp-2026-07-07-Step2.34-ReleaseValidationSuite.md` 和 `nnz-mvp-2026-07-07-Step2.35-ReleaseEvidence.md`。下一步不是再配置数据库，也不是再拆 `/demo`，也不是再启用 `/ops`，也不是再加基础 audit log/RBAC，也不是再做 audit 查询接口；而是 push Step 2.35 后，注入外部输入跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`，再按失败 stage 做 focused diagnosis。
 
 ## 16.2.1 2026-06-23 Step 2.5 Postgres scoped repository
 
@@ -2279,6 +2279,36 @@ npm run release:validation-suite -- --help: passed
 npm run release:validation-suite -- --from-json missing-snapshot.json --snapshot-out raw.json --report-out report.json --summary-out summary.json --confirm RUN_NNZ_RELEASE_VALIDATION_SUITE: failed during release preflight as expected, no DB/network stage
 npm run typecheck: passed
 npm test: 32 个测试文件、204 tests passed；2 个 integration 文件 skipped
+npm run build:demo: passed
+git diff --check: passed
+```
+
+## 16.2.31 2026-07-07 Step 2.35 release evidence option
+
+本地已为 release validation suite 增加脱敏上线证据产物：
+
+- `release:validation-suite` 新增可选 `--evidence-out <sanitized-evidence-json-path>`。
+- 只有传入 `--confirm RUN_NNZ_RELEASE_VALIDATION_SUITE` 后才会尝试写 evidence；缺确认或参数错误时不写。
+- suite 全部通过时写 `status: "passed"`，四个 stage 均为 `passed`。
+- 确认执行后若某个 stage 失败，写 `status: "failed"`、`failedStage`，已跑 stage 标记为 `passed/failed`，后续 stage 标记为 `not_run`。
+- evidence 只记录 stage 状态、env key 名、本地产物类别和 redaction 说明；不记录 snapshot input/output path、DB URL、token 值、用户内容、cleanup receipt、child command output、server log 或 raw error detail。
+- stdout/stderr 也不打印 evidence output path；写 evidence 失败时只返回固定脱敏错误。
+
+命令：
+
+```bash
+npm run release:validation-suite -- --from-json <snapshot-or-wrapper-json-path> --snapshot-out <raw-snapshot-json-path> --report-out <sanitized-report-json-path> --summary-out <sanitized-summary-json-path> --evidence-out <sanitized-evidence-json-path> --confirm RUN_NNZ_RELEASE_VALIDATION_SUITE
+npm run release:validation-suite -- --from-sqlite <sqlite-db-path> --snapshot-out <raw-snapshot-json-path> --report-out <sanitized-report-json-path> --summary-out <sanitized-summary-json-path> --evidence-out <sanitized-evidence-json-path> --confirm RUN_NNZ_RELEASE_VALIDATION_SUITE
+```
+
+当前已验证：
+
+```text
+npm test -- src/tools/release-validation-suite-cli.test.ts --reporter verbose: 10 tests passed
+npm run typecheck: passed
+npm run release:validation-suite -- --help: passed
+npm run release:validation-suite -- --from-json missing-snapshot.json --snapshot-out raw.json --report-out report.json --summary-out summary.json --evidence-out /private/tmp/nnz-release-evidence-smoke.json --confirm RUN_NNZ_RELEASE_VALIDATION_SUITE: failed during release preflight as expected, no DB/network stage, evidence JSON sanitized
+npm test: 32 个测试文件、206 tests passed；2 个 integration 文件 skipped
 npm run build:demo: passed
 git diff --check: passed
 ```

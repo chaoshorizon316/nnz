@@ -65,6 +65,7 @@ https://github.com/chaoshorizon316/nnz
 2026-07-06 Step 2.32: Ops role token smoke CLI 已实现；新增 `ops:role-smoke`，默认非破坏性验证 viewer/operator/admin token 权限边界，confirmed cleanup smoke 需要第二道 confirm；本地 typecheck、190 tests + 2 skipped、build:demo、CLI help 通过
 2026-07-07 Step 2.33: release preflight CLI 已实现；新增 `release:preflight`，不读 snapshot、不连 DB、不触网，只脱敏检查三类外部实跑前置输入；本地 typecheck、196 tests + 2 skipped、build:demo、CLI help 通过
 2026-07-07 Step 2.34: release validation suite CLI 已实现；新增 `release:validation-suite`，一个受保护命令串起 preflight、migration validation、默认非破坏性 Ops role smoke、runtime smoke suite；本地 typecheck、204 tests + 2 skipped、build:demo、CLI help 通过
+2026-07-07 Step 2.35: release validation evidence option 本地已实现；`release:validation-suite` 新增可选 `--evidence-out`，确认执行后成功或 stage 失败都会写脱敏 evidence JSON；本地 typecheck、206 tests + 2 skipped、build:demo、CLI help、当前环境 preflight-blocked evidence smoke、git diff --check 通过
 ```
 
 说明：
@@ -229,6 +230,8 @@ npm audit
 2026-07-07 Step 2.33 release preflight CLI 结果：新增 `src/tools/release-preflight-cli.ts` / `.test.ts`，新增 `release:preflight` script；命令只检查本地 snapshot/SQLite 输入存在性、`NNZ_POSTGRES_INTEGRATION_URL`、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`、Ops role token env 是否具备，并识别 disposable DB env 与 `DATABASE_URL` / `NNZ_POSTGRES_URL` 同值的生产别名误配。它不读取 snapshot 内容、不连接数据库、不发送网络请求；stdout 只输出 ready/blocked、env key 和固定命令模板，不打印 snapshot 路径、DB URL、token 值或用户内容。本地 `npm run typecheck`、targeted preflight CLI tests、`npm run release:preflight -- --help`、`npm run release:preflight` 当前环境 blocked smoke、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 31 个测试文件、196 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-07-Step2.33-ReleasePreflight.md`。
 
 2026-07-07 Step 2.34 release validation suite CLI 结果：新增 `src/tools/release-validation-suite-cli.ts` / `.test.ts`，新增 `release:validation-suite` script；命令必须传 `--confirm RUN_NNZ_RELEASE_VALIDATION_SUITE`，stage 顺序固定为 `release:preflight` -> `migration:validation-suite` -> 默认非破坏性 `ops:role-smoke` -> `runtime:smoke-suite`。它不传 `--include-delete`，因此不会跑 confirmed Ops cleanup deletion；失败时只输出固定 stage 名称，不拼接子命令 stdout/stderr。stdout/stderr 不打印 DB URL、token 值、snapshot 内容、用户内容、cleanup receipt、child command output、server log 或 raw error details。本地 `npm run typecheck`、targeted release validation suite tests、`npm run release:validation-suite -- --help`、当前环境 preflight-blocked smoke、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 32 个测试文件、204 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-07-Step2.34-ReleaseValidationSuite.md`。
+
+2026-07-07 Step 2.35 release evidence option 结果：`release:validation-suite` 新增可选 `--evidence-out <sanitized-evidence-json-path>`；只有传 `--confirm RUN_NNZ_RELEASE_VALIDATION_SUITE` 后才会写 evidence。suite 成功时写四个 stage passed；确认后若某 stage 失败，写 failedStage，后续 stage 标记 not_run。evidence 只含 stage 状态、env key 名、本地产物类别和 redaction 说明，不含 snapshot 路径、DB URL、token、用户内容、cleanup receipt、child command output、server log 或 raw error details；stdout/stderr 也不打印 evidence path。本地 `npm run typecheck`、targeted release validation tests、CLI help、当前环境 preflight-blocked evidence smoke、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 32 个测试文件、206 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-07-Step2.35-ReleaseEvidence.md`。
 
 最新 CI run：
 

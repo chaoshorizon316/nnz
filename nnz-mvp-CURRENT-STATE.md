@@ -59,18 +59,19 @@ https://github.com/chaoshorizon316/nnz
 2026-07-06 Step 2.32: Ops role token smoke CLI 已实现；新增 `ops:role-smoke`，验证 viewer/operator/admin token 权限边界，默认非破坏性，确认删除 smoke 需要第二道 confirm；本地 typecheck、190 tests + 2 skipped、build:demo、CLI help 通过
 2026-07-07 Step 2.33: release preflight CLI 已实现；新增 `release:preflight`，在不读 snapshot、不连 DB、不触网的情况下汇总剩余三类外部实跑的本地前置条件；本地 typecheck、196 tests + 2 skipped、build:demo、CLI help 通过
 2026-07-07 Step 2.34: release validation suite CLI 已实现；新增 `release:validation-suite`，先跑 preflight，再串 migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite；本地 typecheck、204 tests + 2 skipped、build:demo、CLI help 通过
+2026-07-07 Step 2.35: release validation evidence option 本地已实现；`release:validation-suite` 新增可选 `--evidence-out`，成功或确认后的 stage 失败都会写脱敏 evidence JSON，只含 stage 状态、env key 名和本地产物类别，不含 snapshot 路径、DB URL、token、用户内容、child output、server log 或 raw error details；本地 typecheck、206 tests + 2 skipped、build:demo、CLI help、当前环境 preflight-blocked evidence smoke、git diff --check 通过，尚待下一次 push
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main + local Step 2.34 release validation suite changes pending
+main...origin/main + local Step 2.35 release evidence changes pending
 ```
 
 最新提交：
 
 ```text
-7c3b1c5 feat: add release preflight
+a09f198 feat: add release validation suite
 ```
 
 最新云端 Soul Ops 记录：
