@@ -2,15 +2,15 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.32。最新已推送提交是：
+Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.33。最新已推送提交是：
 
 ```text
-28b61ff feat: add migration validation suite
+9bf2c39 feat: add ops role token smoke
 ```
 
-当前本地新增 Step 2.32 Ops role token smoke CLI，尚待下一次合并 push。
+当前本地新增 Step 2.33 release preflight CLI，尚待下一次合并 push。
 
-截至 2026-07-06，链路还剩 **3 类外部实跑未完全收口**：真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、以及 Ops role token smoke CLI 都已完成本地实现；真实 DB/Render 执行仍需要 disposable URL、snapshot 路径或 token env。
+截至 2026-07-07，链路还剩 **3 类外部实跑未完全收口**：真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、以及 release preflight CLI 都已完成本地实现；真实 DB/Render 执行仍需要 disposable URL、snapshot 路径或 token env。
 
 ## 已完成基线
 
@@ -40,6 +40,7 @@ Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Ste
 - Step 2.30：`runtime:smoke-suite` CLI 已实现；一次运行 direct `runtime:smoke`、`build:demo`、HTTP `runtime:http-smoke`，统一使用 `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 与 suite confirm，失败时只输出固定 stage 与脱敏说明。
 - Step 2.31：`migration:validation-suite` CLI 已实现；一次运行 offline `migration:readiness` 与 disposable `migration:smoke`，readiness 干净后才连接 `NNZ_POSTGRES_INTEGRATION_URL`，失败时不输出 raw snapshot、child command output 或 raw details。
 - Step 2.32：`ops:role-smoke` CLI 已实现；默认非破坏性地验证 missing/invalid token、viewer read-only、operator dry-run、admin dry-run 与 admin delete confirmation boundary，确认删除 smoke 需要额外 `--include-delete --delete-confirm RUN_OPS_ROLE_TOKEN_DELETE_SMOKE`。
+- Step 2.33：`release:preflight` CLI 已实现；不读取 snapshot 内容、不连接数据库、不触网，只检查 snapshot/SQLite 输入、disposable DB env、role token env、scoped runtime DB env 是否具备，并输出脱敏状态。
 
 ## 剩余目标状态
 
@@ -52,10 +53,11 @@ Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Ste
 
 ## 推荐推进顺序
 
-1. 先做目标 1+2：拿一个真实本地 snapshot 样本和一次性 Postgres 测试库跑 `migration:validation-suite`。suite 会先离线生成 raw snapshot、sanitized report、sanitized summary，readiness 干净后才连接 disposable DB 跑 migration smoke。
-2. 如 readiness 输出 blocking errors，先只审阅 sanitized report，不连接数据库。
-3. 做目标 3：当 Render 角色 token 配好后，运行 `ops:role-smoke` 做 viewer/operator/admin cloud smoke；默认先不跑 confirmed delete。
-4. 最后继续目标 4：用 disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 跑 `runtime:smoke-suite`，一次覆盖 adapter 直连与真实 HTTP 注册、创建、聊天、Covenant、导出和删除。
+1. 先跑 `release:preflight`，确认 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Ops role tokens、`NNZ_POSTGRES_SCOPED_RUNTIME_URL` 哪些已具备。
+2. 做目标 1+2：拿一个真实本地 snapshot 样本和一次性 Postgres 测试库跑 `migration:validation-suite`。suite 会先离线生成 raw snapshot、sanitized report、sanitized summary，readiness 干净后才连接 disposable DB 跑 migration smoke。
+3. 如 readiness 输出 blocking errors，先只审阅 sanitized report，不连接数据库。
+4. 做目标 3：当 Render 角色 token 配好后，运行 `ops:role-smoke` 做 viewer/operator/admin cloud smoke；默认先不跑 confirmed delete。
+5. 最后继续目标 4：用 disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 跑 `runtime:smoke-suite`，一次覆盖 adapter 直连与真实 HTTP 注册、创建、聊天、Covenant、导出和删除。
 
 ## 安全边界
 
@@ -73,11 +75,13 @@ Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Ste
 - `runtime:http-smoke` 真正连接数据库前必须先 `npm run build:demo`，再传 `--database-url-env NNZ_POSTGRES_SCOPED_RUNTIME_URL` 和 `--confirm RUN_POSTGRES_SCOPED_RUNTIME_HTTP_SMOKE`；它会启动真实 demo server，但 stdout/stderr 不输出 DB URL、token、email/password、memory/chat、credential hash、row payload、server log 或 raw error details。
 - `runtime:smoke-suite` 是目标 4 的推荐入口；真正连接数据库前必须传 `--database-url-env NNZ_POSTGRES_SCOPED_RUNTIME_URL` 和 `--confirm RUN_POSTGRES_SCOPED_RUNTIME_SMOKE_SUITE`；它串行运行 direct smoke、`build:demo` 和 HTTP smoke，失败时不打印 child process output 或 raw details。
 - `ops:role-smoke` 是目标 3 的推荐入口；默认只做非破坏性边界验证，必须传 `--base-url` 与 `--confirm RUN_OPS_ROLE_TOKEN_SMOKE`，并从本地 shell 读取 `NNZ_OPS_VIEWER_TOKEN` / `NNZ_OPS_OPERATOR_TOKEN` / `NNZ_OPS_ADMIN_TOKEN`。确认删除 smoke 还必须额外传 `--include-delete --delete-confirm RUN_OPS_ROLE_TOKEN_DELETE_SMOKE`。stdout/stderr 不打印 token 值、response payload、用户内容、cleanup receipt、server log 或 raw network details。
+- `release:preflight` 是三类外部实跑前的本地检查入口；它只检查文件存在性和 env key 设置/别名冲突，不读取 snapshot 内容、不连接数据库、不发送网络请求，也不打印 snapshot 路径、数据库 URL、token 值、用户内容、cleanup receipt、server log 或 raw network details。
 - 任何执行入口都必须保留 `userId + personaId` 作用域边界，不能引入 persona-only 查询。
 - 用户端不可暴露 `SoulVersion`、`SoulSnapshot`、`scope`、`evidence`、`migration` 等后台机制。
 
 ## 当前可继续做的本地工作
 
+- 先跑 `release:preflight` 检查外部输入是否齐备。
 - 用真实本地 snapshot/SQLite 与 disposable `NNZ_POSTGRES_INTEGRATION_URL` 跑 `migration:validation-suite`。
 - 用 Render base URL 与本地 role token env 跑 `ops:role-smoke`。
 - 用 disposable `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 跑 `runtime:smoke-suite`；默认仍保持 snapshot persistence。
