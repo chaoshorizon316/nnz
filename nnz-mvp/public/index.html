@@ -415,6 +415,10 @@
           <div id="h5CreatePage3" class="hidden space-y-3">
             <p class="text-sm text-warm-600">还有什么想补充的？（可选）</p>
             <textarea id="h5Description" rows="4" placeholder="性格、说话方式、小习惯……" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors resize-none bg-warm-50/50"></textarea>
+            <label class="flex items-start gap-3 rounded-xl border border-warm-200 bg-warm-50/70 px-4 py-3 text-xs text-warm-600 leading-relaxed">
+              <input id="h5ConsentAccepted" type="checkbox" class="mt-0.5 h-4 w-4 rounded border-warm-300 text-sage-600 focus:ring-sage-500">
+              <span>我理解这是一段辅助性的记忆对话，不替代身边的人或专业帮助；我可以随时导出或删除自己的数据。</span>
+            </label>
             <div class="flex gap-3">
               <button onclick="h5NextPage(2)" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">← 上一步</button>
               <button onclick="h5CreatePersona()" class="flex-1 py-3 bg-sage-500 text-white text-sm font-medium rounded-full hover:bg-sage-600 transition-colors">创建并开始对话</button>
@@ -1527,6 +1531,8 @@ function h5ShowCreatePanel() {
   document.getElementById('h5Relationship').value = '';
   document.getElementById('h5PetPhrase').value = '';
   document.getElementById('h5Description').value = '';
+  const consent = document.getElementById('h5ConsentAccepted');
+  if (consent) consent.checked = false;
   document.getElementById('h5PersonaName').focus();
   h5SelectedTraits = {};
   h5NextPage(1);
@@ -1634,8 +1640,15 @@ async function h5CreatePersona() {
   const relationship = document.getElementById('h5Relationship').value.trim();
   const petPhrase = document.getElementById('h5PetPhrase').value.trim();
   const description = document.getElementById('h5Description').value.trim();
+  const consentAccepted = document.getElementById('h5ConsentAccepted')?.checked;
   if (!displayName || !relationship) {
     h5SetStatus('h5PersonaStatus', '请填写称呼和关系。');
+    return;
+  }
+  if (!consentAccepted) {
+    h5SetStatus('h5PersonaStatus', '请先确认使用边界和数据权利。');
+    h5NextPage(3);
+    document.getElementById('h5ConsentAccepted')?.focus();
     return;
   }
   // Build traits description from selections
@@ -1661,7 +1674,7 @@ async function h5CreatePersona() {
   try {
     const data = await h5Request('/api/me/persona', {
       method: 'POST',
-      body: { displayName, relationship, petPhrase, description: fullDescription, traits: traitsPayload },
+      body: { displayName, relationship, petPhrase, description: fullDescription, traits: traitsPayload, consentAccepted: true },
     });
     h5CurrentPersonaId = data.persona.id;
     h5SelectedTraits = {};

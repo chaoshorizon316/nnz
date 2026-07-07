@@ -45,4 +45,19 @@ describe('H5 experience lifecycle controls', () => {
     expect(updateSafetySupport).toContain('h5IsSafetySupportReply');
     expect(html).toContain('请现在就联系能真正帮助你的人');
   });
+
+  it('requires boundary and data-rights consent before creating a persona', () => {
+    const createPersona = functionBody('h5CreatePersona');
+    const showCreatePanel = functionBody('h5ShowCreatePanel', false);
+
+    expect(html).toContain('id="h5ConsentAccepted"');
+    expect(html).toContain('不替代身边的人或专业帮助');
+    expect(html).toContain('随时导出或删除自己的数据');
+    expect(createPersona).toContain("document.getElementById('h5ConsentAccepted')?.checked");
+    expect(createPersona).toContain('consentAccepted: true');
+    expect(createPersona).toContain('请先确认使用边界和数据权利。');
+    expect(createPersona).toContain('h5NextPage(3);');
+    expect(showCreatePanel).toContain('h5ConsentAccepted');
+    expect(showCreatePanel).toContain('consent.checked = false;');
+  });
 });

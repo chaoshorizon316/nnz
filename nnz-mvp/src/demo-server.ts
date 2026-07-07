@@ -254,9 +254,13 @@ const server = createServer(async (req, res) => {
         description?: string;
         petPhrase?: string;
         traits?: Record<string, string>;
+        consentAccepted?: boolean;
       }>(req);
       if (!normalizeVisibleText(body.displayName, 24) || !normalizeVisibleText(body.relationship, 24)) {
         return sendJson(res, { error: '请填写称呼和关系。' }, 400);
+      }
+      if (body.consentAccepted !== true) {
+        return sendJson(res, { error: '请先确认使用边界和数据权利。' }, 400);
       }
       return sendJson(res, await createUserPersona(authUser.userId, body));
     }

@@ -5,10 +5,10 @@
 Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.36。最新已推送提交是：
 
 ```text
-1885a99 chore: guard sensitive local release artifacts
+426d721 feat: add h5 graduation export and safety support
 ```
 
-Step 2.36 sensitive local release safety 已完成验证并推送。当前另有 Step 2.37 H5 graduation export + safety support UX 本地待推；它不改变本路线图的外部 release validation 剩余入口。
+Step 2.37 H5 graduation export + safety support UX 已完成验证并推送。当前本地新增 Step 2.38 H5/API onboarding consent UX；它不改变本路线图的外部 release validation 剩余入口。
 
 截至 2026-07-07，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、以及本地 `.env.example` 都已完成实现；真实 DB/Render 执行仍需要 disposable URL、snapshot 路径或 token env。
 

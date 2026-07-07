@@ -180,6 +180,7 @@ export async function runPostgresScopedRuntimeHttpSmoke(
         relationship: '女儿',
         description,
         traits: { humorLevel: 'medium' },
+        consentAccepted: true,
       },
     });
     const personaId = persona.body.persona?.id;
