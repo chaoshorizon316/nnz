@@ -58,18 +58,19 @@ https://github.com/chaoshorizon316/nnz
 2026-07-06 Step 2.31: migration validation suite 已实现；新增 `migration:validation-suite`，先跑真实 snapshot readiness，干净后再跑 disposable Postgres migration smoke；本地 typecheck、183 tests + 2 skipped、build:demo、CLI help 通过
 2026-07-06 Step 2.32: Ops role token smoke CLI 已实现；新增 `ops:role-smoke`，验证 viewer/operator/admin token 权限边界，默认非破坏性，确认删除 smoke 需要第二道 confirm；本地 typecheck、190 tests + 2 skipped、build:demo、CLI help 通过
 2026-07-07 Step 2.33: release preflight CLI 已实现；新增 `release:preflight`，在不读 snapshot、不连 DB、不触网的情况下汇总剩余三类外部实跑的本地前置条件；本地 typecheck、196 tests + 2 skipped、build:demo、CLI help 通过
+2026-07-07 Step 2.34: release validation suite CLI 已实现；新增 `release:validation-suite`，先跑 preflight，再串 migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite；本地 typecheck、204 tests + 2 skipped、build:demo、CLI help 通过
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main + local Step 2.33 release preflight changes pending
+main...origin/main + local Step 2.34 release validation suite changes pending
 ```
 
 最新提交：
 
 ```text
-9bf2c39 feat: add ops role token smoke
+7c3b1c5 feat: add release preflight
 ```
 
 最新云端 Soul Ops 记录：
@@ -115,6 +116,7 @@ nnz-mvp-2026-07-06-Step2.30-ScopedRuntimeSmokeSuite.md
 nnz-mvp-2026-07-06-Step2.31-MigrationValidationSuite.md
 nnz-mvp-2026-07-06-Step2.32-OpsRoleTokenSmoke.md
 nnz-mvp-2026-07-07-Step2.33-ReleasePreflight.md
+nnz-mvp-2026-07-07-Step2.34-ReleaseValidationSuite.md
 ```
 
 ## 2026-06-22 工作区注意

@@ -18,6 +18,7 @@
     "migration:validation-suite": "node --import tsx src/tools/postgres-scoped-migration-validation-suite-cli.ts",
     "ops:role-smoke": "node --import tsx src/tools/ops-role-token-smoke-cli.ts",
     "release:preflight": "node --import tsx src/tools/release-preflight-cli.ts",
+    "release:validation-suite": "node --import tsx src/tools/release-validation-suite-cli.ts",
     "runtime:http-smoke": "node --import tsx src/tools/postgres-scoped-runtime-http-smoke-cli.ts",
     "runtime:smoke": "node --import tsx src/tools/postgres-scoped-runtime-smoke-cli.ts",
     "runtime:smoke-suite": "node --import tsx src/tools/postgres-scoped-runtime-smoke-suite-cli.ts",

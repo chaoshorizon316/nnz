@@ -64,6 +64,7 @@ https://github.com/chaoshorizon316/nnz
 2026-07-06 Step 2.31: migration validation suite 已实现；新增 `migration:validation-suite`，合并 offline readiness 与 disposable Postgres migration smoke；本地 typecheck、183 tests + 2 skipped、build:demo、CLI help 通过
 2026-07-06 Step 2.32: Ops role token smoke CLI 已实现；新增 `ops:role-smoke`，默认非破坏性验证 viewer/operator/admin token 权限边界，confirmed cleanup smoke 需要第二道 confirm；本地 typecheck、190 tests + 2 skipped、build:demo、CLI help 通过
 2026-07-07 Step 2.33: release preflight CLI 已实现；新增 `release:preflight`，不读 snapshot、不连 DB、不触网，只脱敏检查三类外部实跑前置输入；本地 typecheck、196 tests + 2 skipped、build:demo、CLI help 通过
+2026-07-07 Step 2.34: release validation suite CLI 已实现；新增 `release:validation-suite`，一个受保护命令串起 preflight、migration validation、默认非破坏性 Ops role smoke、runtime smoke suite；本地 typecheck、204 tests + 2 skipped、build:demo、CLI help 通过
 ```
 
 说明：
@@ -226,6 +227,8 @@ npm audit
 2026-07-06 Step 2.32 Ops role token smoke CLI 结果：新增 `src/tools/ops-role-token-smoke-cli.ts` / `.test.ts`，新增 `ops:role-smoke` script；命令必须传 `--base-url` 与 `--confirm RUN_OPS_ROLE_TOKEN_SMOKE`，默认读取 `NNZ_OPS_VIEWER_TOKEN` / `NNZ_OPS_OPERATOR_TOKEN` / `NNZ_OPS_ADMIN_TOKEN`，验证 missing/invalid token、viewer 只读、operator dry-run、admin dry-run 与 admin delete confirmation boundary。默认非破坏性；confirmed cleanup smoke 必须额外传 `--include-delete --delete-confirm RUN_OPS_ROLE_TOKEN_DELETE_SMOKE`。stdout/stderr 不打印 token 值、response payload、用户内容、cleanup receipt、server log 或 raw network details。本地 `npm run typecheck`、targeted role smoke CLI tests、`npm run ops:role-smoke -- --help`、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 30 个测试文件、190 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-06-Step2.32-OpsRoleTokenSmoke.md`。
 
 2026-07-07 Step 2.33 release preflight CLI 结果：新增 `src/tools/release-preflight-cli.ts` / `.test.ts`，新增 `release:preflight` script；命令只检查本地 snapshot/SQLite 输入存在性、`NNZ_POSTGRES_INTEGRATION_URL`、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`、Ops role token env 是否具备，并识别 disposable DB env 与 `DATABASE_URL` / `NNZ_POSTGRES_URL` 同值的生产别名误配。它不读取 snapshot 内容、不连接数据库、不发送网络请求；stdout 只输出 ready/blocked、env key 和固定命令模板，不打印 snapshot 路径、DB URL、token 值或用户内容。本地 `npm run typecheck`、targeted preflight CLI tests、`npm run release:preflight -- --help`、`npm run release:preflight` 当前环境 blocked smoke、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 31 个测试文件、196 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-07-Step2.33-ReleasePreflight.md`。
+
+2026-07-07 Step 2.34 release validation suite CLI 结果：新增 `src/tools/release-validation-suite-cli.ts` / `.test.ts`，新增 `release:validation-suite` script；命令必须传 `--confirm RUN_NNZ_RELEASE_VALIDATION_SUITE`，stage 顺序固定为 `release:preflight` -> `migration:validation-suite` -> 默认非破坏性 `ops:role-smoke` -> `runtime:smoke-suite`。它不传 `--include-delete`，因此不会跑 confirmed Ops cleanup deletion；失败时只输出固定 stage 名称，不拼接子命令 stdout/stderr。stdout/stderr 不打印 DB URL、token 值、snapshot 内容、用户内容、cleanup receipt、child command output、server log 或 raw error details。本地 `npm run typecheck`、targeted release validation suite tests、`npm run release:validation-suite -- --help`、当前环境 preflight-blocked smoke、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 32 个测试文件、204 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-07-Step2.34-ReleaseValidationSuite.md`。
 
 最新 CI run：
 
@@ -407,10 +410,13 @@ nnz-mvp/src/tools/ops-role-token-smoke-cli.ts
 nnz-mvp/src/tools/ops-role-token-smoke-cli.test.ts
 nnz-mvp/src/tools/release-preflight-cli.ts
 nnz-mvp/src/tools/release-preflight-cli.test.ts
+nnz-mvp/src/tools/release-validation-suite-cli.ts
+nnz-mvp/src/tools/release-validation-suite-cli.test.ts
 nnz-mvp/src/ops/ops-console.ts
 nnz-mvp/src/ops/ops-console.test.ts
 nnz-mvp/public/index.html
 nnz-mvp/CLAUDE_CODE_HANDOFF.md
+nnz-mvp-2026-07-07-Step2.34-ReleaseValidationSuite.md
 nnz-mvp-2026-07-07-Step2.33-ReleasePreflight.md
 nnz-mvp-2026-07-06-Step2.32-OpsRoleTokenSmoke.md
 nnz-mvp-2026-07-06-Step2.31-MigrationValidationSuite.md
