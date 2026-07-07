@@ -374,7 +374,7 @@
               <button onclick="h5Logout()" class="px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">退出</button>
             </div>
           </div>
-          <p id="h5AuthStatus" class="text-xs text-sage-600 h-4"></p>
+          <p id="h5AuthStatus" class="text-xs text-sage-600 min-h-[1rem]"></p>
         </div>
       </div>
 
@@ -446,6 +446,12 @@
           <span id="h5CovenantHint" class="text-xs text-warm-500"></span>
         </div>
         <div id="h5CovenantActions" class="flex gap-2 flex-wrap"></div>
+      </div>
+      <div id="h5SafetySupport" class="hidden px-6 py-3 border-b border-red-100 bg-red-50">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 text-sm text-red-700">
+          <p class="leading-relaxed"><span class="font-semibold">请先联系现实中的支持。</span> 如果你此刻有伤害自己的念头，请立刻联系身边的人或拨打心理援助热线。</p>
+          <a href="tel:4001619995" class="inline-flex items-center justify-center rounded-full border border-red-200 bg-white px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors">拨打 400-161-9995</a>
+        </div>
       </div>
       <div id="h5Messages" class="h5-chat-full overflow-y-auto px-6 py-6 space-y-4 md:space-y-5 bg-warm-50/30">
         <div class="flex gap-3">
@@ -1454,20 +1460,24 @@ async function h5ExportData() {
   }
   try {
     const data = await h5Request('/api/me/export');
-    const payload = JSON.stringify(data.export, null, 2);
-    const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'nianzain-data-' + new Date().toISOString().slice(0, 10) + '.json';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    h5SetStatus('h5AuthStatus', '已开始导出。');
+    h5DownloadDataArchive(data.export);
   } catch (error) {
     h5SetStatus('h5AuthStatus', error.message || '导出失败。');
   }
+}
+
+function h5DownloadDataArchive(exportData, statusText = '已开始导出。') {
+  const payload = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'nianzain-data-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  h5SetStatus('h5AuthStatus', statusText);
 }
 
 async function h5DeleteAllData() {
@@ -1674,7 +1684,7 @@ async function h5LoadConversation() {
 async function h5RefreshCovenantState() {
   if (!h5Token || !h5CurrentPersonaId) return;
   try {
-    const res = await fetch('/api/me/covenant-state?personaId=' + h5CurrentPersonaId, {
+    const res = await fetch('/api/me/covenant-state?personaId=' + encodeURIComponent(h5CurrentPersonaId), {
       headers: h5AuthHeaders()
     });
     if (!res.ok) return;
@@ -1686,24 +1696,24 @@ async function h5RefreshCovenantState() {
     const state = data.state;
     bar.classList.remove('hidden');
     badge.className = 'text-xs font-bold px-3 py-1 rounded-full';
-    const labels = { ACTIVE: '活跃中', SEALED: '已封存', NODE: '节点中', GRADUATED: '已毕业' };
+    const labels = { ACTIVE: '可继续说话', SEALED: '正在休息', NODE: '特别时刻', GRADUATED: '已好好告别' };
     const cssMap = { ACTIVE: 'covenant-active', SEALED: 'covenant-sealed', NODE: 'covenant-node', GRADUATED: 'covenant-graduated' };
-    badge.textContent = labels[state] || state;
+    badge.textContent = labels[state] || '状态更新中';
     badge.classList.add(cssMap[state] || '');
     actions.innerHTML = '';
 
     if (state === 'ACTIVE') {
-      hint.textContent = '「封存」后，AI 会暂时休息，直到下一个重要时刻。';
+      hint.textContent = '选择「封存」后，这段对话会暂时安静下来，等下一个重要时刻再回来。';
       actions.innerHTML = '<button class="covenant-btn covenant-btn-seal" onclick="h5SealSoul()">封存</button>';
     } else if (state === 'SEALED') {
-      hint.textContent = '等待下一个节点。输入节点名称重启 3 天互动。';
+      hint.textContent = '等待下一个重要时刻。输入一个名称，开启 3 天的短暂陪伴。';
       actions.innerHTML = '<input id="h5NodeName" type="text" placeholder="例如：婚礼" style="padding:6px 12px;border:1px solid #E8D5C4;border-radius:999px;font-size:13px;width:100px">' +
-        '<button class="covenant-btn covenant-btn-node" onclick="h5ActivateNode()">节点重启</button>' +
+        '<button class="covenant-btn covenant-btn-node" onclick="h5ActivateNode()">开启时刻</button>' +
         '<button class="covenant-btn covenant-btn-graduate" onclick="h5Graduate()">毕业</button>';
     } else if (state === 'NODE') {
-      const nodeName = data.nodeContext ? data.nodeContext.nodeName : '当前节点';
-      hint.textContent = '节点「' + nodeName + '」进行中。完成后将回到封存状态。';
-      actions.innerHTML = '<button class="covenant-btn covenant-btn-done" onclick="h5CompleteNode()">完成节点</button>';
+      const nodeName = data.nodeContext ? data.nodeContext.nodeName : '这个时刻';
+      hint.textContent = '「' + nodeName + '」正在进行中。完成后，这段对话会回到安静状态。';
+      actions.innerHTML = '<button class="covenant-btn covenant-btn-done" onclick="h5CompleteNode()">完成这个时刻</button>';
     } else if (state === 'GRADUATED') {
       hint.textContent = '这段思念已安静落幕。感谢你曾经认真说过这些话。';
       bar.classList.add('hidden');
@@ -1722,8 +1732,29 @@ async function h5CompleteNode() {
   await h5CovenantAction('/api/me/complete-node', { personaId: h5CurrentPersonaId });
 }
 async function h5Graduate() {
-  if (!confirm('毕业意味着这段对话将永久封存。确定要继续吗？')) return;
-  await h5CovenantAction('/api/me/graduate', { personaId: h5CurrentPersonaId });
+  if (!h5Token) {
+    h5SetStatus('h5AuthStatus', '请先登录或注册。');
+    return;
+  }
+  if (!h5CurrentPersonaId) {
+    h5SetStatus('h5PersonaStatus', '请先创建你想念的人。');
+    return;
+  }
+  if (!confirm('毕业前会先为你导出一份数据档案，随后这段对话将安静封存。确定继续吗？')) return;
+  try {
+    h5SetStatus('h5AuthStatus', '正在准备数据档案……');
+    const data = await h5Request('/api/me/export');
+    h5DownloadDataArchive(data.export, '数据档案已开始导出。');
+    await h5Request('/api/me/graduate', {
+      method: 'POST',
+      body: { personaId: h5CurrentPersonaId },
+    });
+    h5SetStatus('h5AuthStatus', '已毕业，数据档案已交还给你。');
+    await h5RefreshCovenantState();
+    await h5LoadConversation();
+  } catch (error) {
+    h5SetStatus('h5AuthStatus', error.message || '毕业失败。');
+  }
 }
 async function h5CovenantAction(url, body) {
   try {
@@ -1778,6 +1809,7 @@ function h5RenderConversation(persona, messages) {
     ? persona.relationship + ' · 已保存 ' + (persona.messageCount || messages.length || 0) + ' 条对话'
     : '完成登录和创建后，就可以说第一句话。';
   h5RefreshCovenantState();
+  h5UpdateSafetySupport(messages);
   const container = document.getElementById('h5Messages');
   if (!messages.length) {
     container.innerHTML = '<div class="flex gap-3"><div class="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg></div><div class="max-w-[80%]"><div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100"><p class="text-sm text-warm-700 leading-relaxed">可以从一句简单的话开始。比如：“今天我有点想你。”</p></div></div></div>';
@@ -1785,6 +1817,19 @@ function h5RenderConversation(persona, messages) {
     container.innerHTML = messages.map((message) => h5BubbleHtml(message.role, message.content)).join('');
   }
   container.scrollTop = container.scrollHeight;
+}
+
+function h5UpdateSafetySupport(messages) {
+  const panel = document.getElementById('h5SafetySupport');
+  if (!panel) return;
+  const shouldShow = messages.some((message) => (
+    message.role === 'ASSISTANT' && h5IsSafetySupportReply(message.content || '')
+  ));
+  panel.classList.toggle('hidden', !shouldShow);
+}
+
+function h5IsSafetySupportReply(content) {
+  return content.includes('心理援助热线') || content.includes('请现在就联系能真正帮助你的人');
 }
 
 function h5AppendBubble(role, content) {

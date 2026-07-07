@@ -82,5 +82,4 @@ git diff --check: passed
 
 ## 下一步
 
-1. push Step 2.36。
-2. 外部输入齐备后运行带 `--evidence-out` 的 `release:validation-suite`。
+1. 外部输入齐备后运行带 `--evidence-out` 的 `release:validation-suite`。

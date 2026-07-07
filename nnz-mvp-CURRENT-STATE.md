@@ -60,19 +60,20 @@ https://github.com/chaoshorizon316/nnz
 2026-07-07 Step 2.33: release preflight CLI 已实现；新增 `release:preflight`，在不读 snapshot、不连 DB、不触网的情况下汇总剩余三类外部实跑的本地前置条件；本地 typecheck、196 tests + 2 skipped、build:demo、CLI help 通过
 2026-07-07 Step 2.34: release validation suite CLI 已实现；新增 `release:validation-suite`，先跑 preflight，再串 migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite；本地 typecheck、204 tests + 2 skipped、build:demo、CLI help 通过
 2026-07-07 Step 2.35: release validation evidence option 已实现并推送；`release:validation-suite` 新增可选 `--evidence-out`，成功或确认后的 stage 失败都会写脱敏 evidence JSON，只含 stage 状态、env key 名和本地产物类别，不含 snapshot 路径、DB URL、token、用户内容、child output、server log 或 raw error details；本地 typecheck、206 tests + 2 skipped、build:demo、CLI help、当前环境 preflight-blocked evidence smoke、git diff --check 通过
-2026-07-07 Step 2.36: sensitive local release safety 本地已实现；`.gitignore` 显式忽略 SQLite/DB 文件、raw/report/summary/evidence JSON、migration/release/snapshot artifact 目录，防止真实 snapshot、readiness/report/evidence 本地产物误提交；新增 `nnz-mvp/.env.example`，只列空 env key 和 disposable DB 安全注释；check-ignore 已验证不影响 package/tsconfig/Markdown/env template；本地 typecheck、206 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次 push
+2026-07-07 Step 2.36: sensitive local release safety 已实现并推送；`.gitignore` 显式忽略 SQLite/DB 文件、raw/report/summary/evidence JSON、migration/release/snapshot artifact 目录，防止真实 snapshot、readiness/report/evidence 本地产物误提交；新增 `nnz-mvp/.env.example`，只列空 env key 和 disposable DB 安全注释；check-ignore 已验证不影响 package/tsconfig/Markdown/env template；本地 typecheck、206 tests + 2 skipped、build:demo、git diff --check 通过
+2026-07-07 Step 2.37: H5 graduation export + safety support UX 本地已实现；毕业按钮会先导出当前登录用户的数据档案，再提交毕业；高风险 guard 回复出现时，H5 显示独立的现实支持提示和热线拨号入口；状态徽标不再向用户兜底显示内部状态名，并补 H5 静态回归测试；本地 h5 targeted tests、typecheck、全量 tests、build:demo、git diff --check 通过，尚待下一次合并 push
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main + local Step 2.36 sensitive release safety changes pending
+main...origin/main + local Step 2.37 H5 graduation export + safety support UX changes pending
 ```
 
-最新提交：
+最新已推送提交：
 
 ```text
-2711618 feat: add release validation evidence output
+1885a99 chore: guard sensitive local release artifacts
 ```
 
 最新云端 Soul Ops 记录：
