@@ -62,6 +62,39 @@ describe('H5 experience lifecycle controls', () => {
     expect(sealSoul).toContain('if (sealed) h5CancelSealConfirm();');
   });
 
+  it('uses inline confirmation before completing a special moment', () => {
+    const refreshCovenant = functionBody('h5RefreshCovenantState');
+    const openComplete = functionBody('h5OpenNodeCompleteConfirm', false);
+    const confirmComplete = functionBody('h5ConfirmCompleteNode');
+    const completeNode = functionBody('h5CompleteNode');
+
+    expect(html).toContain('id="h5NodeCompleteConfirmPanel"');
+    expect(html).toContain('输入“收束”确认');
+    expect(html).toContain('这个特别时刻会安静收束');
+    expect(refreshCovenant).toContain('onclick="h5OpenNodeCompleteConfirm()">完成这个时刻</button>');
+    expect(refreshCovenant).not.toContain('onclick="h5CompleteNode()">完成这个时刻</button>');
+    expect(openComplete).toContain("panel.classList.remove('hidden');");
+    expect(openComplete).toContain('h5ToggleMemoryPanel(false);');
+    expect(confirmComplete).toContain("phrase !== '收束'");
+    expect(confirmComplete).toContain('await h5CompleteNode();');
+    expect(completeNode).toContain("const completed = await h5CovenantAction('/api/me/complete-node'");
+    expect(completeNode).toContain('if (completed) h5CancelNodeCompleteConfirm();');
+  });
+
+  it('requires a named special moment and keeps covenant errors inline', () => {
+    const activateNode = functionBody('h5ActivateNode');
+    const covenantAction = functionBody('h5CovenantAction');
+
+    expect(html).toContain('id="h5CovenantStatus"');
+    expect(activateNode).toContain("const nodeName = input?.value.trim() || ''");
+    expect(activateNode).toContain('写下这个时刻的名字后再开启。');
+    expect(activateNode).toContain('input?.focus();');
+    expect(activateNode).not.toContain("|| '重要时刻'");
+    expect(activateNode).toContain('正在开启这个时刻');
+    expect(covenantAction).toContain("h5SetStatus('h5CovenantStatus'");
+    expect(covenantAction).not.toContain('alert(');
+  });
+
   it('does not fall back to displaying raw lifecycle state names', () => {
     expect(html).toContain("badge.textContent = labels[state] || '状态更新中';");
     expect(html).not.toContain('badge.textContent = labels[state] || state;');

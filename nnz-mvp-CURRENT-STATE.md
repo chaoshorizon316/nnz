@@ -66,20 +66,22 @@ https://github.com/chaoshorizon316/nnz
 2026-07-07 Step 2.39: H5 account deletion inline confirmation 已实现并推送；“删除全部数据”改为页面内确认面板，说明删除不可恢复、建议先导出数据档案，并要求输入“删除”后再提交既有 `/api/me/delete`；新增 H5 静态回归测试；本地 `npm test -- h5-experience`、typecheck、212 tests + 2 skipped、build:demo、git diff --check 通过；最新已推送提交 `871c4d0 feat: add h5 delete confirmation`
 2026-07-07 Step 2.40: H5 memory append UX/API 已实现并推送；新增 `/api/me/memory` 并通过当前登录用户 + persona scoped runtime 写入补充记忆；H5 对话区新增“补充记忆”面板，文案限定为已经发生过的细节；runtime HTTP smoke 覆盖该接口；与 Step 2.41 合并推送为 `adac0ea feat: add h5 memory append and graduation confirmation`
 2026-07-07 Step 2.41: H5 graduation inline confirmation 已实现并推送；毕业改为页面内确认，输入“告别”后才执行；毕业仍先导出数据档案再提交 `/api/me/graduate`；与 Step 2.40 合并推送为 `adac0ea feat: add h5 memory append and graduation confirmation`
-2026-07-08 Step 2.42: scoped runtime daily usage persistence 本地已实现；H5 `/api/me/chat` 的 scoped runtime guard 在每日限额检查通过后会显式写回 `dailyMessageCount` / `lastMessageDate`，Postgres scoped mode 下不再只更新内存对象；更新不改变 Covenant state、snapshot 或 NODE context；本地 targeted tests、typecheck、218 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
-2026-07-08 Step 2.43: H5 seal inline confirmation 本地已实现；ACTIVE 状态下“封存”先打开页面内确认面板，用户输入“安放”后才提交 `/api/me/seal`；切换/新建 persona 和封存成功会收起确认面板；本地 h5 targeted test、typecheck、219 tests + 2 skipped、build:demo、git diff --check 通过，建议与 Step 2.42 合并 push
+2026-07-08 Step 2.42: scoped runtime daily usage persistence 已实现并推送；H5 `/api/me/chat` 的 scoped runtime guard 在每日限额检查通过后会显式写回 `dailyMessageCount` / `lastMessageDate`，Postgres scoped mode 下不再只更新内存对象；更新不改变 Covenant state、snapshot 或 NODE context；与 Step 2.43 合并推送为 `e4a14dd feat: persist runtime usage and add seal confirmation`
+2026-07-08 Step 2.43: H5 seal inline confirmation 已实现并推送；ACTIVE 状态下“封存”先打开页面内确认面板，用户输入“安放”后才提交 `/api/me/seal`；切换/新建 persona 和封存成功会收起确认面板；与 Step 2.42 合并推送为 `e4a14dd feat: persist runtime usage and add seal confirmation`
+2026-07-08 Step 2.44: H5 node complete inline confirmation 本地已实现；NODE 状态下“完成这个时刻”先打开页面内确认面板，用户输入“收束”后才提交 `/api/me/complete-node`；离开 NODE、切换/新建 persona 和完成成功会收起确认面板；本地 h5 targeted test、typecheck、220 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
+2026-07-08 Step 2.45: H5 node activation inline status 本地已实现；SEALED 状态开启特别时刻必须填写具体名称，不再空值兜底“重要时刻”；Covenant 操作失败从浏览器 alert 改为页面内状态提示；本地 h5 targeted test、typecheck、221 tests + 2 skipped、build:demo、git diff --check 通过，建议与 Step 2.44 合并 push
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main + local Step 2.42/2.43 scoped daily usage persistence + H5 seal inline confirmation changes pending
+main...origin/main + local Step 2.44/2.45 H5 node completion confirmation + node activation inline status changes pending
 ```
 
 最新已推送提交：
 
 ```text
-adac0ea feat: add h5 memory append and graduation confirmation
+e4a14dd feat: persist runtime usage and add seal confirmation
 ```
 
 最新云端 Soul Ops 记录：

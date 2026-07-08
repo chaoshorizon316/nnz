@@ -2,13 +2,13 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.43。最新已推送提交是：
+Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.45。最新已推送提交是：
 
 ```text
-adac0ea feat: add h5 memory append and graduation confirmation
+e4a14dd feat: persist runtime usage and add seal confirmation
 ```
 
-Step 2.40 H5 memory append UX/API 与 Step 2.41 H5 graduation inline confirmation 已完成验证并合并推送。当前本地新增 Step 2.42 scoped runtime daily usage persistence 与 Step 2.43 H5 seal inline confirmation；它们不改变本路线图的外部 release validation 剩余入口。
+Step 2.42 scoped runtime daily usage persistence 与 Step 2.43 H5 seal inline confirmation 已完成验证并合并推送。当前本地新增 Step 2.44 H5 node complete inline confirmation 与 Step 2.45 H5 node activation inline status；它们不改变本路线图的外部 release validation 剩余入口。
 
 截至 2026-07-07，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、以及本地 `.env.example` 都已完成实现；真实 DB/Render 执行仍需要 disposable URL、snapshot 路径或 token env。
 
@@ -49,8 +49,10 @@ Step 2.40 H5 memory append UX/API 与 Step 2.41 H5 graduation inline confirmatio
 - Step 2.39：H5 account deletion inline confirmation 已实现并推送；删除全部数据改为页面内确认、建议先导出、输入“删除”后二次确认，仍走既有 scoped `/api/me/delete`。
 - Step 2.40：H5 memory append UX/API 已实现并推送；用户可为当前选中的记忆伙伴补充一段已经发生过的细节，API 通过当前登录用户 + persona 的 scoped runtime 写入，不新增 migration。
 - Step 2.41：H5 graduation inline confirmation 已实现并推送；毕业改为页面内确认，输入“告别”后才执行，仍保持先导出数据档案再提交毕业。
-- Step 2.42：scoped runtime daily usage persistence 本地已实现；H5 scoped runtime 聊天 guard 在每日限额检查通过后显式写回 `dailyMessageCount` / `lastMessageDate`，Postgres scoped mode 下不再只更新 session 副本，且保留 Covenant/NODE 上下文。
-- Step 2.43：H5 seal inline confirmation 本地已实现；首次封存从一键执行改为页面内确认，输入“安放”后才提交 `/api/me/seal`，补齐 Seal / Node / Graduation 用户旅程中的封存确认。
+- Step 2.42：scoped runtime daily usage persistence 已实现并推送；H5 scoped runtime 聊天 guard 在每日限额检查通过后显式写回 `dailyMessageCount` / `lastMessageDate`，Postgres scoped mode 下不再只更新 session 副本，且保留 Covenant/NODE 上下文。
+- Step 2.43：H5 seal inline confirmation 已实现并推送；首次封存从一键执行改为页面内确认，输入“安放”后才提交 `/api/me/seal`，补齐 Seal / Node / Graduation 用户旅程中的封存确认。
+- Step 2.44：H5 node complete inline confirmation 本地已实现；NODE 阶段完成特别时刻从一键执行改为页面内确认，输入“收束”后才提交 `/api/me/complete-node`。
+- Step 2.45：H5 node activation inline status 本地已实现；开启特别时刻必须填写具体名称，Covenant 操作错误改为页面内状态提示，不再使用浏览器弹窗。
 
 ## 剩余目标状态
 
@@ -94,7 +96,7 @@ Step 2.40 H5 memory append UX/API 与 Step 2.41 H5 graduation inline confirmatio
 ## 当前可继续做的本地工作
 
 - 用真实外部输入跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`；默认仍保持 snapshot persistence，scoped runtime 只在 disposable DB smoke 中验证。
-- 当前本地 Step 2.42/2.43 是 scoped runtime 每日使用计数持久化与 H5 封存确认补强，不依赖外部 DB/token；推送后，核心上线闸口仍是上面的 release validation suite。
+- 当前本地 Step 2.44/2.45 是 H5 特别时刻完成确认与节点开启内联状态补强，不依赖外部 DB/token；推送后，核心上线闸口仍是上面的 release validation suite。
 
 ## 当前需要用户或外部环境提供的东西
 

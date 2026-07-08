@@ -468,6 +468,7 @@
           <span id="h5CovenantHint" class="text-xs text-warm-500"></span>
         </div>
         <div id="h5CovenantActions" class="flex gap-2 flex-wrap"></div>
+        <p id="h5CovenantStatus" class="w-full text-xs text-sage-600"></p>
       </div>
       <div id="h5SealConfirmPanel" class="hidden px-6 py-4 border-b border-warm-100 bg-warm-50/80">
         <p class="text-xs text-warm-600 leading-relaxed">封存后，这段对话会暂时安静下来。你仍然可以导出数据，也可以在重要时刻开启一次短暂陪伴。确认你想先往前走，再继续。</p>
@@ -476,6 +477,15 @@
           <button onclick="h5ConfirmSeal()" class="px-4 py-2 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">确认封存</button>
           <button onclick="h5CancelSealConfirm()" class="px-4 py-2 border border-warm-200 text-warm-700 text-sm font-medium rounded-full hover:bg-white transition-colors">再想想</button>
           <p id="h5SealStatus" class="text-xs text-warm-600 min-h-[1rem] sm:ml-2"></p>
+        </div>
+      </div>
+      <div id="h5NodeCompleteConfirmPanel" class="hidden px-6 py-4 border-b border-sage-100 bg-sage-50/60">
+        <p class="text-xs text-sage-700 leading-relaxed">完成后，这个特别时刻会安静收束，对话会回到休息状态。确认这段话已经说完，再继续。</p>
+        <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+          <input id="h5NodeCompleteConfirmPhrase" type="text" autocomplete="off" placeholder="输入“收束”确认" class="flex-1 px-3 py-2 text-sm border border-sage-200 rounded-full outline-none focus:border-sage-400 bg-white text-sage-700">
+          <button onclick="h5ConfirmCompleteNode()" class="px-4 py-2 bg-sage-600 text-white text-sm font-medium rounded-full hover:bg-sage-700 transition-colors">确认完成</button>
+          <button onclick="h5CancelNodeCompleteConfirm()" class="px-4 py-2 border border-sage-200 text-sage-700 text-sm font-medium rounded-full hover:bg-white transition-colors">再说一会儿</button>
+          <p id="h5NodeCompleteStatus" class="text-xs text-sage-700 min-h-[1rem] sm:ml-2"></p>
         </div>
       </div>
       <div id="h5GraduateConfirmPanel" class="hidden px-6 py-4 border-b border-sage-100 bg-sage-50/70">
@@ -1588,6 +1598,7 @@ async function h5SwitchPersona(personaId) {
   localStorage.setItem('nnz_h5_persona_id', personaId);
   h5ToggleMemoryPanel(false);
   h5CancelSealConfirm();
+  h5CancelNodeCompleteConfirm();
   h5CancelGraduateConfirm();
   await h5LoadConversation();
 }
@@ -1601,6 +1612,7 @@ function h5ShowCreatePanel() {
   if (consent) consent.checked = false;
   h5ToggleMemoryPanel(false);
   h5CancelSealConfirm();
+  h5CancelNodeCompleteConfirm();
   h5CancelGraduateConfirm();
   document.getElementById('h5PersonaName').focus();
   h5SelectedTraits = {};
@@ -1820,6 +1832,7 @@ async function h5RefreshCovenantState() {
     const badge = document.getElementById('h5CovenantBadge');
     const hint = document.getElementById('h5CovenantHint');
     const actions = document.getElementById('h5CovenantActions');
+    const status = document.getElementById('h5CovenantStatus');
     const state = data.state;
     bar.classList.remove('hidden');
     badge.className = 'text-xs font-bold px-3 py-1 rounded-full';
@@ -1828,7 +1841,9 @@ async function h5RefreshCovenantState() {
     badge.textContent = labels[state] || '状态更新中';
     badge.classList.add(cssMap[state] || '');
     actions.innerHTML = '';
+    if (status) status.textContent = '';
     if (state !== 'ACTIVE') h5CancelSealConfirm();
+    if (state !== 'NODE') h5CancelNodeCompleteConfirm();
     if (state !== 'SEALED') h5CancelGraduateConfirm();
 
     if (state === 'ACTIVE') {
@@ -1842,7 +1857,7 @@ async function h5RefreshCovenantState() {
     } else if (state === 'NODE') {
       const nodeName = data.nodeContext ? data.nodeContext.nodeName : '这个时刻';
       hint.textContent = '「' + nodeName + '」正在进行中。完成后，这段对话会回到安静状态。';
-      actions.innerHTML = '<button class="covenant-btn covenant-btn-done" onclick="h5CompleteNode()">完成这个时刻</button>';
+      actions.innerHTML = '<button class="covenant-btn covenant-btn-done" onclick="h5OpenNodeCompleteConfirm()">完成这个时刻</button>';
     } else if (state === 'GRADUATED') {
       hint.textContent = '这段思念已安静落幕。感谢你曾经认真说过这些话。';
       bar.classList.add('hidden');
@@ -1862,6 +1877,7 @@ function h5OpenSealConfirm() {
   const panel = document.getElementById('h5SealConfirmPanel');
   const input = document.getElementById('h5SealConfirmPhrase');
   if (!panel || !input) return;
+  h5CancelNodeCompleteConfirm();
   h5CancelGraduateConfirm();
   h5ToggleMemoryPanel(false);
   panel.classList.remove('hidden');
@@ -1889,11 +1905,55 @@ async function h5SealSoul() {
   if (sealed) h5CancelSealConfirm();
 }
 async function h5ActivateNode() {
-  const nodeName = document.getElementById('h5NodeName')?.value || '重要时刻';
-  await h5CovenantAction('/api/me/activate-node', { personaId: h5CurrentPersonaId, nodeName });
+  const input = document.getElementById('h5NodeName');
+  const nodeName = input?.value.trim() || '';
+  if (!nodeName) {
+    h5SetStatus('h5CovenantStatus', '写下这个时刻的名字后再开启。');
+    input?.focus();
+    return;
+  }
+  h5SetStatus('h5CovenantStatus', '正在开启这个时刻……');
+  const activated = await h5CovenantAction('/api/me/activate-node', { personaId: h5CurrentPersonaId, nodeName });
+  if (activated) h5SetStatus('h5CovenantStatus', '这个时刻已开启。');
+}
+function h5OpenNodeCompleteConfirm() {
+  if (!h5Token) {
+    h5SetStatus('h5AuthStatus', '请先登录或注册。');
+    return;
+  }
+  if (!h5CurrentPersonaId) {
+    h5SetStatus('h5PersonaStatus', '请先创建你想念的人。');
+    return;
+  }
+  const panel = document.getElementById('h5NodeCompleteConfirmPanel');
+  const input = document.getElementById('h5NodeCompleteConfirmPhrase');
+  if (!panel || !input) return;
+  h5CancelSealConfirm();
+  h5CancelGraduateConfirm();
+  h5ToggleMemoryPanel(false);
+  panel.classList.remove('hidden');
+  input.value = '';
+  h5SetStatus('h5NodeCompleteStatus', '');
+  input.focus();
+}
+function h5CancelNodeCompleteConfirm() {
+  document.getElementById('h5NodeCompleteConfirmPanel')?.classList.add('hidden');
+  const input = document.getElementById('h5NodeCompleteConfirmPhrase');
+  if (input) input.value = '';
+  h5SetStatus('h5NodeCompleteStatus', '');
+}
+async function h5ConfirmCompleteNode() {
+  const phrase = document.getElementById('h5NodeCompleteConfirmPhrase')?.value.trim();
+  if (phrase !== '收束') {
+    h5SetStatus('h5NodeCompleteStatus', '请输入“收束”后再确认。');
+    document.getElementById('h5NodeCompleteConfirmPhrase')?.focus();
+    return;
+  }
+  await h5CompleteNode();
 }
 async function h5CompleteNode() {
-  await h5CovenantAction('/api/me/complete-node', { personaId: h5CurrentPersonaId });
+  const completed = await h5CovenantAction('/api/me/complete-node', { personaId: h5CurrentPersonaId });
+  if (completed) h5CancelNodeCompleteConfirm();
 }
 function h5OpenGraduateConfirm() {
   if (!h5Token) {
@@ -1907,6 +1967,8 @@ function h5OpenGraduateConfirm() {
   const panel = document.getElementById('h5GraduateConfirmPanel');
   const input = document.getElementById('h5GraduateConfirmPhrase');
   if (!panel || !input) return;
+  h5CancelSealConfirm();
+  h5CancelNodeCompleteConfirm();
   panel.classList.remove('hidden');
   input.value = '';
   h5SetStatus('h5GraduateStatus', '');
@@ -1965,11 +2027,11 @@ async function h5CovenantAction(url, body) {
       await h5LoadConversation();
       return true;
     } else {
-      alert(data.error || '操作失败');
+      h5SetStatus('h5CovenantStatus', data.error || '刚才没有完成，请稍后再试。');
       return false;
     }
   } catch (e) {
-    alert('网络错误');
+    h5SetStatus('h5CovenantStatus', '网络不稳定，请稍后再试。');
     return false;
   }
 }
