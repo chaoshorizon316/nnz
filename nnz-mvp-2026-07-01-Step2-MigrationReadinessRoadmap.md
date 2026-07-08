@@ -2,13 +2,13 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.50。最新已推送提交是：
+Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.51。最新已推送提交是：
 
 ```text
-ca296ca fix: sanitize h5 runtime errors and soften copy
+4663ce5 test: align h5 runtime error mechanism guard
 ```
 
-Step 2.48 H5 runtime safe error guard 与 Step 2.49 H5 user-facing copy softening 已完成验证并推送。当前本地新增 Step 2.50 H5 runtime unsafe fragment parity；它不改变本路线图的外部 release validation 剩余入口。
+Step 2.50 H5 runtime unsafe fragment parity 已完成验证并推送。当前本地新增 Step 2.51 H5 load conversation safe error handling；它不改变本路线图的外部 release validation 剩余入口。
 
 截至 2026-07-07，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、以及本地 `.env.example` 都已完成实现；真实 DB/Render 执行仍需要 disposable URL、snapshot 路径或 token env。
 
@@ -57,7 +57,8 @@ Step 2.48 H5 runtime safe error guard 与 Step 2.49 H5 user-facing copy softenin
 - Step 2.47：H5 visible mechanism leak guard 已实现并推送；H5 静态测试扫描用户可见正文和常见可见属性，防止内部机制词、后台审核表达和模型表达进入前台文案，并把安全/付费卡片改成现实支持与数据档案语言。
 - Step 2.48：H5 runtime safe error guard 已实现并推送；H5 运行时错误展示统一先过滤内部机制词，Covenant 操作、毕业、登录、导出、删除、创建、补充记忆和发送消息不再直接向用户暴露 raw backend error。
 - Step 2.49：H5 user-facing copy softening 已实现并推送；前台可见文案把“节点重启 / AI人格 / 毕业机制”等机制化表达改为“特别时刻 / 记忆伙伴 / 主动告别”，并把这些词加入 visible mechanism leak guard。
-- Step 2.50：H5 runtime unsafe fragment parity 本地已实现；运行时错误过滤词表补齐到覆盖新增可见文案禁用词，避免后端错误里出现模型/审核/AI人格等表达时漏过滤。
+- Step 2.50：H5 runtime unsafe fragment parity 已实现并推送；运行时错误过滤词表补齐到覆盖新增可见文案禁用词，避免后端错误里出现模型/审核/AI人格等表达时漏过滤。
+- Step 2.51：H5 load conversation safe error handling 本地已实现；`h5LoadConversation()` 读取对话失败时捕获异常并统一走 `h5SafeErrorMessage()`，避免 persona 切换或 Covenant 后刷新历史时显示 raw backend error。
 
 ## 剩余目标状态
 
@@ -101,7 +102,7 @@ Step 2.48 H5 runtime safe error guard 与 Step 2.49 H5 user-facing copy softenin
 ## 当前可继续做的本地工作
 
 - 用真实外部输入跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`；默认仍保持 snapshot persistence，scoped runtime 只在 disposable DB smoke 中验证。
-- 当前本地 Step 2.50 是 H5 运行时错误词表补齐，不依赖外部 DB/token；推送后，核心上线闸口仍是上面的 release validation suite。
+- 当前本地 Step 2.51 是 H5 对话历史加载失败的安全展示兜底，不依赖外部 DB/token；推送后，核心上线闸口仍是上面的 release validation suite。
 
 ## 当前需要用户或外部环境提供的东西
 

@@ -1865,8 +1865,12 @@ async function h5SaveMemory() {
 
 async function h5LoadConversation() {
   if (!h5CurrentPersonaId) return;
-  const data = await h5Request('/api/me/chat-history?personaId=' + encodeURIComponent(h5CurrentPersonaId));
-  h5RenderConversation(data.persona, data.messages || []);
+  try {
+    const data = await h5Request('/api/me/chat-history?personaId=' + encodeURIComponent(h5CurrentPersonaId));
+    h5RenderConversation(data.persona, data.messages || []);
+  } catch (error) {
+    h5SetStatus('h5PersonaStatus', h5SafeErrorMessage(error, '读取对话失败，请稍后再试。'));
+  }
 }
 
 async function h5RefreshCovenantState() {

@@ -46,6 +46,6 @@ passed
 
 ## 状态
 
-- 本地 Step 2.50 已完成，尚待下一次合并 push。
-- 最新已推送提交是 `ca296ca fix: sanitize h5 runtime errors and soften copy`。
+- Step 2.50 已完成并推送为 `4663ce5 test: align h5 runtime error mechanism guard`。
+- 最新本地后续是 Step 2.51 H5 load conversation safe error handling。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。
