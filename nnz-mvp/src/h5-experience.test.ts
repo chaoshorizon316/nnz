@@ -29,6 +29,20 @@ describe('H5 experience lifecycle controls', () => {
     expect(graduate).toContain('数据档案已交还给你');
   });
 
+  it('uses inline confirmation before graduation instead of a browser confirm', () => {
+    const openGraduate = functionBody('h5OpenGraduateConfirm', false);
+    const confirmGraduate = functionBody('h5ConfirmGraduate');
+
+    expect(html).toContain('id="h5GraduateConfirmPanel"');
+    expect(html).toContain('输入“告别”确认');
+    expect(html).toContain('确认这是此刻想要的告别');
+    expect(html).toContain('onclick="h5OpenGraduateConfirm()">毕业</button>');
+    expect(html).not.toContain('confirm(');
+    expect(openGraduate).toContain("panel.classList.remove('hidden');");
+    expect(confirmGraduate).toContain("phrase !== '告别'");
+    expect(confirmGraduate).toContain('await h5Graduate();');
+  });
+
   it('does not fall back to displaying raw lifecycle state names', () => {
     expect(html).toContain("badge.textContent = labels[state] || '状态更新中';");
     expect(html).not.toContain('badge.textContent = labels[state] || state;');
@@ -72,5 +86,20 @@ describe('H5 experience lifecycle controls', () => {
     expect(openDelete).toContain("panel.classList.remove('hidden');");
     expect(confirmDelete).toContain("confirmText !== '删除'");
     expect(confirmDelete).toContain("body: { confirm: 'DELETE_MY_DATA' }");
+  });
+
+  it('lets a signed-in user add a memory for the selected persona', () => {
+    const saveMemory = functionBody('h5SaveMemory');
+    const renderConversation = functionBody('h5RenderConversation', false);
+
+    expect(html).toContain('id="h5MemoryPanel"');
+    expect(html).toContain('写一段已经发生过的细节');
+    expect(html).toContain('只补充你愿意留下的内容');
+    expect(html).toContain('保存这段记忆');
+    expect(saveMemory).toContain("await h5Request('/api/me/memory'");
+    expect(saveMemory).toContain('body: { personaId: h5CurrentPersonaId, content }');
+    expect(saveMemory).toContain('写下一段想补充的记忆。');
+    expect(renderConversation).toContain('段记忆');
+    expect(html).not.toContain('MemoryItem');
   });
 });

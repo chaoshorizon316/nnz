@@ -450,6 +450,16 @@
         </div>
         <div class="flex items-center gap-2">
           <button id="h5NewPersonaBtn" class="hidden text-xs text-sage-600 border border-sage-200 rounded-full px-3 py-1 hover:bg-sage-50 transition-colors" onclick="h5ShowCreatePanel()">+ 新建</button>
+          <button id="h5AddMemoryBtn" class="hidden text-xs text-warm-600 border border-warm-200 rounded-full px-3 py-1 hover:bg-warm-50 transition-colors" onclick="h5ToggleMemoryPanel()">补充记忆</button>
+        </div>
+      </div>
+      <div id="h5MemoryPanel" class="hidden px-6 py-4 border-b border-warm-100 bg-white">
+        <p class="text-xs text-warm-500 leading-relaxed mb-3">写一段已经发生过的细节，比如习惯、口头禅、一起经历过的事。只补充你愿意留下的内容。</p>
+        <textarea id="h5MemoryInput" rows="3" placeholder="例如：他每次出门前都会检查门窗，嘴上说不担心，其实总是把家里照顾得很细。" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors resize-none bg-warm-50/50"></textarea>
+        <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+          <button onclick="h5SaveMemory()" class="px-4 py-2 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">保存这段记忆</button>
+          <button onclick="h5ToggleMemoryPanel(false)" class="px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">稍后再写</button>
+          <p id="h5MemoryStatus" class="text-xs text-sage-600 min-h-[1rem] sm:ml-2"></p>
         </div>
       </div>
       <div id="h5CovenantBar" class="hidden px-6 py-3 border-b border-warm-100 bg-warm-50 flex items-center justify-between gap-3 flex-wrap">
@@ -458,6 +468,15 @@
           <span id="h5CovenantHint" class="text-xs text-warm-500"></span>
         </div>
         <div id="h5CovenantActions" class="flex gap-2 flex-wrap"></div>
+      </div>
+      <div id="h5GraduateConfirmPanel" class="hidden px-6 py-4 border-b border-sage-100 bg-sage-50/70">
+        <p class="text-xs text-sage-700 leading-relaxed">毕业前会先为你导出一份数据档案，随后这段对话会安静封存。确认这是此刻想要的告别，再继续。</p>
+        <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+          <input id="h5GraduateConfirmPhrase" type="text" autocomplete="off" placeholder="输入“告别”确认" class="flex-1 px-3 py-2 text-sm border border-sage-200 rounded-full outline-none focus:border-sage-400 bg-white text-sage-700">
+          <button onclick="h5ConfirmGraduate()" class="px-4 py-2 bg-sage-600 text-white text-sm font-medium rounded-full hover:bg-sage-700 transition-colors">确认毕业</button>
+          <button onclick="h5CancelGraduateConfirm()" class="px-4 py-2 border border-sage-200 text-sage-700 text-sm font-medium rounded-full hover:bg-white transition-colors">再想想</button>
+          <p id="h5GraduateStatus" class="text-xs text-sage-700 min-h-[1rem] sm:ml-2"></p>
+        </div>
       </div>
       <div id="h5SafetySupport" class="hidden px-6 py-3 border-b border-red-100 bg-red-50">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 text-sm text-red-700">
@@ -1540,6 +1559,7 @@ async function h5ConfirmDeleteAllData() {
 function h5UpdatePersonaList(personas) {
   const sel = document.getElementById('h5PersonaSwitcher');
   const btn = document.getElementById('h5NewPersonaBtn');
+  const memoryBtn = document.getElementById('h5AddMemoryBtn');
   if (personas.length <= 1) {
     sel.classList.add('hidden');
     btn.classList.toggle('hidden', personas.length === 0);
@@ -1547,6 +1567,7 @@ function h5UpdatePersonaList(personas) {
     sel.classList.remove('hidden');
     btn.classList.remove('hidden');
   }
+  if (memoryBtn) memoryBtn.classList.toggle('hidden', personas.length === 0);
   sel.innerHTML = personas.map(p =>
     '<option value="' + p.id + '">' + p.displayName + '（' + p.relationship + '）</option>'
   ).join('');
@@ -1556,6 +1577,8 @@ function h5UpdatePersonaList(personas) {
 async function h5SwitchPersona(personaId) {
   h5CurrentPersonaId = personaId;
   localStorage.setItem('nnz_h5_persona_id', personaId);
+  h5ToggleMemoryPanel(false);
+  h5CancelGraduateConfirm();
   await h5LoadConversation();
 }
 
@@ -1566,6 +1589,8 @@ function h5ShowCreatePanel() {
   document.getElementById('h5Description').value = '';
   const consent = document.getElementById('h5ConsentAccepted');
   if (consent) consent.checked = false;
+  h5ToggleMemoryPanel(false);
+  h5CancelGraduateConfirm();
   document.getElementById('h5PersonaName').focus();
   h5SelectedTraits = {};
   h5NextPage(1);
@@ -1716,8 +1741,53 @@ async function h5CreatePersona() {
     localStorage.setItem('nnz_h5_persona_id', h5CurrentPersonaId);
     h5SetStatus('h5PersonaStatus', '已创建，可以开始说话。');
     h5RenderConversation(data.persona, data.messages || []);
+    h5ToggleMemoryPanel(false);
   } catch (error) {
     h5SetStatus('h5PersonaStatus', error.message || '创建失败。');
+  }
+}
+
+function h5ToggleMemoryPanel(forceOpen) {
+  const panel = document.getElementById('h5MemoryPanel');
+  if (!panel) return;
+  const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : panel.classList.contains('hidden');
+  panel.classList.toggle('hidden', !shouldOpen);
+  if (shouldOpen) {
+    document.getElementById('h5MemoryStatus').textContent = '';
+    document.getElementById('h5MemoryInput')?.focus();
+  }
+}
+
+async function h5SaveMemory() {
+  if (!h5Token) {
+    h5SetStatus('h5AuthStatus', '请先登录或注册。');
+    return;
+  }
+  if (!h5CurrentPersonaId) {
+    h5SetStatus('h5PersonaStatus', '请先创建你想念的人。');
+    return;
+  }
+  const input = document.getElementById('h5MemoryInput');
+  const content = input.value.trim();
+  if (!content) {
+    h5SetStatus('h5MemoryStatus', '写下一段想补充的记忆。');
+    input.focus();
+    return;
+  }
+  try {
+    const data = await h5Request('/api/me/memory', {
+      method: 'POST',
+      body: { personaId: h5CurrentPersonaId, content },
+    });
+    input.value = '';
+    h5SetStatus('h5MemoryStatus', '已保存。');
+    if (data.persona) {
+      document.getElementById('h5ChatSubtitle').textContent =
+        data.persona.relationship + ' · 已保存 ' + (data.persona.messageCount || 0) + ' 条对话 · ' + (data.persona.memoryCount || 0) + ' 段记忆';
+    }
+    setTimeout(() => h5ToggleMemoryPanel(false), 500);
+  } catch (error) {
+    h5SetStatus('h5MemoryStatus', error.message || '保存失败。');
   }
 }
 
@@ -1755,7 +1825,7 @@ async function h5RefreshCovenantState() {
       hint.textContent = '等待下一个重要时刻。输入一个名称，开启 3 天的短暂陪伴。';
       actions.innerHTML = '<input id="h5NodeName" type="text" placeholder="例如：婚礼" style="padding:6px 12px;border:1px solid #E8D5C4;border-radius:999px;font-size:13px;width:100px">' +
         '<button class="covenant-btn covenant-btn-node" onclick="h5ActivateNode()">开启时刻</button>' +
-        '<button class="covenant-btn covenant-btn-graduate" onclick="h5Graduate()">毕业</button>';
+        '<button class="covenant-btn covenant-btn-graduate" onclick="h5OpenGraduateConfirm()">毕业</button>';
     } else if (state === 'NODE') {
       const nodeName = data.nodeContext ? data.nodeContext.nodeName : '这个时刻';
       hint.textContent = '「' + nodeName + '」正在进行中。完成后，这段对话会回到安静状态。';
@@ -1777,6 +1847,38 @@ async function h5ActivateNode() {
 async function h5CompleteNode() {
   await h5CovenantAction('/api/me/complete-node', { personaId: h5CurrentPersonaId });
 }
+function h5OpenGraduateConfirm() {
+  if (!h5Token) {
+    h5SetStatus('h5AuthStatus', '请先登录或注册。');
+    return;
+  }
+  if (!h5CurrentPersonaId) {
+    h5SetStatus('h5PersonaStatus', '请先创建你想念的人。');
+    return;
+  }
+  const panel = document.getElementById('h5GraduateConfirmPanel');
+  const input = document.getElementById('h5GraduateConfirmPhrase');
+  if (!panel || !input) return;
+  panel.classList.remove('hidden');
+  input.value = '';
+  h5SetStatus('h5GraduateStatus', '');
+  input.focus();
+}
+function h5CancelGraduateConfirm() {
+  document.getElementById('h5GraduateConfirmPanel')?.classList.add('hidden');
+  const input = document.getElementById('h5GraduateConfirmPhrase');
+  if (input) input.value = '';
+  h5SetStatus('h5GraduateStatus', '');
+}
+async function h5ConfirmGraduate() {
+  const phrase = document.getElementById('h5GraduateConfirmPhrase')?.value.trim();
+  if (phrase !== '告别') {
+    h5SetStatus('h5GraduateStatus', '请输入“告别”后再确认。');
+    document.getElementById('h5GraduateConfirmPhrase')?.focus();
+    return;
+  }
+  await h5Graduate();
+}
 async function h5Graduate() {
   if (!h5Token) {
     h5SetStatus('h5AuthStatus', '请先登录或注册。');
@@ -1786,7 +1888,6 @@ async function h5Graduate() {
     h5SetStatus('h5PersonaStatus', '请先创建你想念的人。');
     return;
   }
-  if (!confirm('毕业前会先为你导出一份数据档案，随后这段对话将安静封存。确定继续吗？')) return;
   try {
     h5SetStatus('h5AuthStatus', '正在准备数据档案……');
     const data = await h5Request('/api/me/export');
@@ -1796,6 +1897,7 @@ async function h5Graduate() {
       body: { personaId: h5CurrentPersonaId },
     });
     h5SetStatus('h5AuthStatus', '已毕业，数据档案已交还给你。');
+    h5CancelGraduateConfirm();
     await h5RefreshCovenantState();
     await h5LoadConversation();
   } catch (error) {
@@ -1852,8 +1954,9 @@ async function h5SendMessage() {
 function h5RenderConversation(persona, messages) {
   document.getElementById('h5ChatTitle').textContent = persona ? '和「' + persona.displayName + '」说说话' : '等待创建';
   document.getElementById('h5ChatSubtitle').textContent = persona
-    ? persona.relationship + ' · 已保存 ' + (persona.messageCount || messages.length || 0) + ' 条对话'
+    ? persona.relationship + ' · 已保存 ' + (persona.messageCount || messages.length || 0) + ' 条对话 · ' + (persona.memoryCount || 0) + ' 段记忆'
     : '完成登录和创建后，就可以说第一句话。';
+  document.getElementById('h5AddMemoryBtn')?.classList.toggle('hidden', !persona);
   h5RefreshCovenantState();
   h5UpdateSafetySupport(messages);
   const container = document.getElementById('h5Messages');

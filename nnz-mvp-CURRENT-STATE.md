@@ -63,19 +63,21 @@ https://github.com/chaoshorizon316/nnz
 2026-07-07 Step 2.36: sensitive local release safety 已实现并推送；`.gitignore` 显式忽略 SQLite/DB 文件、raw/report/summary/evidence JSON、migration/release/snapshot artifact 目录，防止真实 snapshot、readiness/report/evidence 本地产物误提交；新增 `nnz-mvp/.env.example`，只列空 env key 和 disposable DB 安全注释；check-ignore 已验证不影响 package/tsconfig/Markdown/env template；本地 typecheck、206 tests + 2 skipped、build:demo、git diff --check 通过
 2026-07-07 Step 2.37: H5 graduation export + safety support UX 已实现并推送；毕业按钮会先导出当前登录用户的数据档案，再提交毕业；高风险 guard 回复出现时，H5 显示独立的现实支持提示和热线拨号入口；状态徽标不再向用户兜底显示内部状态名，并补 H5 静态回归测试；本地 h5 targeted tests、typecheck、全量 tests、build:demo、git diff --check 通过
 2026-07-07 Step 2.38: H5 onboarding consent UX 已实现并推送；创建记忆伙伴前需要确认“辅助性记忆对话、不替代身边的人或专业帮助、可随时导出/删除自己的数据”，`POST /api/me/persona` 同步要求 `consentAccepted: true`，新建另一位时会重置确认；新增 H5/API 静态回归测试；本地 targeted tests、typecheck、211 tests + 2 skipped、build:demo、git diff --check 通过；最新已推送提交 `59e8119 feat: add h5 onboarding consent gate`
-2026-07-07 Step 2.39: H5 account deletion inline confirmation 本地已实现；“删除全部数据”改为页面内确认面板，说明删除不可恢复、建议先导出数据档案，并要求输入“删除”后再提交既有 `/api/me/delete`；新增 H5 静态回归测试；本地 `npm test -- h5-experience`、typecheck、212 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
+2026-07-07 Step 2.39: H5 account deletion inline confirmation 已实现并推送；“删除全部数据”改为页面内确认面板，说明删除不可恢复、建议先导出数据档案，并要求输入“删除”后再提交既有 `/api/me/delete`；新增 H5 静态回归测试；本地 `npm test -- h5-experience`、typecheck、212 tests + 2 skipped、build:demo、git diff --check 通过；最新已推送提交 `871c4d0 feat: add h5 delete confirmation`
+2026-07-07 Step 2.40: H5 memory append UX/API 本地已实现；新增 `/api/me/memory` 并通过当前登录用户 + persona scoped runtime 写入补充记忆；H5 对话区新增“补充记忆”面板，文案限定为已经发生过的细节；runtime HTTP smoke 覆盖该接口；本地 targeted tests、typecheck、214 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
+2026-07-07 Step 2.41: H5 graduation inline confirmation 本地已实现；毕业改为页面内确认，输入“告别”后才执行；毕业仍先导出数据档案再提交 `/api/me/graduate`；本地 h5 targeted test、typecheck、215 tests + 2 skipped、build:demo、git diff --check 通过，建议与 Step 2.40 合并 push
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main + local Step 2.39 H5 account deletion inline confirmation changes pending
+main...origin/main + local Step 2.40/2.41 H5 memory append + graduation inline confirmation changes pending
 ```
 
 最新已推送提交：
 
 ```text
-59e8119 feat: add h5 onboarding consent gate
+871c4d0 feat: add h5 delete confirmation
 ```
 
 最新云端 Soul Ops 记录：

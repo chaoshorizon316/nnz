@@ -134,6 +134,7 @@ describe('Postgres scoped runtime HTTP smoke CLI', () => {
     });
     expect(result.stdout).toContain('Postgres scoped runtime HTTP disposable smoke');
     expect(result.stdout).toContain('healthzScopedPostgres: yes');
+    expect(result.stdout).toContain('memoryAppend: yes');
     expect(result.stdout).toContain('exportRedactsCredentialHash: yes');
     expect(result.stdout).toContain('deleteCurrentUser: yes');
     expect(result.stdout).not.toContain('prod-secret');
@@ -243,6 +244,7 @@ function createSmokeResult(): ScopedRuntimeHttpSmokeResult {
       healthzScopedPostgres: true,
       registerLogin: true,
       personaCreate: true,
+      memoryAppend: true,
       chatHistory: true,
       covenantTransitions: true,
       exportContainsOwnData: true,

@@ -16,4 +16,19 @@ describe('demo server user onboarding consent', () => {
     expect(route).toContain('body.consentAccepted !== true');
     expect(route).toContain('请先确认使用边界和数据权利。');
   });
+
+  it('stores user-supplied memory through the scoped persona runtime', () => {
+    const routeStart = source.indexOf("url.pathname === '/api/me/memory'");
+    expect(routeStart).toBeGreaterThanOrEqual(0);
+    const nextRoute = source.indexOf("url.pathname === '/api/me/chat-history'", routeStart);
+    const route = source.slice(routeStart, nextRoute);
+
+    expect(route).toContain('personaId?: string; content?: string');
+    expect(route).toContain('请先选择要补充记忆的人。');
+    expect(route).toContain('请输入一段想补充的记忆。');
+    expect(route).toContain('requireUserPersonaRuntime(res, authUser.userId, body.personaId)');
+    expect(route).toContain('addUserPersonaMemory(runtime, content)');
+    expect(source).toContain("type: 'DESCRIPTION'");
+    expect(source).toContain('enabledForSoul: true');
+  });
 });

@@ -265,6 +265,26 @@ const server = createServer(async (req, res) => {
       return sendJson(res, await createUserPersona(authUser.userId, body));
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/me/memory') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      const body = await readJsonBody<{ personaId?: string; content?: string }>(req);
+      if (!body.personaId) {
+        return sendJson(res, { error: '请先选择要补充记忆的人。' }, 400);
+      }
+      const content = normalizeVisibleText(body.content, 600);
+      if (!content) {
+        return sendJson(res, { error: '请输入一段想补充的记忆。' }, 400);
+      }
+      const runtime = await requireUserPersonaRuntime(res, authUser.userId, body.personaId);
+      if (!runtime) return;
+      const memory = await addUserPersonaMemory(runtime, content);
+      return sendJson(res, {
+        memory: { id: memory.id, createdAt: memory.createdAt },
+        persona: await summarizeUserPersona(runtime),
+      });
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/me/chat-history') {
       const authUser = requireAuth(req, res);
       if (!authUser) return;
@@ -1184,6 +1204,20 @@ async function createUserPersona(
     persona: await summarizeUserPersona(runtime),
     messages: await serializeUserMessages(runtime),
   };
+}
+
+async function addUserPersonaMemory(
+  runtime: ScopedPersonaRuntimeAdapter,
+  content: string,
+) {
+  const memory = await runtime.addMemory({
+    type: 'DESCRIPTION',
+    content,
+    confidence: 0.82,
+    enabledForSoul: true,
+  });
+  await persistIfEnabled();
+  return memory;
 }
 
 async function sendMessageToUserPersona(runtime: ScopedPersonaRuntimeAdapter, message: string) {

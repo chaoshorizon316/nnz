@@ -50,6 +50,7 @@ export interface ScopedRuntimeHttpSmokeResult {
     healthzScopedPostgres: true;
     registerLogin: true;
     personaCreate: true;
+    memoryAppend: true;
     chatHistory: true;
     covenantTransitions: true;
     exportContainsOwnData: true;
@@ -139,6 +140,7 @@ export async function runPostgresScopedRuntimeHttpSmoke(
   const email = `${runId}@example.test`;
   const password = `SmokePass-${runId}`;
   const description = `private http smoke memory ${runId}`;
+  const supplementalMemory = `private http smoke supplemental memory ${runId}`;
   const chatMessage = `private http smoke chat ${runId}`;
   const nodeName = `重要时刻 ${runId}`;
   let token = '';
@@ -186,6 +188,12 @@ export async function runPostgresScopedRuntimeHttpSmoke(
     const personaId = persona.body.persona?.id;
     assert(typeof personaId === 'string' && personaId.length > 0, 'persona create did not return an id');
 
+    await requestJson(baseUrl, '/api/me/memory', {
+      method: 'POST',
+      token,
+      body: { personaId, content: supplementalMemory },
+    });
+
     await requestJson(baseUrl, '/api/me/chat', {
       method: 'POST',
       token,
@@ -222,6 +230,7 @@ export async function runPostgresScopedRuntimeHttpSmoke(
     const exported = await requestJson<{ export?: unknown }>(baseUrl, '/api/me/export', { token });
     const exportedJson = JSON.stringify(exported.body);
     assert(exportedJson.includes(description), 'export did not include own memory text');
+    assert(exportedJson.includes(supplementalMemory), 'export did not include supplemental memory text');
     assert(exportedJson.includes(chatMessage), 'export did not include own chat text');
     assert(!exportedJson.includes('passwordHash'), 'export leaked the credential hash key');
     assert(!exportedJson.includes(password), 'export leaked the raw password');
@@ -248,6 +257,7 @@ export async function runPostgresScopedRuntimeHttpSmoke(
         healthzScopedPostgres: true,
         registerLogin: true,
         personaCreate: true,
+        memoryAppend: true,
         chatHistory: true,
         covenantTransitions: true,
         exportContainsOwnData: true,
