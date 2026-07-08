@@ -1274,7 +1274,7 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.47。最新已推送提交是 `f21b392 fix: keep h5 lifecycle panels mutually exclusive`；H5 panel mutual exclusion 已完成本地验证并推送。当前本地新增 Step 2.47 H5 visible mechanism leak guard：H5 静态测试扫描用户可见正文和常见可见属性，防止内部机制词、后台审核表达和模型表达进入前台文案；安全/付费卡片已改成现实支持与数据档案语言。本地 h5 targeted test、typecheck、223 tests + 2 skipped、build:demo 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
+Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.49。最新已推送提交是 `0d78c32 test: guard h5 visible copy against mechanism leaks`；H5 visible mechanism leak guard 已完成本地验证并推送。当前本地新增 Step 2.48 H5 runtime safe error guard 与 Step 2.49 H5 user-facing copy softening：H5 状态栏与聊天气泡展示错误前统一走 `h5SafeErrorMessage()`，遇到 personaId、Covenant、raw lifecycle state、当前状态不允许、节点重启等机制词时回退为用户语言；前台可见文案把“节点重启 / AI人格 / 毕业机制”等机制化表达改为“特别时刻 / 记忆伙伴 / 主动告别”。本地 h5 targeted test、typecheck、224 tests + 2 skipped、build:demo 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
 
 1. 注入真实本地 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Render role token env、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`。
 2. 跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`，它会串 preflight、migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite，并写脱敏上线 evidence。

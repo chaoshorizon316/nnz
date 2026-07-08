@@ -47,6 +47,6 @@ passed
 
 ## 状态
 
-- 本地 Step 2.47 已完成，尚待下一次合并 push。
-- 最新已推送提交是 `f21b392 fix: keep h5 lifecycle panels mutually exclusive`。
+- Step 2.47 已完成并推送为 `0d78c32 test: guard h5 visible copy against mechanism leaks`。
+- 最新本地后续是 Step 2.48 H5 runtime safe error guard。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。

@@ -28,6 +28,11 @@ const USER_VISIBLE_MECHANISM_TERMS = [
   '人工审核',
   '极端情绪词汇',
   'AI模型',
+  'AI人格',
+  '基础 AI 人格',
+  '基础AI人格',
+  '毕业机制',
+  '节点重启',
   '作用域',
   '检索',
   '证据',
@@ -157,7 +162,33 @@ describe('H5 experience lifecycle controls', () => {
     expect(activateNode).not.toContain("|| '重要时刻'");
     expect(activateNode).toContain('正在开启这个时刻');
     expect(covenantAction).toContain("h5SetStatus('h5CovenantStatus'");
+    expect(covenantAction).toContain("h5SafeErrorMessage(data.error, '刚才没有完成，请稍后再试。')");
+    expect(covenantAction).not.toContain("data.error || '刚才没有完成，请稍后再试。'");
     expect(covenantAction).not.toContain('alert(');
+  });
+
+  it('sanitizes H5 runtime errors before displaying them to users', () => {
+    const safeError = functionBody('h5SafeErrorMessage', false);
+    const graduate = functionBody('h5Graduate');
+    const sendMessage = functionBody('h5SendMessage');
+
+    expect(safeError).toContain('H5_UNSAFE_ERROR_FRAGMENTS');
+    expect(safeError).toContain('return H5_UNSAFE_ERROR_FRAGMENTS.some');
+    expect(html).toContain("'personaId'");
+    expect(html).toContain("'Covenant'");
+    expect(html).toContain("'当前状态不允许'");
+    expect(html).toContain("'节点重启'");
+    expect(html).toContain("h5SafeErrorMessage(error, '登录已失效，请重新登录。')");
+    expect(html).toContain("h5SafeErrorMessage(data.error, '体验模式暂不可用')");
+    expect(html).toContain("h5SafeErrorMessage(error, '操作失败。')");
+    expect(html).toContain("h5SafeErrorMessage(error, '导出失败。')");
+    expect(html).toContain("h5SafeErrorMessage(error, '删除失败。')");
+    expect(html).toContain("h5SafeErrorMessage(error, '创建失败。')");
+    expect(html).toContain("h5SafeErrorMessage(error, '保存失败。')");
+    expect(graduate).toContain("h5SafeErrorMessage(error, '毕业失败。')");
+    expect(sendMessage).toContain("h5SafeErrorMessage(error, '刚才没有发送成功，我们稍后再试。')");
+    expect(html).not.toContain("error.message || '毕业失败。'");
+    expect(html).not.toContain("error.message || '刚才没有发送成功，我们稍后再试。'");
   });
 
   it('keeps memory and covenant confirmation panels mutually exclusive', () => {
@@ -230,6 +261,6 @@ describe('H5 experience lifecycle controls', () => {
     expect(saveMemory).toContain('body: { personaId: h5CurrentPersonaId, content }');
     expect(saveMemory).toContain('写下一段想补充的记忆。');
     expect(renderConversation).toContain('段记忆');
-    expect(html).not.toContain('MemoryItem');
+    expect(visibleTextFromHtml(html)).not.toContain('MemoryItem');
   });
 });
