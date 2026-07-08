@@ -469,6 +469,15 @@
         </div>
         <div id="h5CovenantActions" class="flex gap-2 flex-wrap"></div>
       </div>
+      <div id="h5SealConfirmPanel" class="hidden px-6 py-4 border-b border-warm-100 bg-warm-50/80">
+        <p class="text-xs text-warm-600 leading-relaxed">封存后，这段对话会暂时安静下来。你仍然可以导出数据，也可以在重要时刻开启一次短暂陪伴。确认你想先往前走，再继续。</p>
+        <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+          <input id="h5SealConfirmPhrase" type="text" autocomplete="off" placeholder="输入“安放”确认" class="flex-1 px-3 py-2 text-sm border border-warm-200 rounded-full outline-none focus:border-warm-400 bg-white text-warm-700">
+          <button onclick="h5ConfirmSeal()" class="px-4 py-2 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">确认封存</button>
+          <button onclick="h5CancelSealConfirm()" class="px-4 py-2 border border-warm-200 text-warm-700 text-sm font-medium rounded-full hover:bg-white transition-colors">再想想</button>
+          <p id="h5SealStatus" class="text-xs text-warm-600 min-h-[1rem] sm:ml-2"></p>
+        </div>
+      </div>
       <div id="h5GraduateConfirmPanel" class="hidden px-6 py-4 border-b border-sage-100 bg-sage-50/70">
         <p class="text-xs text-sage-700 leading-relaxed">毕业前会先为你导出一份数据档案，随后这段对话会安静封存。确认这是此刻想要的告别，再继续。</p>
         <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
@@ -1578,6 +1587,7 @@ async function h5SwitchPersona(personaId) {
   h5CurrentPersonaId = personaId;
   localStorage.setItem('nnz_h5_persona_id', personaId);
   h5ToggleMemoryPanel(false);
+  h5CancelSealConfirm();
   h5CancelGraduateConfirm();
   await h5LoadConversation();
 }
@@ -1590,6 +1600,7 @@ function h5ShowCreatePanel() {
   const consent = document.getElementById('h5ConsentAccepted');
   if (consent) consent.checked = false;
   h5ToggleMemoryPanel(false);
+  h5CancelSealConfirm();
   h5CancelGraduateConfirm();
   document.getElementById('h5PersonaName').focus();
   h5SelectedTraits = {};
@@ -1817,10 +1828,12 @@ async function h5RefreshCovenantState() {
     badge.textContent = labels[state] || '状态更新中';
     badge.classList.add(cssMap[state] || '');
     actions.innerHTML = '';
+    if (state !== 'ACTIVE') h5CancelSealConfirm();
+    if (state !== 'SEALED') h5CancelGraduateConfirm();
 
     if (state === 'ACTIVE') {
       hint.textContent = '选择「封存」后，这段对话会暂时安静下来，等下一个重要时刻再回来。';
-      actions.innerHTML = '<button class="covenant-btn covenant-btn-seal" onclick="h5SealSoul()">封存</button>';
+      actions.innerHTML = '<button class="covenant-btn covenant-btn-seal" onclick="h5OpenSealConfirm()">封存</button>';
     } else if (state === 'SEALED') {
       hint.textContent = '等待下一个重要时刻。输入一个名称，开启 3 天的短暂陪伴。';
       actions.innerHTML = '<input id="h5NodeName" type="text" placeholder="例如：婚礼" style="padding:6px 12px;border:1px solid #E8D5C4;border-radius:999px;font-size:13px;width:100px">' +
@@ -1837,8 +1850,43 @@ async function h5RefreshCovenantState() {
   } catch (e) { /* ignore */ }
 }
 
+function h5OpenSealConfirm() {
+  if (!h5Token) {
+    h5SetStatus('h5AuthStatus', '请先登录或注册。');
+    return;
+  }
+  if (!h5CurrentPersonaId) {
+    h5SetStatus('h5PersonaStatus', '请先创建你想念的人。');
+    return;
+  }
+  const panel = document.getElementById('h5SealConfirmPanel');
+  const input = document.getElementById('h5SealConfirmPhrase');
+  if (!panel || !input) return;
+  h5CancelGraduateConfirm();
+  h5ToggleMemoryPanel(false);
+  panel.classList.remove('hidden');
+  input.value = '';
+  h5SetStatus('h5SealStatus', '');
+  input.focus();
+}
+function h5CancelSealConfirm() {
+  document.getElementById('h5SealConfirmPanel')?.classList.add('hidden');
+  const input = document.getElementById('h5SealConfirmPhrase');
+  if (input) input.value = '';
+  h5SetStatus('h5SealStatus', '');
+}
+async function h5ConfirmSeal() {
+  const phrase = document.getElementById('h5SealConfirmPhrase')?.value.trim();
+  if (phrase !== '安放') {
+    h5SetStatus('h5SealStatus', '请输入“安放”后再确认。');
+    document.getElementById('h5SealConfirmPhrase')?.focus();
+    return;
+  }
+  await h5SealSoul();
+}
 async function h5SealSoul() {
-  await h5CovenantAction('/api/me/seal', { personaId: h5CurrentPersonaId });
+  const sealed = await h5CovenantAction('/api/me/seal', { personaId: h5CurrentPersonaId });
+  if (sealed) h5CancelSealConfirm();
 }
 async function h5ActivateNode() {
   const nodeName = document.getElementById('h5NodeName')?.value || '重要时刻';
@@ -1915,11 +1963,14 @@ async function h5CovenantAction(url, body) {
     if (res.ok) {
       await h5RefreshCovenantState();
       await h5LoadConversation();
+      return true;
     } else {
       alert(data.error || '操作失败');
+      return false;
     }
   } catch (e) {
     alert('网络错误');
+    return false;
   }
 }
 

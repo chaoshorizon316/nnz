@@ -31,4 +31,19 @@ describe('demo server user onboarding consent', () => {
     expect(source).toContain("type: 'DESCRIPTION'");
     expect(source).toContain('enabledForSoul: true');
   });
+
+  it('persists scoped runtime daily usage after a chat passes the usage guard', () => {
+    const functionStart = source.indexOf('async function applyUserRuntimeSafetyGuard');
+    expect(functionStart).toBeGreaterThanOrEqual(0);
+    const functionEnd = source.indexOf('async function getLastUserRuntimeAssistantReply', functionStart);
+    const guardFunction = source.slice(functionStart, functionEnd);
+
+    expect(guardFunction).toContain('const limitCheck = checkDailyLimit(session)');
+    expect(guardFunction.indexOf('checkDailyLimit(session)')).toBeLessThan(
+      guardFunction.indexOf('incrementDailyCount(session)'),
+    );
+    expect(guardFunction).toContain('await runtime.updateRuntimeUsage({');
+    expect(guardFunction).toContain('dailyMessageCount: session.dailyMessageCount');
+    expect(guardFunction).toContain('lastMessageDate: session.lastMessageDate');
+  });
 });

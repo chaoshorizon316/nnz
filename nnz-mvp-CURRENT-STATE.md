@@ -1,6 +1,6 @@
 # nnz-mvp 当前状态与交接指南
 
-> 更新：2026-07-07
+> 更新：2026-07-08
 > 覆盖：Soul 作用域、Covenant 状态机、Memory 分层、Soul Ops、安全护栏、Render demo、LLM 对话、自动化提取管线、SQLite 持久化、登录注册、官网首页
 
 ## 2026-06-22 GitHub / CI / 本地状态
@@ -64,20 +64,22 @@ https://github.com/chaoshorizon316/nnz
 2026-07-07 Step 2.37: H5 graduation export + safety support UX 已实现并推送；毕业按钮会先导出当前登录用户的数据档案，再提交毕业；高风险 guard 回复出现时，H5 显示独立的现实支持提示和热线拨号入口；状态徽标不再向用户兜底显示内部状态名，并补 H5 静态回归测试；本地 h5 targeted tests、typecheck、全量 tests、build:demo、git diff --check 通过
 2026-07-07 Step 2.38: H5 onboarding consent UX 已实现并推送；创建记忆伙伴前需要确认“辅助性记忆对话、不替代身边的人或专业帮助、可随时导出/删除自己的数据”，`POST /api/me/persona` 同步要求 `consentAccepted: true`，新建另一位时会重置确认；新增 H5/API 静态回归测试；本地 targeted tests、typecheck、211 tests + 2 skipped、build:demo、git diff --check 通过；最新已推送提交 `59e8119 feat: add h5 onboarding consent gate`
 2026-07-07 Step 2.39: H5 account deletion inline confirmation 已实现并推送；“删除全部数据”改为页面内确认面板，说明删除不可恢复、建议先导出数据档案，并要求输入“删除”后再提交既有 `/api/me/delete`；新增 H5 静态回归测试；本地 `npm test -- h5-experience`、typecheck、212 tests + 2 skipped、build:demo、git diff --check 通过；最新已推送提交 `871c4d0 feat: add h5 delete confirmation`
-2026-07-07 Step 2.40: H5 memory append UX/API 本地已实现；新增 `/api/me/memory` 并通过当前登录用户 + persona scoped runtime 写入补充记忆；H5 对话区新增“补充记忆”面板，文案限定为已经发生过的细节；runtime HTTP smoke 覆盖该接口；本地 targeted tests、typecheck、214 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
-2026-07-07 Step 2.41: H5 graduation inline confirmation 本地已实现；毕业改为页面内确认，输入“告别”后才执行；毕业仍先导出数据档案再提交 `/api/me/graduate`；本地 h5 targeted test、typecheck、215 tests + 2 skipped、build:demo、git diff --check 通过，建议与 Step 2.40 合并 push
+2026-07-07 Step 2.40: H5 memory append UX/API 已实现并推送；新增 `/api/me/memory` 并通过当前登录用户 + persona scoped runtime 写入补充记忆；H5 对话区新增“补充记忆”面板，文案限定为已经发生过的细节；runtime HTTP smoke 覆盖该接口；与 Step 2.41 合并推送为 `adac0ea feat: add h5 memory append and graduation confirmation`
+2026-07-07 Step 2.41: H5 graduation inline confirmation 已实现并推送；毕业改为页面内确认，输入“告别”后才执行；毕业仍先导出数据档案再提交 `/api/me/graduate`；与 Step 2.40 合并推送为 `adac0ea feat: add h5 memory append and graduation confirmation`
+2026-07-08 Step 2.42: scoped runtime daily usage persistence 本地已实现；H5 `/api/me/chat` 的 scoped runtime guard 在每日限额检查通过后会显式写回 `dailyMessageCount` / `lastMessageDate`，Postgres scoped mode 下不再只更新内存对象；更新不改变 Covenant state、snapshot 或 NODE context；本地 targeted tests、typecheck、218 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
+2026-07-08 Step 2.43: H5 seal inline confirmation 本地已实现；ACTIVE 状态下“封存”先打开页面内确认面板，用户输入“安放”后才提交 `/api/me/seal`；切换/新建 persona 和封存成功会收起确认面板；本地 h5 targeted test、typecheck、219 tests + 2 skipped、build:demo、git diff --check 通过，建议与 Step 2.42 合并 push
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main + local Step 2.40/2.41 H5 memory append + graduation inline confirmation changes pending
+main...origin/main + local Step 2.42/2.43 scoped daily usage persistence + H5 seal inline confirmation changes pending
 ```
 
 最新已推送提交：
 
 ```text
-871c4d0 feat: add h5 delete confirmation
+adac0ea feat: add h5 memory append and graduation confirmation
 ```
 
 最新云端 Soul Ops 记录：

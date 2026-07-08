@@ -73,6 +73,11 @@ export interface DeleteUserDataResult {
   deleted: UserDataExportTotals;
 }
 
+export interface RuntimeUsagePatch {
+  dailyMessageCount: number;
+  lastMessageDate: string;
+}
+
 export interface ScopedRuntimeAdapter {
   createUser(displayName: string): Promise<User>;
   storeCredential(userId: string, email: string, passwordHash: string): Promise<void>;
@@ -98,6 +103,7 @@ export interface ScopedPersonaRuntimeAdapter {
   getSoulSnapshot(snapshotId: string): Promise<SoulSnapshot>;
   getRuntimeSession(): Promise<RuntimeSession>;
   getRuntimeContext(): Promise<RuntimeContext>;
+  updateRuntimeUsage(input: RuntimeUsagePatch): Promise<RuntimeSession>;
   sealSoul(): Promise<{ snapshot: SoulSnapshot; session: RuntimeSession }>;
   activateNode(nodeName: string, durationDays?: number): Promise<{ node: NodeEvent; session: RuntimeSession }>;
   completeNode(): Promise<RuntimeSession>;
@@ -128,6 +134,7 @@ interface ScopedPersonaRuntimeRepository {
   createNode(input: PostgresScopedCreateNodeInput): Promise<NodeEvent>;
   getSoulSnapshot(snapshotId: string): Promise<SoulSnapshot>;
   getRuntimeSession(): Promise<RuntimeSession>;
+  updateRuntimeUsage(input: RuntimeUsagePatch): Promise<RuntimeSession>;
   sealSoul(): Promise<{ snapshot: SoulSnapshot; session: RuntimeSession }>;
   activateNode(nodeName: string, durationDays?: number): Promise<{ node: NodeEvent; session: RuntimeSession }>;
   completeNode(): Promise<RuntimeSession>;
@@ -466,6 +473,7 @@ function createScopedPersonaRuntimeAdapter(
     getSoulSnapshot: (snapshotId) => repository.getSoulSnapshot(snapshotId),
     getRuntimeSession: () => repository.getRuntimeSession(),
     getRuntimeContext: () => buildRuntimeContext(repository),
+    updateRuntimeUsage: (input) => repository.updateRuntimeUsage(input),
     sealSoul: () => repository.sealSoul(),
     activateNode: (nodeName, durationDays) => repository.activateNode(nodeName, durationDays),
     completeNode: () => repository.completeNode(),
@@ -575,6 +583,13 @@ class InMemoryScopedPersonaRuntimeRepository implements ScopedPersonaRuntimeRepo
 
   async getRuntimeSession(): Promise<RuntimeSession> {
     return this.store.getRuntimeSession(this.scopeValue);
+  }
+
+  async updateRuntimeUsage(input: RuntimeUsagePatch): Promise<RuntimeSession> {
+    const session = this.store.getRuntimeSession(this.scopeValue);
+    session.dailyMessageCount = input.dailyMessageCount;
+    session.lastMessageDate = input.lastMessageDate;
+    return session;
   }
 
   async sealSoul(): Promise<{ snapshot: SoulSnapshot; session: RuntimeSession }> {

@@ -120,6 +120,41 @@ describe('scoped runtime adapter', () => {
     await expect(runtime.getRuntimeContext()).rejects.toBeInstanceOf(CovenantStateError);
   });
 
+  it('updates runtime usage without changing the covenant context', async () => {
+    const adapter = createInMemoryScopedRuntimeAdapter(new InMemorySoulStore());
+    const user = await adapter.createUser('usage-user@example.test');
+    const persona = await adapter.createPersona({
+      userId: user.id,
+      displayName: '爸爸',
+      relationship: '女儿',
+      type: 'DECEASED',
+    });
+    const runtime = adapter.forPersona({ userId: user.id, personaId: persona.id });
+    await runtime.createSoulVersion({
+      kernelJson: { identityCore: { displayName: '爸爸' } },
+    });
+
+    const sealed = await runtime.sealSoul();
+    const activated = await runtime.activateNode('婚礼');
+    const updated = await runtime.updateRuntimeUsage({
+      dailyMessageCount: 8,
+      lastMessageDate: '2026-07-08',
+    });
+
+    expect(updated).toMatchObject({
+      state: 'NODE',
+      soulSnapshotId: sealed.snapshot.id,
+      nodeContext: {
+        nodeId: activated.node.id,
+        nodeName: '婚礼',
+      },
+      dailyMessageCount: 8,
+      lastMessageDate: '2026-07-08',
+    });
+    expect(await runtime.getRuntimeSession()).toMatchObject(updated);
+    expect((await runtime.getRuntimeContext()).nodeName).toBe('婚礼');
+  });
+
   it('exports and deletes only the authenticated user data without credential hashes', async () => {
     const adapter = createInMemoryScopedRuntimeAdapter(new InMemorySoulStore());
     const userA = await adapter.createUser('user-a@example.test');

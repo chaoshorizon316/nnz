@@ -622,6 +622,18 @@ export class PostgresScopedSoulRepository {
     return fresh;
   }
 
+  async updateRuntimeUsage(input: { dailyMessageCount: number; lastMessageDate: string }): Promise<RuntimeSession> {
+    await this.ensureBoundPersona();
+    const current = await this.getRuntimeSession();
+    const session: RuntimeSession = {
+      ...current,
+      dailyMessageCount: input.dailyMessageCount,
+      lastMessageDate: input.lastMessageDate,
+    };
+    await this.setSession(session);
+    return session;
+  }
+
   async sealSoul(): Promise<{ snapshot: SoulSnapshot; session: RuntimeSession }> {
     await this.ensureBoundPersona();
     const current = await this.getRuntimeSession();

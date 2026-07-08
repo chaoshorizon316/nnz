@@ -43,6 +43,25 @@ describe('H5 experience lifecycle controls', () => {
     expect(confirmGraduate).toContain('await h5Graduate();');
   });
 
+  it('uses inline confirmation before sealing a conversation', () => {
+    const refreshCovenant = functionBody('h5RefreshCovenantState');
+    const openSeal = functionBody('h5OpenSealConfirm', false);
+    const confirmSeal = functionBody('h5ConfirmSeal');
+    const sealSoul = functionBody('h5SealSoul');
+
+    expect(html).toContain('id="h5SealConfirmPanel"');
+    expect(html).toContain('输入“安放”确认');
+    expect(html).toContain('确认你想先往前走');
+    expect(refreshCovenant).toContain('onclick="h5OpenSealConfirm()">封存</button>');
+    expect(refreshCovenant).not.toContain('onclick="h5SealSoul()">封存</button>');
+    expect(openSeal).toContain("panel.classList.remove('hidden');");
+    expect(openSeal).toContain('h5ToggleMemoryPanel(false);');
+    expect(confirmSeal).toContain("phrase !== '安放'");
+    expect(confirmSeal).toContain('await h5SealSoul();');
+    expect(sealSoul).toContain("const sealed = await h5CovenantAction('/api/me/seal'");
+    expect(sealSoul).toContain('if (sealed) h5CancelSealConfirm();');
+  });
+
   it('does not fall back to displaying raw lifecycle state names', () => {
     expect(html).toContain("badge.textContent = labels[state] || '状态更新中';");
     expect(html).not.toContain('badge.textContent = labels[state] || state;');

@@ -1082,6 +1082,13 @@ async function applyUserRuntimeSafetyGuard(
       return limitCheck;
     }
     incrementDailyCount(session);
+    if (session.dailyMessageCount === undefined || session.lastMessageDate === undefined) {
+      throw new Error('Runtime daily usage update is missing count or date.');
+    }
+    await runtime.updateRuntimeUsage({
+      dailyMessageCount: session.dailyMessageCount,
+      lastMessageDate: session.lastMessageDate,
+    });
   }
 
   return { blocked: false };

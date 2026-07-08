@@ -305,6 +305,48 @@ describe('PostgresScopedSoulRepository', () => {
     expect(await repoB.listSoulVersions()).toMatchObject([{ id: soulB.id, status: 'ARCHIVED' }, { status: 'ACTIVE' }]);
   });
 
+  it('updates runtime usage without losing scoped covenant context', async () => {
+    const { userA, userB, personaA, personaB, pool } = await createFixture();
+    const repoA = createPostgresScopedSoulRepositoryFromPool(pool, {
+      userId: userA.id,
+      personaId: personaA.id,
+    });
+    const repoB = createPostgresScopedSoulRepositoryFromPool(pool, {
+      userId: userB.id,
+      personaId: personaB.id,
+    });
+
+    await repoA.createSoulVersion({
+      kernelJson: { identityCore: { displayName: '爸爸' } },
+    });
+    const sealed = await repoA.sealSoul();
+    const activated = await repoA.activateNode('婚礼');
+    const updated = await repoA.updateRuntimeUsage({
+      dailyMessageCount: 9,
+      lastMessageDate: '2026-07-08',
+    });
+
+    expect(updated).toMatchObject({
+      userId: userA.id,
+      personaId: personaA.id,
+      state: 'NODE',
+      soulSnapshotId: sealed.snapshot.id,
+      nodeContext: {
+        nodeId: activated.node.id,
+        nodeName: '婚礼',
+      },
+      dailyMessageCount: 9,
+      lastMessageDate: '2026-07-08',
+    });
+    expect(await repoA.getRuntimeSession()).toMatchObject(updated);
+    expect(await repoB.getRuntimeSession()).toMatchObject({
+      userId: userB.id,
+      personaId: personaB.id,
+      state: 'ACTIVE',
+      dailyMessageCount: 0,
+    });
+  });
+
   it('keeps soul update proposals scoped and reviewable', async () => {
     const { pool, userA, userB, personaA, personaB } = await createFixture();
     const repoA = createPostgresScopedSoulRepositoryFromPool(pool, {
