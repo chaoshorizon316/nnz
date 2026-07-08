@@ -79,6 +79,12 @@ function visibleTextFromHtml(source: string): string {
     .trim();
 }
 
+function h5UnsafeErrorFragmentsFromHtml(source: string): string[] {
+  const match = source.match(/const H5_UNSAFE_ERROR_FRAGMENTS = \[([\s\S]*?)\];/);
+  expect(match).not.toBeNull();
+  return Array.from(match![1].matchAll(/'([^']+)'/g), ([, value]) => value ?? '');
+}
+
 describe('H5 experience lifecycle controls', () => {
   it('does not expose internal mechanism terms in user-visible H5 copy', () => {
     const visibleText = visibleTextFromHtml(html);
@@ -171,13 +177,13 @@ describe('H5 experience lifecycle controls', () => {
     const safeError = functionBody('h5SafeErrorMessage', false);
     const graduate = functionBody('h5Graduate');
     const sendMessage = functionBody('h5SendMessage');
+    const unsafeErrorFragments = h5UnsafeErrorFragmentsFromHtml(html);
 
     expect(safeError).toContain('H5_UNSAFE_ERROR_FRAGMENTS');
     expect(safeError).toContain('return H5_UNSAFE_ERROR_FRAGMENTS.some');
-    expect(html).toContain("'personaId'");
-    expect(html).toContain("'Covenant'");
-    expect(html).toContain("'当前状态不允许'");
-    expect(html).toContain("'节点重启'");
+    expect(unsafeErrorFragments).toEqual(expect.arrayContaining(USER_VISIBLE_MECHANISM_TERMS));
+    expect(unsafeErrorFragments).toContain('当前状态不允许');
+    expect(unsafeErrorFragments).toContain('节点重启');
     expect(html).toContain("h5SafeErrorMessage(error, '登录已失效，请重新登录。')");
     expect(html).toContain("h5SafeErrorMessage(data.error, '体验模式暂不可用')");
     expect(html).toContain("h5SafeErrorMessage(error, '操作失败。')");

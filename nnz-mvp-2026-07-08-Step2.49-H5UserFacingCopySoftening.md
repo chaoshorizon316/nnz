@@ -42,6 +42,6 @@ passed
 
 ## 状态
 
-- 本地 Step 2.49 已完成，尚待下一次合并 push。
-- 最新已推送提交是 `0d78c32 test: guard h5 visible copy against mechanism leaks`。
+- Step 2.49 已完成，并与 Step 2.48 合并推送为 `ca296ca fix: sanitize h5 runtime errors and soften copy`。
+- 最新本地后续是 Step 2.50 H5 runtime unsafe fragment parity。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。

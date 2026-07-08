@@ -72,20 +72,21 @@ https://github.com/chaoshorizon316/nnz
 2026-07-08 Step 2.45: H5 node activation inline status 已实现并推送；SEALED 状态开启特别时刻必须填写具体名称，不再空值兜底“重要时刻”；Covenant 操作失败从浏览器 alert 改为页面内状态提示；与 Step 2.44 合并推送为 `12c0548 feat: add h5 node completion and activation safeguards`
 2026-07-08 Step 2.46: H5 panel mutual exclusion 已实现并推送；补充记忆、封存确认、节点完成确认、毕业确认之间会自动互斥收起，避免同一屏堆叠多个关键动作；推送为 `f21b392 fix: keep h5 lifecycle panels mutually exclusive`
 2026-07-08 Step 2.47: H5 visible mechanism leak guard 已实现并推送；H5 静态测试会剥离 script/style/comment 后扫描用户可见正文与常见可见属性，防止 SoulVersion、scope、Covenant raw state、后台审核、AI模型等机制词进入前台文案；同时把安全/付费文案改成用户能理解的现实支持与数据档案表达；推送为 `0d78c32 test: guard h5 visible copy against mechanism leaks`
-2026-07-08 Step 2.48: H5 runtime safe error guard 本地已实现；H5 状态栏与聊天气泡展示错误前统一走 `h5SafeErrorMessage()`，遇到 personaId、Covenant、raw lifecycle state、当前状态不允许、节点重启等机制词时回退为用户语言；Covenant 操作不再直接展示 `data.error`；本地 h5 targeted test、typecheck、224 tests + 2 skipped、build:demo 通过，尚待下一次合并 push
-2026-07-08 Step 2.49: H5 user-facing copy softening 本地已实现；前台可见文案把“节点重启 / AI人格 / 毕业机制”等机制化表达改为“特别时刻 / 记忆伙伴 / 主动告别”，并把这些词加入 H5 visible mechanism leak guard；本地 h5 targeted test、typecheck、224 tests + 2 skipped、build:demo 通过，尚待下一次合并 push
+2026-07-08 Step 2.48: H5 runtime safe error guard 已实现并推送；H5 状态栏与聊天气泡展示错误前统一走 `h5SafeErrorMessage()`，遇到 personaId、Covenant、raw lifecycle state、当前状态不允许、节点重启等机制词时回退为用户语言；Covenant 操作不再直接展示 `data.error`；与 Step 2.49 合并推送为 `ca296ca fix: sanitize h5 runtime errors and soften copy`
+2026-07-08 Step 2.49: H5 user-facing copy softening 已实现并推送；前台可见文案把“节点重启 / AI人格 / 毕业机制”等机制化表达改为“特别时刻 / 记忆伙伴 / 主动告别”，并把这些词加入 H5 visible mechanism leak guard；与 Step 2.48 合并推送为 `ca296ca fix: sanitize h5 runtime errors and soften copy`
+2026-07-08 Step 2.50: H5 runtime unsafe fragment parity 本地已实现；`H5_UNSAFE_ERROR_FRAGMENTS` 补齐后台通知、人工审核、极端情绪词汇、AI模型、AI人格、基础AI人格、毕业机制等词，使运行时错误过滤与可见文案护栏保持一致；本地 h5 targeted test、typecheck、224 tests + 2 skipped、build:demo 通过，尚待下一次合并 push
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main + local Step 2.48/2.49 H5 runtime safe error and user-facing copy changes pending
+main...origin/main + local Step 2.50 H5 runtime unsafe fragment parity changes pending
 ```
 
 最新已推送提交：
 
 ```text
-0d78c32 test: guard h5 visible copy against mechanism leaks
+ca296ca fix: sanitize h5 runtime errors and soften copy
 ```
 
 最新云端 Soul Ops 记录：
@@ -147,6 +148,7 @@ nnz-mvp-2026-07-08-Step2.46-H5PanelMutualExclusion.md
 nnz-mvp-2026-07-08-Step2.47-H5VisibleMechanismLeakGuard.md
 nnz-mvp-2026-07-08-Step2.48-H5RuntimeSafeErrorGuard.md
 nnz-mvp-2026-07-08-Step2.49-H5UserFacingCopySoftening.md
+nnz-mvp-2026-07-08-Step2.50-H5RuntimeUnsafeFragmentParity.md
 ```
 
 ## 2026-06-22 工作区注意
