@@ -74,8 +74,9 @@ https://github.com/chaoshorizon316/nnz
 2026-07-07 Step 2.41: H5 graduation inline confirmation 已实现并推送；毕业不再使用浏览器 confirm，而是在 H5 内联面板中说明会先导出数据档案、随后安静封存，用户输入“告别”后才执行；`h5Graduate()` 仍保持先 `/api/me/export`、再 `/api/me/graduate`；与 Step 2.40 合并推送为 `adac0ea feat: add h5 memory append and graduation confirmation`
 2026-07-08 Step 2.42: scoped runtime daily usage persistence 已实现并推送；`ScopedPersonaRuntimeAdapter` / InMemory repository / Postgres scoped repository 新增 `updateRuntimeUsage()`，H5 `/api/me/chat` 的 scoped runtime guard 在 `checkDailyLimit()` 通过并 `incrementDailyCount()` 后显式写回 `dailyMessageCount` / `lastMessageDate`；更新保留 Covenant state、snapshot 和 NODE context；与 Step 2.43 合并推送为 `e4a14dd feat: persist runtime usage and add seal confirmation`
 2026-07-08 Step 2.43: H5 seal inline confirmation 已实现并推送；ACTIVE 状态下“封存”不再一键提交，而是打开页面内确认面板，输入“安放”后才调用 `/api/me/seal`；切换/新建 persona 和封存成功会收起确认面板；与 Step 2.42 合并推送为 `e4a14dd feat: persist runtime usage and add seal confirmation`
-2026-07-08 Step 2.44: H5 node complete inline confirmation 本地已实现；NODE 状态下“完成这个时刻”不再一键提交，而是打开页面内确认面板，输入“收束”后才调用 `/api/me/complete-node`；离开 NODE、切换/新建 persona 和完成成功会收起确认面板；本地 h5 targeted test、typecheck、220 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
-2026-07-08 Step 2.45: H5 node activation inline status 本地已实现；SEALED 状态开启特别时刻必须填写具体名称，不再空值兜底“重要时刻”；Covenant 操作失败从浏览器 alert 改为页面内状态提示；本地 h5 targeted test、typecheck、221 tests + 2 skipped、build:demo、git diff --check 通过，建议与 Step 2.44 合并 push
+2026-07-08 Step 2.44: H5 node complete inline confirmation 已实现并推送；NODE 状态下“完成这个时刻”不再一键提交，而是打开页面内确认面板，输入“收束”后才调用 `/api/me/complete-node`；离开 NODE、切换/新建 persona 和完成成功会收起确认面板；与 Step 2.45 合并推送为 `12c0548 feat: add h5 node completion and activation safeguards`
+2026-07-08 Step 2.45: H5 node activation inline status 已实现并推送；SEALED 状态开启特别时刻必须填写具体名称，不再空值兜底“重要时刻”；Covenant 操作失败从浏览器 alert 改为页面内状态提示；与 Step 2.44 合并推送为 `12c0548 feat: add h5 node completion and activation safeguards`
+2026-07-08 Step 2.46: H5 panel mutual exclusion 本地已实现；补充记忆、封存确认、节点完成确认、毕业确认之间会自动互斥收起，避免同一屏堆叠多个关键动作；本地 h5 targeted test、typecheck、222 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
 ```
 
 说明：
@@ -262,6 +263,8 @@ npm audit
 2026-07-08 Step 2.44 H5 node complete inline confirmation 结果：继续补 Seal / Node / Graduation 用户旅程，把 NODE 阶段“完成这个时刻”从一键立即执行改为页面内确认。`public/index.html` 新增 `h5NodeCompleteConfirmPanel`，NODE 状态下完成按钮改为 `h5OpenNodeCompleteConfirm()`，用户输入“收束”后 `h5ConfirmCompleteNode()` 才调用 `h5CompleteNode()`；切换 persona、新建 persona、离开 NODE 状态、完成成功后会收起确认面板。新增 H5 回归点，固定节点完成确认面板、确认词、“完成这个时刻”不直接调用 API，以及 API 成功后才关闭面板。本地 `npm test -- h5-experience`、`npm run typecheck`、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 34 个测试文件、220 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-08-Step2.44-H5NodeCompleteInlineConfirm.md`。
 
 2026-07-08 Step 2.45 H5 node activation inline status 结果：继续补 SEALED -> NODE 的前台细节。`h5ActivateNode()` 不再为空输入兜底“重要时刻”，用户必须填写具体名称；未填写时在 Covenant bar 内显示“写下这个时刻的名字后再开启。”并聚焦输入框。Covenant bar 新增 `h5CovenantStatus`，`h5CovenantAction()` 的后端失败与网络错误从 `alert()` 改为页面内状态提示。新增 H5 回归点，固定节点名称必填、不再使用默认“重要时刻”、Covenant action 不含 `alert(`。本地 `npm test -- h5-experience`、`npm run typecheck`、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 34 个测试文件、221 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-08-Step2.45-H5NodeActivationInlineStatus.md`。
+
+2026-07-08 Step 2.46 H5 panel mutual exclusion 结果：最后一轮 H5 用户旅程收口，避免补充记忆、封存确认、节点完成确认和毕业确认在同一屏堆叠。`h5ToggleMemoryPanel()` 打开补充记忆时会收起三个 Covenant 确认面板；`h5OpenGraduateConfirm()` 会收起补充记忆；`h5ActivateNode()` 在有效节点名称后会收起毕业确认和补充记忆，再提交节点开启。新增 H5 回归点，固定上述互斥行为。本地 `npm test -- h5-experience`、`npm run typecheck`、`npm test`、`npm run build:demo`、`git diff --check` 通过；全量为 34 个测试文件、222 tests，另有 2 个 integration 文件 skipped。记录见 `nnz-mvp-2026-07-08-Step2.46-H5PanelMutualExclusion.md`。
 
 最新 CI run：
 

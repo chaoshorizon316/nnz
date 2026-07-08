@@ -1776,6 +1776,9 @@ function h5ToggleMemoryPanel(forceOpen) {
   const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : panel.classList.contains('hidden');
   panel.classList.toggle('hidden', !shouldOpen);
   if (shouldOpen) {
+    h5CancelSealConfirm();
+    h5CancelNodeCompleteConfirm();
+    h5CancelGraduateConfirm();
     document.getElementById('h5MemoryStatus').textContent = '';
     document.getElementById('h5MemoryInput')?.focus();
   }
@@ -1913,6 +1916,8 @@ async function h5ActivateNode() {
     return;
   }
   h5SetStatus('h5CovenantStatus', '正在开启这个时刻……');
+  h5CancelGraduateConfirm();
+  h5ToggleMemoryPanel(false);
   const activated = await h5CovenantAction('/api/me/activate-node', { personaId: h5CurrentPersonaId, nodeName });
   if (activated) h5SetStatus('h5CovenantStatus', '这个时刻已开启。');
 }
@@ -1969,6 +1974,7 @@ function h5OpenGraduateConfirm() {
   if (!panel || !input) return;
   h5CancelSealConfirm();
   h5CancelNodeCompleteConfirm();
+  h5ToggleMemoryPanel(false);
   panel.classList.remove('hidden');
   input.value = '';
   h5SetStatus('h5GraduateStatus', '');

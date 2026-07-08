@@ -95,6 +95,19 @@ describe('H5 experience lifecycle controls', () => {
     expect(covenantAction).not.toContain('alert(');
   });
 
+  it('keeps memory and covenant confirmation panels mutually exclusive', () => {
+    const toggleMemory = functionBody('h5ToggleMemoryPanel', false);
+    const openGraduate = functionBody('h5OpenGraduateConfirm', false);
+    const activateNode = functionBody('h5ActivateNode');
+
+    expect(toggleMemory).toContain('h5CancelSealConfirm();');
+    expect(toggleMemory).toContain('h5CancelNodeCompleteConfirm();');
+    expect(toggleMemory).toContain('h5CancelGraduateConfirm();');
+    expect(openGraduate).toContain('h5ToggleMemoryPanel(false);');
+    expect(activateNode).toContain('h5CancelGraduateConfirm();');
+    expect(activateNode).toContain('h5ToggleMemoryPanel(false);');
+  });
+
   it('does not fall back to displaying raw lifecycle state names', () => {
     expect(html).toContain("badge.textContent = labels[state] || '状态更新中';");
     expect(html).not.toContain('badge.textContent = labels[state] || state;');
