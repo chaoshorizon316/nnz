@@ -41,6 +41,6 @@ passed
 
 ## 状态
 
-- 本地 Step 2.46 已完成，尚待下一次合并 push。
-- 最新已推送提交是 `12c0548 feat: add h5 node completion and activation safeguards`。
+- Step 2.46 已完成并推送为 `f21b392 fix: keep h5 lifecycle panels mutually exclusive`。
+- 最新本地后续是 Step 2.47 H5 visible mechanism leak guard。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。

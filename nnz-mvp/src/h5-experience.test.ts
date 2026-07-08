@@ -5,6 +5,38 @@ import { describe, expect, it } from 'vitest';
 
 const html = readFileSync(join(process.cwd(), 'public', 'index.html'), 'utf-8');
 
+const USER_VISIBLE_MECHANISM_TERMS = [
+  'SoulVersion',
+  'SoulSnapshot',
+  'SoulUpdateProposal',
+  'MemoryItem',
+  'enabledForRuntime',
+  'enabledForSoulUpdate',
+  'userId',
+  'personaId',
+  'scope',
+  'kernelJson',
+  'vector',
+  'embedding',
+  'LLM prompt',
+  'Covenant',
+  'ACTIVE',
+  'SEALED',
+  'NODE',
+  'GRADUATED',
+  '后台通知',
+  '人工审核',
+  '极端情绪词汇',
+  'AI模型',
+  '作用域',
+  '检索',
+  '证据',
+  '节点里的',
+  '不是我本来就知道',
+  '只按',
+  '别人的记忆',
+] as const;
+
 function functionBody(name: string, asyncFunction = true): string {
   const prefix = asyncFunction ? 'async function' : 'function';
   const start = html.indexOf(`${prefix} ${name}(`);
@@ -16,7 +48,40 @@ function functionBody(name: string, asyncFunction = true): string {
   return html.slice(start, end);
 }
 
+function decodeHtmlEntities(source: string): string {
+  return source
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+function visibleTextFromHtml(source: string): string {
+  const sourceWithoutCode = source
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ');
+  const textNodes = sourceWithoutCode.replace(/<[^>]+>/g, ' ');
+  const visibleAttributes = Array.from(
+    sourceWithoutCode.matchAll(/\s(?:aria-label|alt|placeholder|title|value)=["']([^"']*)["']/gi),
+    ([, value]) => value ?? '',
+  ).join(' ');
+
+  return decodeHtmlEntities(`${textNodes} ${visibleAttributes}`)
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 describe('H5 experience lifecycle controls', () => {
+  it('does not expose internal mechanism terms in user-visible H5 copy', () => {
+    const visibleText = visibleTextFromHtml(html);
+    const leakedTerms = USER_VISIBLE_MECHANISM_TERMS.filter((term) => visibleText.includes(term));
+
+    expect(leakedTerms).toEqual([]);
+  });
+
   it('downloads the user data archive before submitting graduation', () => {
     const graduate = functionBody('h5Graduate');
     const exportCall = graduate.indexOf("await h5Request('/api/me/export')");

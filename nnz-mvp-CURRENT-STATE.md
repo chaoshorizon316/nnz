@@ -70,19 +70,20 @@ https://github.com/chaoshorizon316/nnz
 2026-07-08 Step 2.43: H5 seal inline confirmation 已实现并推送；ACTIVE 状态下“封存”先打开页面内确认面板，用户输入“安放”后才提交 `/api/me/seal`；切换/新建 persona 和封存成功会收起确认面板；与 Step 2.42 合并推送为 `e4a14dd feat: persist runtime usage and add seal confirmation`
 2026-07-08 Step 2.44: H5 node complete inline confirmation 已实现并推送；NODE 状态下“完成这个时刻”先打开页面内确认面板，用户输入“收束”后才提交 `/api/me/complete-node`；离开 NODE、切换/新建 persona 和完成成功会收起确认面板；与 Step 2.45 合并推送为 `12c0548 feat: add h5 node completion and activation safeguards`
 2026-07-08 Step 2.45: H5 node activation inline status 已实现并推送；SEALED 状态开启特别时刻必须填写具体名称，不再空值兜底“重要时刻”；Covenant 操作失败从浏览器 alert 改为页面内状态提示；与 Step 2.44 合并推送为 `12c0548 feat: add h5 node completion and activation safeguards`
-2026-07-08 Step 2.46: H5 panel mutual exclusion 本地已实现；补充记忆、封存确认、节点完成确认、毕业确认之间会自动互斥收起，避免同一屏堆叠多个关键动作；本地 h5 targeted test、typecheck、222 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
+2026-07-08 Step 2.46: H5 panel mutual exclusion 已实现并推送；补充记忆、封存确认、节点完成确认、毕业确认之间会自动互斥收起，避免同一屏堆叠多个关键动作；推送为 `f21b392 fix: keep h5 lifecycle panels mutually exclusive`
+2026-07-08 Step 2.47: H5 visible mechanism leak guard 本地已实现；H5 静态测试会剥离 script/style/comment 后扫描用户可见正文与常见可见属性，防止 SoulVersion、scope、Covenant raw state、后台审核、AI模型等机制词进入前台文案；同时把安全/付费文案改成用户能理解的现实支持与数据档案表达；本地 h5 targeted test、typecheck、223 tests + 2 skipped、build:demo 通过，尚待下一次合并 push
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main + local Step 2.46 H5 panel mutual exclusion changes pending
+main...origin/main + local Step 2.47 H5 visible mechanism leak guard changes pending
 ```
 
 最新已推送提交：
 
 ```text
-12c0548 feat: add h5 node completion and activation safeguards
+f21b392 fix: keep h5 lifecycle panels mutually exclusive
 ```
 
 最新云端 Soul Ops 记录：
@@ -129,6 +130,19 @@ nnz-mvp-2026-07-06-Step2.31-MigrationValidationSuite.md
 nnz-mvp-2026-07-06-Step2.32-OpsRoleTokenSmoke.md
 nnz-mvp-2026-07-07-Step2.33-ReleasePreflight.md
 nnz-mvp-2026-07-07-Step2.34-ReleaseValidationSuite.md
+nnz-mvp-2026-07-07-Step2.35-ReleaseEvidence.md
+nnz-mvp-2026-07-07-Step2.36-SensitiveArtifactIgnore.md
+nnz-mvp-2026-07-07-Step2.37-H5GraduationExport.md
+nnz-mvp-2026-07-07-Step2.38-H5OnboardingConsent.md
+nnz-mvp-2026-07-07-Step2.39-H5DeleteInlineConfirm.md
+nnz-mvp-2026-07-07-Step2.40-H5MemoryAppend.md
+nnz-mvp-2026-07-07-Step2.41-H5GraduationInlineConfirm.md
+nnz-mvp-2026-07-08-Step2.42-ScopedRuntimeDailyUsage.md
+nnz-mvp-2026-07-08-Step2.43-H5SealInlineConfirm.md
+nnz-mvp-2026-07-08-Step2.44-H5NodeCompleteInlineConfirm.md
+nnz-mvp-2026-07-08-Step2.45-H5NodeActivationInlineStatus.md
+nnz-mvp-2026-07-08-Step2.46-H5PanelMutualExclusion.md
+nnz-mvp-2026-07-08-Step2.47-H5VisibleMechanismLeakGuard.md
 ```
 
 ## 2026-06-22 工作区注意
