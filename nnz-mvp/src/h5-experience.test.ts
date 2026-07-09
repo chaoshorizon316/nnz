@@ -212,6 +212,16 @@ describe('H5 experience lifecycle controls', () => {
     expect(activateNode).toContain('h5ToggleMemoryPanel(false);');
   });
 
+  it('renders persona switcher options with DOM text APIs', () => {
+    const updatePersonaList = functionBody('h5UpdatePersonaList', false);
+
+    expect(updatePersonaList).toContain("document.createElement('option')");
+    expect(updatePersonaList).toContain('option.value = persona.id;');
+    expect(updatePersonaList).toContain('option.textContent = persona.displayName');
+    expect(updatePersonaList).toContain('sel.appendChild(option);');
+    expect(updatePersonaList).not.toContain('sel.innerHTML = personas.map');
+  });
+
   it('does not fall back to displaying raw lifecycle state names', () => {
     expect(html).toContain("badge.textContent = labels[state] || '状态更新中';");
     expect(html).not.toContain('badge.textContent = labels[state] || state;');

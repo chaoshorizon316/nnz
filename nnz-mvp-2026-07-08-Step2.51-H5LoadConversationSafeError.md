@@ -36,6 +36,6 @@ passed
 
 ## 状态
 
-- 本地 Step 2.51 已完成，尚待下一次合并 push。
-- 最新已推送提交是 `4663ce5 test: align h5 runtime error mechanism guard`。
+- Step 2.51 已完成并推送为 `58c0fe5 fix: handle h5 conversation load errors safely`。
+- 最新本地后续是 Step 2.52 H5 persona switcher safe rendering。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。

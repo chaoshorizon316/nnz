@@ -1633,9 +1633,13 @@ function h5UpdatePersonaList(personas) {
     btn.classList.remove('hidden');
   }
   if (memoryBtn) memoryBtn.classList.toggle('hidden', personas.length === 0);
-  sel.innerHTML = personas.map(p =>
-    '<option value="' + p.id + '">' + p.displayName + '（' + p.relationship + '）</option>'
-  ).join('');
+  sel.textContent = '';
+  personas.forEach((persona) => {
+    const option = document.createElement('option');
+    option.value = persona.id;
+    option.textContent = persona.displayName + '（' + persona.relationship + '）';
+    sel.appendChild(option);
+  });
   sel.value = h5CurrentPersonaId;
 }
 
