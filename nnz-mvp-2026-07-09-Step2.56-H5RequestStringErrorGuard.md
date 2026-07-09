@@ -36,6 +36,6 @@ passed
 
 ## 状态
 
-- 本地 Step 2.56 已完成，尚待下一次合并 push。
-- 最新已推送提交是 `e251fd3 fix: unify h5 covenant request handling`。
+- Step 2.56 已完成并推送。
+- 最新已推送提交是 `909783d fix: guard h5 request error payloads`。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。

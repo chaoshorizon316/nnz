@@ -5,10 +5,10 @@
 Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.56。最新已推送提交是：
 
 ```text
-e251fd3 fix: unify h5 covenant request handling
+909783d fix: guard h5 request error payloads
 ```
 
-Step 2.55 H5 Covenant unified request handling 已完成验证并推送。当前本地新增 Step 2.56 H5 request string error guard；它不改变本路线图的外部 release validation 剩余入口。
+Step 2.56 H5 request string error guard 已完成验证并推送；它不改变本路线图的外部 release validation 剩余入口。后续不要再卡在“等待推送 Step 2.56”，当前唯一上线闸口仍是外部输入齐备后的 `release:validation-suite`。
 
 截至 2026-07-09，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、以及本地 `.env.example` 都已完成实现；真实 DB/Render 执行仍需要 disposable URL、snapshot 路径或 token env。
 
@@ -63,7 +63,7 @@ Step 2.55 H5 Covenant unified request handling 已完成验证并推送。当前
 - Step 2.53：H5 request non-JSON safe fallback 已实现并推送；`h5Request()` 不再直接 `response.json()`，非 JSON / 空响应会收敛为固定用户语言错误，避免解析异常进入用户可见错误。
 - Step 2.54：H5 guest mode unified request handling 已实现并推送；体验模式注册复用 `h5Request('/api/register', { skipAuth: true })`，不再手写 fetch/JSON parse，统一获得请求层非 JSON 兜底和运行时错误过滤。
 - Step 2.55：H5 Covenant unified request handling 已实现并推送；Covenant 状态刷新和封存/开启/完成动作复用 `h5Request()`，不再手写 fetch/JSON parse，统一获得请求层非 JSON 兜底和运行时错误过滤。
-- Step 2.56：H5 request string error guard 本地已实现；`h5Request()` 仅允许非空字符串 `data.error` 进入 `Error`，对象、数组、空值等异常 error payload 统一回退为“请求失败。”。
+- Step 2.56：H5 request string error guard 已实现并推送；`h5Request()` 仅允许非空字符串 `data.error` 进入 `Error`，对象、数组、空值等异常 error payload 统一回退为“请求失败。”。
 
 ## 剩余目标状态
 
@@ -107,7 +107,7 @@ Step 2.55 H5 Covenant unified request handling 已完成验证并推送。当前
 ## 当前可继续做的本地工作
 
 - 用真实外部输入跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`；默认仍保持 snapshot persistence，scoped runtime 只在 disposable DB smoke 中验证。
-- 当前本地 Step 2.56 是 H5 请求错误 payload 字符串化防护，不依赖外部 DB/token；推送后，核心上线闸口仍是上面的 release validation suite。
+- 当前不需要为了 Step 2.56 再单独 push；核心上线闸口是上面的 release validation suite。
 
 ## 当前需要用户或外部环境提供的东西
 
