@@ -242,6 +242,22 @@ describe('H5 experience lifecycle controls', () => {
     expect(updatePersonaList).not.toContain('sel.innerHTML = personas.map');
   });
 
+  it('renders H5 conversation bubbles with DOM text APIs', () => {
+    const renderConversation = functionBody('h5RenderConversation', false);
+    const appendBubble = functionBody('h5AppendBubble', false);
+    const createBubble = functionBody('h5CreateBubble', false);
+
+    expect(renderConversation).toContain("container.textContent = '';");
+    expect(renderConversation).toContain('container.appendChild(h5CreateBubble(message.role, message.content));');
+    expect(renderConversation).not.toContain('container.innerHTML = messages.map');
+    expect(renderConversation).not.toContain('h5BubbleHtml');
+    expect(appendBubble).toContain('container.appendChild(h5CreateBubble(role, content));');
+    expect(appendBubble).not.toContain('insertAdjacentHTML');
+    expect(createBubble).toContain("document.createElement('p')");
+    expect(createBubble).toContain("text.textContent = String(content || '');");
+    expect(createBubble).not.toContain('escapeHtml(content)');
+  });
+
   it('does not fall back to displaying raw lifecycle state names', () => {
     expect(html).toContain("badge.textContent = labels[state] || '状态更新中';");
     expect(html).not.toContain('badge.textContent = labels[state] || state;');
