@@ -1274,7 +1274,7 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.52。最新已推送提交是 `58c0fe5 fix: handle h5 conversation load errors safely`；H5 load conversation safe error handling 已完成本地验证并推送。当前本地新增 Step 2.52 H5 persona switcher safe rendering：`h5UpdatePersonaList()` 不再用 `innerHTML` 拼接用户输入的 displayName/relationship，而是通过 DOM option + `textContent` 渲染下拉项，降低用户输入标签注入风险。本地 h5 targeted test、typecheck、225 tests + 2 skipped、build:demo 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
+Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.53。最新已推送提交是 `0e9ffee fix: render h5 persona switcher safely`；H5 persona switcher safe rendering 已完成本地验证并推送。当前本地新增 Step 2.53 H5 request non-JSON safe fallback：`h5Request()` 不再直接 `response.json()`，而是读取 `response.text()` 后安全 `JSON.parse`，遇到非 JSON / 空响应时使用固定“请求失败。”错误，避免网关或静态错误页解析异常进入用户可见错误。本地 h5 targeted test、typecheck、225 tests + 2 skipped、build:demo 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
 
 1. 注入真实本地 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Render role token env、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`。
 2. 跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`，它会串 preflight、migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite，并写脱敏上线 evidence。

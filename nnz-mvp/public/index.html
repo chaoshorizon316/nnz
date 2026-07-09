@@ -2189,9 +2189,15 @@ async function h5Request(path, options = {}) {
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
-  const data = await response.json();
+  const rawBody = await response.text();
+  let data = {};
+  try {
+    data = rawBody ? JSON.parse(rawBody) : {};
+  } catch (error) {
+    throw new Error('请求失败。');
+  }
   if (!response.ok) {
-    throw new Error(data.error || '请求失败。');
+    throw new Error((data && data.error) || '请求失败。');
   }
   return data;
 }

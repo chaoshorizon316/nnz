@@ -175,6 +175,7 @@ describe('H5 experience lifecycle controls', () => {
 
   it('sanitizes H5 runtime errors before displaying them to users', () => {
     const safeError = functionBody('h5SafeErrorMessage', false);
+    const request = functionBody('h5Request');
     const loadConversation = functionBody('h5LoadConversation');
     const graduate = functionBody('h5Graduate');
     const sendMessage = functionBody('h5SendMessage');
@@ -192,6 +193,10 @@ describe('H5 experience lifecycle controls', () => {
     expect(html).toContain("h5SafeErrorMessage(error, '删除失败。')");
     expect(html).toContain("h5SafeErrorMessage(error, '创建失败。')");
     expect(html).toContain("h5SafeErrorMessage(error, '保存失败。')");
+    expect(request).toContain('await response.text()');
+    expect(request).toContain('JSON.parse(rawBody)');
+    expect(request).toContain("throw new Error('请求失败。')");
+    expect(request).not.toContain('await response.json()');
     expect(loadConversation).toContain("h5SafeErrorMessage(error, '读取对话失败，请稍后再试。')");
     expect(graduate).toContain("h5SafeErrorMessage(error, '毕业失败。')");
     expect(sendMessage).toContain("h5SafeErrorMessage(error, '刚才没有发送成功，我们稍后再试。')");

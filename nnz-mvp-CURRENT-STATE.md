@@ -1,6 +1,6 @@
 # nnz-mvp 当前状态与交接指南
 
-> 更新：2026-07-08
+> 更新：2026-07-09
 > 覆盖：Soul 作用域、Covenant 状态机、Memory 分层、Soul Ops、安全护栏、Render demo、LLM 对话、自动化提取管线、SQLite 持久化、登录注册、官网首页
 
 ## 2026-06-22 GitHub / CI / 本地状态
@@ -76,19 +76,20 @@ https://github.com/chaoshorizon316/nnz
 2026-07-08 Step 2.49: H5 user-facing copy softening 已实现并推送；前台可见文案把“节点重启 / AI人格 / 毕业机制”等机制化表达改为“特别时刻 / 记忆伙伴 / 主动告别”，并把这些词加入 H5 visible mechanism leak guard；与 Step 2.48 合并推送为 `ca296ca fix: sanitize h5 runtime errors and soften copy`
 2026-07-08 Step 2.50: H5 runtime unsafe fragment parity 已实现并推送；`H5_UNSAFE_ERROR_FRAGMENTS` 补齐后台通知、人工审核、极端情绪词汇、AI模型、AI人格、基础AI人格、毕业机制等词，使运行时错误过滤与可见文案护栏保持一致；推送为 `4663ce5 test: align h5 runtime error mechanism guard`
 2026-07-08 Step 2.51: H5 load conversation safe error handling 已实现并推送；`h5LoadConversation()` 读取对话失败时捕获异常并通过 `h5SafeErrorMessage(error, '读取对话失败，请稍后再试。')` 在页面状态区展示用户语言，避免 persona 切换或 Covenant 后刷新历史时泄露 raw backend error；推送为 `58c0fe5 fix: handle h5 conversation load errors safely`
-2026-07-08 Step 2.52: H5 persona switcher safe rendering 本地已实现；`h5UpdatePersonaList()` 不再用 `innerHTML` 拼接用户输入的 displayName/relationship，而是通过 `document.createElement('option')`、`option.value` 和 `option.textContent` 渲染下拉项，降低用户输入标签注入风险；本地 h5 targeted test、typecheck、225 tests + 2 skipped、build:demo 通过，尚待下一次合并 push
+2026-07-08 Step 2.52: H5 persona switcher safe rendering 已实现并推送；`h5UpdatePersonaList()` 不再用 `innerHTML` 拼接用户输入的 displayName/relationship，而是通过 `document.createElement('option')`、`option.value` 和 `option.textContent` 渲染下拉项，降低用户输入标签注入风险；推送为 `0e9ffee fix: render h5 persona switcher safely`
+2026-07-09 Step 2.53: H5 request non-JSON safe fallback 本地已实现；`h5Request()` 不再直接 `response.json()`，而是读取 `response.text()` 后安全 `JSON.parse`，遇到非 JSON / 空响应时使用固定“请求失败。”错误，避免网关或静态错误页解析异常进入用户可见错误；本地 h5 targeted test、typecheck、225 tests + 2 skipped、build:demo 通过，尚待下一次合并 push
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main + local Step 2.52 H5 persona switcher safe rendering changes pending
+main...origin/main + local Step 2.53 H5 request non-JSON safe fallback changes pending
 ```
 
 最新已推送提交：
 
 ```text
-58c0fe5 fix: handle h5 conversation load errors safely
+0e9ffee fix: render h5 persona switcher safely
 ```
 
 最新云端 Soul Ops 记录：
@@ -153,6 +154,7 @@ nnz-mvp-2026-07-08-Step2.49-H5UserFacingCopySoftening.md
 nnz-mvp-2026-07-08-Step2.50-H5RuntimeUnsafeFragmentParity.md
 nnz-mvp-2026-07-08-Step2.51-H5LoadConversationSafeError.md
 nnz-mvp-2026-07-08-Step2.52-H5PersonaSwitcherSafeRendering.md
+nnz-mvp-2026-07-09-Step2.53-H5RequestNonJsonSafeFallback.md
 ```
 
 ## 2026-06-22 工作区注意
