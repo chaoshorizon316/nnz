@@ -78,19 +78,20 @@ https://github.com/chaoshorizon316/nnz
 2026-07-08 Step 2.51: H5 load conversation safe error handling 已实现并推送；`h5LoadConversation()` 读取对话失败时捕获异常并通过 `h5SafeErrorMessage(error, '读取对话失败，请稍后再试。')` 在页面状态区展示用户语言，避免 persona 切换或 Covenant 后刷新历史时泄露 raw backend error；推送为 `58c0fe5 fix: handle h5 conversation load errors safely`
 2026-07-08 Step 2.52: H5 persona switcher safe rendering 已实现并推送；`h5UpdatePersonaList()` 不再用 `innerHTML` 拼接用户输入的 displayName/relationship，而是通过 `document.createElement('option')`、`option.value` 和 `option.textContent` 渲染下拉项，降低用户输入标签注入风险；推送为 `0e9ffee fix: render h5 persona switcher safely`
 2026-07-09 Step 2.53: H5 request non-JSON safe fallback 已实现并推送；`h5Request()` 不再直接 `response.json()`，而是读取 `response.text()` 后安全 `JSON.parse`，遇到非 JSON / 空响应时使用固定“请求失败。”错误，避免网关或静态错误页解析异常进入用户可见错误；推送为 `9619fb9 fix: handle h5 non-json responses safely`
-2026-07-09 Step 2.54: H5 guest mode unified request handling 本地已实现；`h5GuestMode()` 不再手写 `fetch('/api/register')` / `res.json()`，改为复用 `h5Request('/api/register', { skipAuth: true })`，使体验模式注册同样获得非 JSON 响应兜底与 `h5SafeErrorMessage()` 机制词过滤；本地 h5 targeted test、typecheck、225 tests + 2 skipped、build:demo 通过，尚待下一次合并 push
+2026-07-09 Step 2.54: H5 guest mode unified request handling 已实现并推送；`h5GuestMode()` 不再手写 `fetch('/api/register')` / `res.json()`，改为复用 `h5Request('/api/register', { skipAuth: true })`，使体验模式注册同样获得非 JSON 响应兜底与 `h5SafeErrorMessage()` 机制词过滤；推送为 `4de0af0 fix: unify h5 guest mode request handling`
+2026-07-09 Step 2.55: H5 Covenant unified request handling 本地已实现；`h5RefreshCovenantState()` 和 `h5CovenantAction()` 不再手写 fetch/res.json，统一复用 `h5Request()`，使封存、开启特别时刻、完成特别时刻和状态刷新同样获得非 JSON 响应兜底与 `h5SafeErrorMessage()` 机制词过滤；本地 h5 targeted test、typecheck、225 tests + 2 skipped、build:demo 通过，尚待下一次合并 push
 ```
 
 当前本地相对远端：
 
 ```text
-main...origin/main + local Step 2.54 H5 guest mode unified request handling changes pending
+main...origin/main + local Step 2.55 H5 Covenant unified request handling changes pending
 ```
 
 最新已推送提交：
 
 ```text
-9619fb9 fix: handle h5 non-json responses safely
+4de0af0 fix: unify h5 guest mode request handling
 ```
 
 最新云端 Soul Ops 记录：
@@ -157,6 +158,7 @@ nnz-mvp-2026-07-08-Step2.51-H5LoadConversationSafeError.md
 nnz-mvp-2026-07-08-Step2.52-H5PersonaSwitcherSafeRendering.md
 nnz-mvp-2026-07-09-Step2.53-H5RequestNonJsonSafeFallback.md
 nnz-mvp-2026-07-09-Step2.54-H5GuestModeUnifiedRequest.md
+nnz-mvp-2026-07-09-Step2.55-H5CovenantUnifiedRequest.md
 ```
 
 ## 2026-06-22 工作区注意

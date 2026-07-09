@@ -1875,11 +1875,7 @@ async function h5LoadConversation() {
 async function h5RefreshCovenantState() {
   if (!h5Token || !h5CurrentPersonaId) return;
   try {
-    const res = await fetch('/api/me/covenant-state?personaId=' + encodeURIComponent(h5CurrentPersonaId), {
-      headers: h5AuthHeaders()
-    });
-    if (!res.ok) return;
-    const data = await res.json();
+    const data = await h5Request('/api/me/covenant-state?personaId=' + encodeURIComponent(h5CurrentPersonaId));
     const bar = document.getElementById('h5CovenantBar');
     const badge = document.getElementById('h5CovenantBadge');
     const hint = document.getElementById('h5CovenantHint');
@@ -2071,22 +2067,15 @@ async function h5Graduate() {
 }
 async function h5CovenantAction(url, body) {
   try {
-    const res = await fetch(url, {
+    await h5Request(url, {
       method: 'POST',
-      headers: { ...h5AuthHeaders(), 'content-type': 'application/json' },
-      body: JSON.stringify(body)
+      body,
     });
-    const data = await res.json();
-    if (res.ok) {
-      await h5RefreshCovenantState();
-      await h5LoadConversation();
-      return true;
-    } else {
-      h5SetStatus('h5CovenantStatus', h5SafeErrorMessage(data.error, '刚才没有完成，请稍后再试。'));
-      return false;
-    }
-  } catch (e) {
-    h5SetStatus('h5CovenantStatus', '网络不稳定，请稍后再试。');
+    await h5RefreshCovenantState();
+    await h5LoadConversation();
+    return true;
+  } catch (error) {
+    h5SetStatus('h5CovenantStatus', h5SafeErrorMessage(error, '刚才没有完成，请稍后再试。'));
     return false;
   }
 }

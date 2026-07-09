@@ -130,6 +130,8 @@ describe('H5 experience lifecycle controls', () => {
     expect(html).toContain('确认你想先往前走');
     expect(refreshCovenant).toContain('onclick="h5OpenSealConfirm()">封存</button>');
     expect(refreshCovenant).not.toContain('onclick="h5SealSoul()">封存</button>');
+    expect(refreshCovenant).toContain("await h5Request('/api/me/covenant-state?personaId='");
+    expect(refreshCovenant).not.toContain("fetch('/api/me/covenant-state");
     expect(openSeal).toContain("panel.classList.remove('hidden');");
     expect(openSeal).toContain('h5ToggleMemoryPanel(false);');
     expect(confirmSeal).toContain("phrase !== '安放'");
@@ -168,7 +170,10 @@ describe('H5 experience lifecycle controls', () => {
     expect(activateNode).not.toContain("|| '重要时刻'");
     expect(activateNode).toContain('正在开启这个时刻');
     expect(covenantAction).toContain("h5SetStatus('h5CovenantStatus'");
-    expect(covenantAction).toContain("h5SafeErrorMessage(data.error, '刚才没有完成，请稍后再试。')");
+    expect(covenantAction).toContain('await h5Request(url');
+    expect(covenantAction).toContain("h5SafeErrorMessage(error, '刚才没有完成，请稍后再试。')");
+    expect(covenantAction).not.toContain('await res.json()');
+    expect(covenantAction).not.toContain('fetch(url');
     expect(covenantAction).not.toContain("data.error || '刚才没有完成，请稍后再试。'");
     expect(covenantAction).not.toContain('alert(');
   });

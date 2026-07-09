@@ -2,13 +2,13 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.54。最新已推送提交是：
+Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.55。最新已推送提交是：
 
 ```text
-9619fb9 fix: handle h5 non-json responses safely
+4de0af0 fix: unify h5 guest mode request handling
 ```
 
-Step 2.53 H5 request non-JSON safe fallback 已完成验证并推送。当前本地新增 Step 2.54 H5 guest mode unified request handling；它不改变本路线图的外部 release validation 剩余入口。
+Step 2.54 H5 guest mode unified request handling 已完成验证并推送。当前本地新增 Step 2.55 H5 Covenant unified request handling；它不改变本路线图的外部 release validation 剩余入口。
 
 截至 2026-07-09，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、以及本地 `.env.example` 都已完成实现；真实 DB/Render 执行仍需要 disposable URL、snapshot 路径或 token env。
 
@@ -61,7 +61,8 @@ Step 2.53 H5 request non-JSON safe fallback 已完成验证并推送。当前本
 - Step 2.51：H5 load conversation safe error handling 已实现并推送；`h5LoadConversation()` 读取对话失败时捕获异常并统一走 `h5SafeErrorMessage()`，避免 persona 切换或 Covenant 后刷新历史时显示 raw backend error。
 - Step 2.52：H5 persona switcher safe rendering 已实现并推送；persona 下拉框不再用 `innerHTML` 拼接用户输入的 displayName/relationship，改用 DOM option + `textContent`，降低用户输入标签注入风险。
 - Step 2.53：H5 request non-JSON safe fallback 已实现并推送；`h5Request()` 不再直接 `response.json()`，非 JSON / 空响应会收敛为固定用户语言错误，避免解析异常进入用户可见错误。
-- Step 2.54：H5 guest mode unified request handling 本地已实现；体验模式注册复用 `h5Request('/api/register', { skipAuth: true })`，不再手写 fetch/JSON parse，统一获得请求层非 JSON 兜底和运行时错误过滤。
+- Step 2.54：H5 guest mode unified request handling 已实现并推送；体验模式注册复用 `h5Request('/api/register', { skipAuth: true })`，不再手写 fetch/JSON parse，统一获得请求层非 JSON 兜底和运行时错误过滤。
+- Step 2.55：H5 Covenant unified request handling 本地已实现；Covenant 状态刷新和封存/开启/完成动作复用 `h5Request()`，不再手写 fetch/JSON parse，统一获得请求层非 JSON 兜底和运行时错误过滤。
 
 ## 剩余目标状态
 
@@ -105,7 +106,7 @@ Step 2.53 H5 request non-JSON safe fallback 已完成验证并推送。当前本
 ## 当前可继续做的本地工作
 
 - 用真实外部输入跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`；默认仍保持 snapshot persistence，scoped runtime 只在 disposable DB smoke 中验证。
-- 当前本地 Step 2.54 是 H5 体验模式请求入口统一化，不依赖外部 DB/token；推送后，核心上线闸口仍是上面的 release validation suite。
+- 当前本地 Step 2.55 是 H5 Covenant 请求入口统一化，不依赖外部 DB/token；推送后，核心上线闸口仍是上面的 release validation suite。
 
 ## 当前需要用户或外部环境提供的东西
 

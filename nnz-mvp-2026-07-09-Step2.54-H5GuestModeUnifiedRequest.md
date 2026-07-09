@@ -40,6 +40,6 @@ passed
 
 ## 状态
 
-- 本地 Step 2.54 已完成，尚待下一次合并 push。
-- 最新已推送提交是 `9619fb9 fix: handle h5 non-json responses safely`。
+- Step 2.54 已完成并推送为 `4de0af0 fix: unify h5 guest mode request handling`。
+- 最新本地后续是 Step 2.55 H5 Covenant unified request handling。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。
