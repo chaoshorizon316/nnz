@@ -1494,25 +1494,20 @@ async function h5GuestMode() {
   const guestEmail = 'guest_' + Date.now() + '@nnz.demo';
   const password = 'guest123';
   try {
-    const res = await fetch('/api/register', {
+    const data = await h5Request('/api/register', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: guestEmail, password })
+      body: { email: guestEmail, password },
+      skipAuth: true,
     });
-    const data = await res.json();
-    if (res.ok) {
-      h5Token = data.token;
-      h5CurrentEmail = guestEmail;
-      localStorage.setItem('nnz_h5_token', h5Token);
-      document.getElementById('h5AuthSignedOut').classList.add('hidden');
-      document.getElementById('h5AuthSignedIn').classList.remove('hidden');
-      document.getElementById('h5UserEmail').textContent = '体验模式（数据不保存）';
-      h5NextPage(1);
-    } else {
-      h5SetStatus('h5AuthStatus', h5SafeErrorMessage(data.error, '体验模式暂不可用'));
-    }
-  } catch (e) {
-    h5SetStatus('h5AuthStatus', '网络错误，请重试');
+    h5Token = data.token;
+    h5CurrentEmail = guestEmail;
+    localStorage.setItem('nnz_h5_token', h5Token);
+    document.getElementById('h5AuthSignedOut').classList.add('hidden');
+    document.getElementById('h5AuthSignedIn').classList.remove('hidden');
+    document.getElementById('h5UserEmail').textContent = '体验模式（数据不保存）';
+    h5NextPage(1);
+  } catch (error) {
+    h5SetStatus('h5AuthStatus', h5SafeErrorMessage(error, '体验模式暂不可用'));
   }
 }
 

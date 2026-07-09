@@ -176,6 +176,7 @@ describe('H5 experience lifecycle controls', () => {
   it('sanitizes H5 runtime errors before displaying them to users', () => {
     const safeError = functionBody('h5SafeErrorMessage', false);
     const request = functionBody('h5Request');
+    const guestMode = functionBody('h5GuestMode');
     const loadConversation = functionBody('h5LoadConversation');
     const graduate = functionBody('h5Graduate');
     const sendMessage = functionBody('h5SendMessage');
@@ -187,7 +188,7 @@ describe('H5 experience lifecycle controls', () => {
     expect(unsafeErrorFragments).toContain('当前状态不允许');
     expect(unsafeErrorFragments).toContain('节点重启');
     expect(html).toContain("h5SafeErrorMessage(error, '登录已失效，请重新登录。')");
-    expect(html).toContain("h5SafeErrorMessage(data.error, '体验模式暂不可用')");
+    expect(html).toContain("h5SafeErrorMessage(error, '体验模式暂不可用')");
     expect(html).toContain("h5SafeErrorMessage(error, '操作失败。')");
     expect(html).toContain("h5SafeErrorMessage(error, '导出失败。')");
     expect(html).toContain("h5SafeErrorMessage(error, '删除失败。')");
@@ -197,6 +198,11 @@ describe('H5 experience lifecycle controls', () => {
     expect(request).toContain('JSON.parse(rawBody)');
     expect(request).toContain("throw new Error('请求失败。')");
     expect(request).not.toContain('await response.json()');
+    expect(guestMode).toContain("await h5Request('/api/register'");
+    expect(guestMode).toContain('skipAuth: true');
+    expect(guestMode).toContain("h5SafeErrorMessage(error, '体验模式暂不可用')");
+    expect(guestMode).not.toContain("fetch('/api/register'");
+    expect(guestMode).not.toContain('await res.json()');
     expect(loadConversation).toContain("h5SafeErrorMessage(error, '读取对话失败，请稍后再试。')");
     expect(graduate).toContain("h5SafeErrorMessage(error, '毕业失败。')");
     expect(sendMessage).toContain("h5SafeErrorMessage(error, '刚才没有发送成功，我们稍后再试。')");

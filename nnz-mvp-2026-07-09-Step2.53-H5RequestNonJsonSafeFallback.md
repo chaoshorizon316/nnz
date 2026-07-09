@@ -38,6 +38,6 @@ passed
 
 ## 状态
 
-- 本地 Step 2.53 已完成，尚待下一次合并 push。
-- 最新已推送提交是 `0e9ffee fix: render h5 persona switcher safely`。
+- Step 2.53 已完成并推送为 `9619fb9 fix: handle h5 non-json responses safely`。
+- 最新本地后续是 Step 2.54 H5 guest mode unified request handling。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。
