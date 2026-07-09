@@ -202,6 +202,10 @@ describe('H5 experience lifecycle controls', () => {
     expect(request).toContain('await response.text()');
     expect(request).toContain('JSON.parse(rawBody)');
     expect(request).toContain("throw new Error('请求失败。')");
+    expect(request).toContain("typeof data.error === 'string'");
+    expect(request).toContain('data.error.trim()');
+    expect(request).toContain('throw new Error(errorMessage)');
+    expect(request).not.toContain("throw new Error((data && data.error) || '请求失败。')");
     expect(request).not.toContain('await response.json()');
     expect(guestMode).toContain("await h5Request('/api/register'");
     expect(guestMode).toContain('skipAuth: true');

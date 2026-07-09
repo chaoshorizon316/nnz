@@ -1274,7 +1274,7 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.55。最新已推送提交是 `4de0af0 fix: unify h5 guest mode request handling`；H5 guest mode unified request handling 已完成本地验证并推送。当前本地新增 Step 2.55 H5 Covenant unified request handling：`h5RefreshCovenantState()` 和 `h5CovenantAction()` 不再手写 fetch/res.json，统一复用 `h5Request()`，使封存、开启特别时刻、完成特别时刻和状态刷新同样获得非 JSON 响应兜底与 `h5SafeErrorMessage()` 机制词过滤。本地 h5 targeted test、typecheck、225 tests + 2 skipped、build:demo 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
+Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.56。最新已推送提交是 `e251fd3 fix: unify h5 covenant request handling`；H5 Covenant unified request handling 已完成本地验证并推送。当前本地新增 Step 2.56 H5 request string error guard：`h5Request()` 仅允许非空字符串 `data.error` 进入 `Error`，对象、数组、空值等异常 error payload 统一回退为“请求失败。”，避免 `[object Object]` 或非用户语言进入 H5 可见错误。本地 h5 targeted test、typecheck、225 tests + 2 skipped、build:demo 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
 
 1. 注入真实本地 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Render role token env、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`。
 2. 跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`，它会串 preflight、migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite，并写脱敏上线 evidence。

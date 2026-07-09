@@ -37,6 +37,6 @@ passed
 
 ## 状态
 
-- 本地 Step 2.55 已完成，尚待下一次合并 push。
-- 最新已推送提交是 `4de0af0 fix: unify h5 guest mode request handling`。
+- Step 2.55 已完成并推送为 `e251fd3 fix: unify h5 covenant request handling`。
+- 最新本地后续是 Step 2.56 H5 request string error guard。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。

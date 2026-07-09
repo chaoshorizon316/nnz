@@ -2181,7 +2181,10 @@ async function h5Request(path, options = {}) {
     throw new Error('请求失败。');
   }
   if (!response.ok) {
-    throw new Error((data && data.error) || '请求失败。');
+    const errorMessage = data && typeof data.error === 'string' && data.error.trim()
+      ? data.error
+      : '请求失败。';
+    throw new Error(errorMessage);
   }
   return data;
 }
