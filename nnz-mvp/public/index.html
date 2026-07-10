@@ -270,7 +270,7 @@
       <span class="font-serif text-lg font-semibold text-warm-800 tracking-wide">念念在</span>
     </div>
     <div class="hidden md:flex items-center gap-8 text-sm text-warm-600">
-      <a href="#demo" onclick="openExperience(event)" class="hover:text-warm-800 transition-colors">在线体验</a>
+      <a href="#demo" data-action="open-experience" class="hover:text-warm-800 transition-colors">在线体验</a>
       <a href="#value" class="hover:text-warm-800 transition-colors">核心价值</a>
       <a href="#how" class="hover:text-warm-800 transition-colors">使用流程</a>
       <a href="#safety" class="hover:text-warm-800 transition-colors">伦理承诺</a>
@@ -279,7 +279,7 @@
       <a href="#stories" class="hover:text-warm-800 transition-colors">用户故事</a>
       <a href="#faq" class="hover:text-warm-800 transition-colors">常见问题</a>
     </div>
-    <button onclick="openExperience(event)" class="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors shadow-sm cursor-pointer">
+    <button data-action="open-experience" class="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors shadow-sm cursor-pointer">
       开始创建
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
     </button>
@@ -300,7 +300,7 @@
       为你心里那个从未离开的人，在微信里重建一个<br class="hidden md:block">有温度、有边界、有仪式感的记忆伙伴。
     </p>
     <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
-      <button onclick="openExperience(event)" class="group inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white text-lg font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 hover:shadow-xl hover:shadow-warm-600/30 cursor-pointer">
+      <button data-action="open-experience" class="group inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white text-lg font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 hover:shadow-xl hover:shadow-warm-600/30 cursor-pointer">
         开始创建
         <svg class="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
       </button>
@@ -328,14 +328,14 @@
 </section>
 
 <!-- ===== H5 EXPERIENCE ===== -->
-<section id="demo" class="nnz-experience-modal" aria-hidden="true" aria-labelledby="demoTitle" hidden onclick="if(event.target===this) closeExperience()">
-  <div class="nnz-experience-panel" onclick="event.stopPropagation()">
+<section id="demo" class="nnz-experience-modal" aria-hidden="true" aria-labelledby="demoTitle" hidden>
+  <div class="nnz-experience-panel">
     <div class="nnz-experience-header">
       <div>
         <p class="text-xs text-sage-600 font-medium tracking-widest uppercase">在线体验</p>
         <p class="text-sm text-warm-500 mt-1">在网页里先完成一次轻量创建和对话</p>
       </div>
-      <button type="button" class="nnz-experience-close" onclick="closeExperience()" aria-label="关闭在线体验">
+      <button type="button" class="nnz-experience-close" data-action="close-experience" aria-label="关闭在线体验">
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
@@ -357,28 +357,28 @@
             <input id="h5Email" type="email" autocomplete="email" placeholder="邮箱" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
             <input id="h5Password" type="password" autocomplete="current-password" placeholder="密码，至少 6 位" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors bg-warm-50/50">
             <div class="flex gap-3">
-              <button onclick="h5Login()" class="flex-1 py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">登录</button>
-              <button onclick="h5Register()" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">注册</button>
+              <button data-action="h5-login" class="flex-1 py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">登录</button>
+              <button data-action="h5-register" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">注册</button>
             </div>
             <div class="pt-1 border-t border-warm-100">
               <p class="text-xs text-warm-400 text-center mb-2">或</p>
-              <button onclick="h5GuestMode()" class="w-full py-3 border border-dashed border-warm-300 text-warm-500 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">跳过注册，直接体验</button>
+              <button data-action="h5-guest-mode" class="w-full py-3 border border-dashed border-warm-300 text-warm-500 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">跳过注册，直接体验</button>
               <p class="text-xs text-warm-400 text-center mt-2">体验模式下数据不会保存</p>
             </div>
           </div>
           <div id="h5AuthSignedIn" class="hidden">
             <p class="text-sm text-warm-600">已登录：<span id="h5UserEmail" class="font-medium text-warm-800"></span></p>
             <div class="mt-3 flex flex-wrap gap-2">
-              <button onclick="h5ExportData()" class="px-4 py-2 border border-sage-200 text-sage-600 text-sm font-medium rounded-full hover:bg-sage-50 transition-colors">导出</button>
-              <button onclick="h5OpenDeleteConfirm()" class="px-4 py-2 border border-red-200 text-red-500 text-sm font-medium rounded-full hover:bg-red-50 transition-colors">删除全部数据</button>
-              <button onclick="h5Logout()" class="px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">退出</button>
+              <button data-action="h5-export-data" class="px-4 py-2 border border-sage-200 text-sage-600 text-sm font-medium rounded-full hover:bg-sage-50 transition-colors">导出</button>
+              <button data-action="h5-open-delete-confirm" class="px-4 py-2 border border-red-200 text-red-500 text-sm font-medium rounded-full hover:bg-red-50 transition-colors">删除全部数据</button>
+              <button data-action="h5-logout" class="px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">退出</button>
             </div>
             <div id="h5DeleteConfirmPanel" class="hidden mt-3 rounded-xl border border-red-100 bg-red-50/80 p-3">
               <p class="text-xs text-red-700 leading-relaxed">删除会清除当前账号下的全部记忆、对话和创建内容，完成后无法恢复。建议先导出一份数据档案。</p>
               <div class="mt-3 flex flex-col sm:flex-row gap-2">
                 <input id="h5DeleteConfirmPhrase" type="text" autocomplete="off" placeholder="输入“删除”确认" class="flex-1 px-3 py-2 text-sm border border-red-200 rounded-full outline-none focus:border-red-300 bg-white text-red-700">
-                <button onclick="h5ConfirmDeleteAllData()" class="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-full hover:bg-red-600 transition-colors">确认删除</button>
-                <button onclick="h5CancelDeleteConfirm()" class="px-4 py-2 border border-red-200 text-red-600 text-sm font-medium rounded-full hover:bg-white transition-colors">取消</button>
+                <button data-action="h5-confirm-delete" class="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-full hover:bg-red-600 transition-colors">确认删除</button>
+                <button data-action="h5-cancel-delete" class="px-4 py-2 border border-red-200 text-red-600 text-sm font-medium rounded-full hover:bg-white transition-colors">取消</button>
               </div>
             </div>
           </div>
@@ -408,15 +408,15 @@
                 <div class="h5-quick-name-grid" id="h5QuickNames"></div>
               </div>
             </div>
-            <button onclick="h5NextPage(2)" class="mt-3 w-full py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">下一步 →</button>
+            <button data-action="h5-next-page" data-page="2" class="mt-3 w-full py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">下一步 →</button>
           </div>
           <!-- Page 2: Personality -->
           <div id="h5CreatePage2" class="hidden space-y-4">
             <p class="text-sm text-warm-600">勾选你记得的特征（可多选，不确定就跳过）</p>
             <div class="h5-trait-grid" id="h5Traits"></div>
             <div class="flex gap-3">
-              <button onclick="h5NextPage(1)" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">← 上一步</button>
-              <button onclick="h5NextPage(3)" class="flex-1 py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">下一步 →</button>
+              <button data-action="h5-next-page" data-page="1" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">← 上一步</button>
+              <button data-action="h5-next-page" data-page="3" class="flex-1 py-3 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">下一步 →</button>
             </div>
           </div>
           <!-- Page 3: Free description -->
@@ -428,8 +428,8 @@
               <span>我理解这是一段辅助性的记忆对话，不替代身边的人或专业帮助；我可以随时导出或删除自己的数据。</span>
             </label>
             <div class="flex gap-3">
-              <button onclick="h5NextPage(2)" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">← 上一步</button>
-              <button onclick="h5CreatePersona()" class="flex-1 py-3 bg-sage-500 text-white text-sm font-medium rounded-full hover:bg-sage-600 transition-colors">创建并开始对话</button>
+              <button data-action="h5-next-page" data-page="2" class="flex-1 py-3 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">← 上一步</button>
+              <button data-action="h5-create-persona" class="flex-1 py-3 bg-sage-500 text-white text-sm font-medium rounded-full hover:bg-sage-600 transition-colors">创建并开始对话</button>
             </div>
           </div>
           <p id="h5PersonaStatus" class="text-xs text-sage-600 h-4"></p>
@@ -443,22 +443,22 @@
           <div>
             <div class="flex items-center gap-2">
               <p id="h5ChatTitle" class="font-serif text-lg font-semibold text-warm-800">等待创建</p>
-              <select id="h5PersonaSwitcher" class="hidden text-sm border border-warm-200 rounded-full px-3 py-1 bg-white text-warm-700 outline-none cursor-pointer" onchange="h5SwitchPersona(this.value)"></select>
+              <select id="h5PersonaSwitcher" class="hidden text-sm border border-warm-200 rounded-full px-3 py-1 bg-white text-warm-700 outline-none cursor-pointer"></select>
             </div>
             <p id="h5ChatSubtitle" class="text-xs text-sage-500 mt-1">完成登录和创建后，就可以说第一句话。</p>
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <button id="h5NewPersonaBtn" class="hidden text-xs text-sage-600 border border-sage-200 rounded-full px-3 py-1 hover:bg-sage-50 transition-colors" onclick="h5ShowCreatePanel()">+ 新建</button>
-          <button id="h5AddMemoryBtn" class="hidden text-xs text-warm-600 border border-warm-200 rounded-full px-3 py-1 hover:bg-warm-50 transition-colors" onclick="h5ToggleMemoryPanel()">补充记忆</button>
+          <button id="h5NewPersonaBtn" class="hidden text-xs text-sage-600 border border-sage-200 rounded-full px-3 py-1 hover:bg-sage-50 transition-colors" data-action="h5-show-create-panel">+ 新建</button>
+          <button id="h5AddMemoryBtn" class="hidden text-xs text-warm-600 border border-warm-200 rounded-full px-3 py-1 hover:bg-warm-50 transition-colors" data-action="h5-toggle-memory">补充记忆</button>
         </div>
       </div>
       <div id="h5MemoryPanel" class="hidden px-6 py-4 border-b border-warm-100 bg-white">
         <p class="text-xs text-warm-500 leading-relaxed mb-3">写一段已经发生过的细节，比如习惯、口头禅、一起经历过的事。只补充你愿意留下的内容。</p>
         <textarea id="h5MemoryInput" rows="3" placeholder="例如：他每次出门前都会检查门窗，嘴上说不担心，其实总是把家里照顾得很细。" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors resize-none bg-warm-50/50"></textarea>
         <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
-          <button onclick="h5SaveMemory()" class="px-4 py-2 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">保存这段记忆</button>
-          <button onclick="h5ToggleMemoryPanel(false)" class="px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">稍后再写</button>
+          <button data-action="h5-save-memory" class="px-4 py-2 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">保存这段记忆</button>
+          <button data-action="h5-toggle-memory" data-force="false" class="px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">稍后再写</button>
           <p id="h5MemoryStatus" class="text-xs text-sage-600 min-h-[1rem] sm:ml-2"></p>
         </div>
       </div>
@@ -474,8 +474,8 @@
         <p class="text-xs text-warm-600 leading-relaxed">封存后，这段对话会暂时安静下来。你仍然可以导出数据，也可以在重要时刻开启一次短暂陪伴。确认你想先往前走，再继续。</p>
         <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
           <input id="h5SealConfirmPhrase" type="text" autocomplete="off" placeholder="输入“安放”确认" class="flex-1 px-3 py-2 text-sm border border-warm-200 rounded-full outline-none focus:border-warm-400 bg-white text-warm-700">
-          <button onclick="h5ConfirmSeal()" class="px-4 py-2 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">确认封存</button>
-          <button onclick="h5CancelSealConfirm()" class="px-4 py-2 border border-warm-200 text-warm-700 text-sm font-medium rounded-full hover:bg-white transition-colors">再想想</button>
+          <button data-action="h5-confirm-seal" class="px-4 py-2 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">确认封存</button>
+          <button data-action="h5-cancel-seal" class="px-4 py-2 border border-warm-200 text-warm-700 text-sm font-medium rounded-full hover:bg-white transition-colors">再想想</button>
           <p id="h5SealStatus" class="text-xs text-warm-600 min-h-[1rem] sm:ml-2"></p>
         </div>
       </div>
@@ -483,8 +483,8 @@
         <p class="text-xs text-sage-700 leading-relaxed">完成后，这个特别时刻会安静收束，对话会回到休息状态。确认这段话已经说完，再继续。</p>
         <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
           <input id="h5NodeCompleteConfirmPhrase" type="text" autocomplete="off" placeholder="输入“收束”确认" class="flex-1 px-3 py-2 text-sm border border-sage-200 rounded-full outline-none focus:border-sage-400 bg-white text-sage-700">
-          <button onclick="h5ConfirmCompleteNode()" class="px-4 py-2 bg-sage-600 text-white text-sm font-medium rounded-full hover:bg-sage-700 transition-colors">确认完成</button>
-          <button onclick="h5CancelNodeCompleteConfirm()" class="px-4 py-2 border border-sage-200 text-sage-700 text-sm font-medium rounded-full hover:bg-white transition-colors">再说一会儿</button>
+          <button data-action="h5-confirm-complete-node" class="px-4 py-2 bg-sage-600 text-white text-sm font-medium rounded-full hover:bg-sage-700 transition-colors">确认完成</button>
+          <button data-action="h5-cancel-complete-node" class="px-4 py-2 border border-sage-200 text-sage-700 text-sm font-medium rounded-full hover:bg-white transition-colors">再说一会儿</button>
           <p id="h5NodeCompleteStatus" class="text-xs text-sage-700 min-h-[1rem] sm:ml-2"></p>
         </div>
       </div>
@@ -492,8 +492,8 @@
         <p class="text-xs text-sage-700 leading-relaxed">毕业前会先为你导出一份数据档案，随后这段对话会安静封存。确认这是此刻想要的告别，再继续。</p>
         <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
           <input id="h5GraduateConfirmPhrase" type="text" autocomplete="off" placeholder="输入“告别”确认" class="flex-1 px-3 py-2 text-sm border border-sage-200 rounded-full outline-none focus:border-sage-400 bg-white text-sage-700">
-          <button onclick="h5ConfirmGraduate()" class="px-4 py-2 bg-sage-600 text-white text-sm font-medium rounded-full hover:bg-sage-700 transition-colors">确认毕业</button>
-          <button onclick="h5CancelGraduateConfirm()" class="px-4 py-2 border border-sage-200 text-sage-700 text-sm font-medium rounded-full hover:bg-white transition-colors">再想想</button>
+          <button data-action="h5-confirm-graduate" class="px-4 py-2 bg-sage-600 text-white text-sm font-medium rounded-full hover:bg-sage-700 transition-colors">确认毕业</button>
+          <button data-action="h5-cancel-graduate" class="px-4 py-2 border border-sage-200 text-sage-700 text-sm font-medium rounded-full hover:bg-white transition-colors">再想想</button>
           <p id="h5GraduateStatus" class="text-xs text-sage-700 min-h-[1rem] sm:ml-2"></p>
         </div>
       </div>
@@ -516,8 +516,8 @@
         </div>
       </div>
       <div class="h5-sticky-input px-6 py-4 border-t border-warm-100 bg-white flex gap-3">
-        <input id="h5ChatInput" type="text" placeholder="想对他说什么？" class="flex-1 px-4 py-2.5 text-sm border border-warm-200 rounded-full outline-none focus:border-warm-400 transition-colors" onkeydown="if(event.key==='Enter')h5SendMessage()">
-        <button onclick="h5SendMessage()" class="px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors flex-shrink-0">发送</button>
+        <input id="h5ChatInput" type="text" placeholder="想对他说什么？" class="flex-1 px-4 py-2.5 text-sm border border-warm-200 rounded-full outline-none focus:border-warm-400 transition-colors">
+        <button data-action="h5-send-message" class="px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors flex-shrink-0">发送</button>
       </div>
       <div class="px-6 pb-5 text-center">
         <p class="text-xs text-warm-400">这里先用于网页体验；后续可以在微信里继续同样的对话方式。</p>
@@ -602,7 +602,7 @@
       </div>
     </div>
     <div class="text-center mt-12">
-      <button onclick="openExperience(event)" class="inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 cursor-pointer">
+      <button data-action="open-experience" class="inline-flex items-center gap-2 px-8 py-3.5 bg-warm-600 text-white font-medium rounded-full hover:bg-warm-700 transition-all shadow-lg shadow-warm-600/20 cursor-pointer">
         开始创建
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
       </button>
@@ -1101,14 +1101,14 @@
         <div>
           <label class="block text-xs font-medium text-warm-500 mb-1.5">角色称呼（可选，帮助你组织语言）</label>
           <div class="flex gap-2 flex-wrap" id="roleTags">
-            <button onclick="selectRole('爸爸', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">爸爸</button>
-            <button onclick="selectRole('妈妈', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">妈妈</button>
-            <button onclick="selectRole('伴侣', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">伴侣</button>
-            <button onclick="selectRole('爷爷', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">爷爷</button>
-            <button onclick="selectRole('奶奶', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">奶奶</button>
-            <button onclick="selectRole('挚友', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">挚友</button>
-            <button onclick="selectRole('子女', this)" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">子女</button>
-            <input type="text" id="roleCustom" placeholder="自定义…" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-600 w-24 outline-none focus:border-warm-400 transition-colors bg-transparent" oninput="onRoleCustomInput()">
+            <button data-role="爸爸" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">爸爸</button>
+            <button data-role="妈妈" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">妈妈</button>
+            <button data-role="伴侣" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">伴侣</button>
+            <button data-role="爷爷" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">爷爷</button>
+            <button data-role="奶奶" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">奶奶</button>
+            <button data-role="挚友" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">挚友</button>
+            <button data-role="子女" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-500 hover:bg-warm-50 hover:border-warm-400 transition-colors">子女</button>
+            <input type="text" id="roleCustom" placeholder="自定义…" class="px-3 py-1.5 text-xs rounded-full border border-warm-200 text-warm-600 w-24 outline-none focus:border-warm-400 transition-colors bg-transparent">
           </div>
         </div>
         <div>
@@ -1119,8 +1119,8 @@
 
       <!-- Chat Input -->
       <div class="h5-sticky-input px-6 py-4 border-t border-warm-100 bg-white flex gap-3">
-        <input type="text" id="chatInput" placeholder="输入你的问题或描述……" class="flex-1 px-4 py-2.5 text-sm border border-warm-200 rounded-full outline-none focus:border-warm-400 transition-colors" onkeydown="if(event.key==='Enter')sendChat()">
-        <button onclick="sendChat()" class="px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors flex-shrink-0">发送</button>
+        <input type="text" id="chatInput" placeholder="输入你的问题或描述……" class="flex-1 px-4 py-2.5 text-sm border border-warm-200 rounded-full outline-none focus:border-warm-400 transition-colors">
+        <button data-action="send-marketing-chat" class="px-5 py-2.5 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors flex-shrink-0">发送</button>
       </div>
       <div class="px-6 pb-4 text-center">
         <p class="text-xs text-warm-400">你的信息仅用于创建记忆人格，采用银行级加密存储，可随时彻底删除。</p>
@@ -1192,8 +1192,8 @@
 
 
 <!-- ===== FLOW MODAL ===== -->
-<div id="flowOverlay" class="fixed inset-0 z-50 hidden bg-warm-900/40 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeFlow()">
-  <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden" onclick="event.stopPropagation()">
+<div id="flowOverlay" class="fixed inset-0 z-50 hidden bg-warm-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden">
 
     <!-- Modal Header -->
     <div class="px-8 pt-8 pb-4 flex items-center justify-between">
@@ -1201,7 +1201,7 @@
         <h3 class="font-serif text-xl font-semibold text-warm-800">开始创建</h3>
         <p id="flowStepTitle" class="text-xs text-warm-400 mt-0.5">步骤 1/3 · 了解我们</p>
       </div>
-      <button onclick="closeFlow()" class="w-8 h-8 rounded-full border border-warm-200 flex items-center justify-center text-warm-400 hover:bg-warm-50 transition-colors">
+      <button data-action="close-flow" class="w-8 h-8 rounded-full border border-warm-200 flex items-center justify-center text-warm-400 hover:bg-warm-50 transition-colors">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
@@ -1245,8 +1245,8 @@
         </div>
       </div>
       <div class="flex gap-3">
-        <button onclick="closeFlow()" class="flex-1 py-3 rounded-full border-2 border-warm-200 text-warm-500 font-medium text-sm hover:bg-warm-50 transition-colors">放弃</button>
-        <button onclick="goToStep(2)" class="flex-1 py-3 rounded-full bg-warm-600 text-white font-medium text-sm hover:bg-warm-700 transition-colors">下一步 →</button>
+        <button data-action="close-flow" class="flex-1 py-3 rounded-full border-2 border-warm-200 text-warm-500 font-medium text-sm hover:bg-warm-50 transition-colors">放弃</button>
+        <button data-action="flow-step" data-step="2" class="flex-1 py-3 rounded-full bg-warm-600 text-white font-medium text-sm hover:bg-warm-700 transition-colors">下一步 →</button>
       </div>
     </div>
 
@@ -1255,7 +1255,7 @@
       <p class="text-sm text-warm-500 mb-4 text-center">选择一个适合你的方案。所有方案首月免费体验。</p>
       <div class="space-y-3 mb-6" id="pricingOptions">
         <!-- Light -->
-        <label class="flex items-center gap-4 p-4 rounded-2xl border-2 border-warm-200 cursor-pointer hover:border-warm-400 transition-colors" onclick="selectPlan('light', this)">
+        <label class="flex items-center gap-4 p-4 rounded-2xl border-2 border-warm-200 cursor-pointer hover:border-warm-400 transition-colors" data-plan="light">
           <input type="radio" name="plan" value="light" class="sr-only">
           <div class="w-5 h-5 rounded-full border-2 border-warm-300 flex items-center justify-center flex-shrink-0">
             <div class="w-2.5 h-2.5 rounded-full bg-warm-500 opacity-0 transition-opacity"></div>
@@ -1269,7 +1269,7 @@
           </div>
         </label>
         <!-- Standard -->
-        <label class="flex items-center gap-4 p-4 rounded-2xl border-2 border-sage-300 bg-sage-50/30 cursor-pointer hover:border-sage-400 transition-colors" onclick="selectPlan('standard', this)">
+        <label class="flex items-center gap-4 p-4 rounded-2xl border-2 border-sage-300 bg-sage-50/30 cursor-pointer hover:border-sage-400 transition-colors" data-plan="standard">
           <input type="radio" name="plan" value="standard" class="sr-only">
           <div class="w-5 h-5 rounded-full border-2 border-sage-400 flex items-center justify-center flex-shrink-0">
             <div class="w-2.5 h-2.5 rounded-full bg-sage-500 opacity-100"></div>
@@ -1284,7 +1284,7 @@
           <span class="text-xs bg-sage-500 text-white px-2 py-0.5 rounded-full flex-shrink-0">推荐</span>
         </label>
         <!-- Lifetime -->
-        <label class="flex items-center gap-4 p-4 rounded-2xl border-2 border-warm-200 cursor-pointer hover:border-warm-400 transition-colors" onclick="selectPlan('lifetime', this)">
+        <label class="flex items-center gap-4 p-4 rounded-2xl border-2 border-warm-200 cursor-pointer hover:border-warm-400 transition-colors" data-plan="lifetime">
           <input type="radio" name="plan" value="lifetime" class="sr-only">
           <div class="w-5 h-5 rounded-full border-2 border-warm-300 flex items-center justify-center flex-shrink-0">
             <div class="w-2.5 h-2.5 rounded-full bg-warm-500 opacity-0 transition-opacity"></div>
@@ -1310,17 +1310,17 @@
         </div>
         <p id="paymentPlanName" class="text-xs font-medium text-warm-600"></p>
         <p id="paymentPlanPrice" class="text-lg font-bold text-warm-700 mt-1"></p>
-        <button onclick="simulatePayment()" class="mt-4 px-6 py-2 bg-sage-500 text-white text-sm rounded-full hover:bg-sage-600 transition-colors">模拟支付成功 →</button>
+        <button data-action="simulate-payment" class="mt-4 px-6 py-2 bg-sage-500 text-white text-sm rounded-full hover:bg-sage-600 transition-colors">模拟支付成功 →</button>
         <p class="text-xs text-warm-300 mt-2">（实际产品中此处为真实微信支付二维码）</p>
       </div>
 
       <div class="flex gap-3" id="pricingButtons">
-        <button onclick="goToStep(1)" class="flex-1 py-3 rounded-full border-2 border-warm-200 text-warm-500 font-medium text-sm hover:bg-warm-50 transition-colors">上一步</button>
-        <button id="btnPay" onclick="showPaymentQR()" class="flex-1 py-3 rounded-full bg-warm-600 text-white font-medium text-sm hover:bg-warm-700 transition-colors">确认并缴费 →</button>
+        <button data-action="flow-step" data-step="1" class="flex-1 py-3 rounded-full border-2 border-warm-200 text-warm-500 font-medium text-sm hover:bg-warm-50 transition-colors">上一步</button>
+        <button id="btnPay" data-action="show-payment-qr" class="flex-1 py-3 rounded-full bg-warm-600 text-white font-medium text-sm hover:bg-warm-700 transition-colors">确认并缴费 →</button>
       </div>
       <div class="flex gap-3 hidden" id="paymentButtons">
-        <button onclick="hidePaymentQR()" class="flex-1 py-3 rounded-full border-2 border-warm-200 text-warm-500 font-medium text-sm hover:bg-warm-50 transition-colors">重新选择</button>
-        <button id="btnPaid" onclick="goToStep(3)" class="flex-1 py-3 rounded-full bg-warm-200 text-warm-400 font-medium text-sm cursor-not-allowed" disabled>请先完成支付</button>
+        <button data-action="hide-payment-qr" class="flex-1 py-3 rounded-full border-2 border-warm-200 text-warm-500 font-medium text-sm hover:bg-warm-50 transition-colors">重新选择</button>
+        <button id="btnPaid" data-action="flow-step" data-step="3" class="flex-1 py-3 rounded-full bg-warm-200 text-warm-400 font-medium text-sm cursor-not-allowed" disabled>请先完成支付</button>
       </div>
     </div>
 
@@ -1348,8 +1348,8 @@
         <p class="text-xs text-warm-400">请在有效期内完成扫码添加。过期后需重新获取二维码。</p>
       </div>
       <div class="flex gap-3">
-        <button onclick="goToStep(2)" class="flex-1 py-3 rounded-full border-2 border-warm-200 text-warm-500 font-medium text-sm hover:bg-warm-50 transition-colors">上一步</button>
-        <button onclick="closeFlow()" class="flex-1 py-3 rounded-full bg-warm-600 text-white font-medium text-sm hover:bg-warm-700 transition-colors">完成</button>
+        <button data-action="flow-step" data-step="2" class="flex-1 py-3 rounded-full border-2 border-warm-200 text-warm-500 font-medium text-sm hover:bg-warm-50 transition-colors">上一步</button>
+        <button data-action="close-flow" class="flex-1 py-3 rounded-full bg-warm-600 text-white font-medium text-sm hover:bg-warm-700 transition-colors">完成</button>
       </div>
     </div>
 
@@ -1435,7 +1435,94 @@ function closeExperience() {
   }
 }
 
+function bindPublicInteractionHandlers() {
+  document.querySelectorAll('[data-action]').forEach((element) => {
+    element.addEventListener('click', (event) => {
+      handlePublicAction(element.dataset.action, element, event);
+    });
+  });
+
+  document.querySelectorAll('[data-role]').forEach((button) => {
+    button.addEventListener('click', () => selectRole(button.dataset.role || '', button));
+  });
+
+  document.querySelectorAll('[data-plan]').forEach((option) => {
+    option.addEventListener('click', () => selectPlan(option.dataset.plan || 'standard', option));
+  });
+
+  document.getElementById('demo')?.addEventListener('click', (event) => {
+    if (event.target === event.currentTarget) closeExperience();
+  });
+
+  document.getElementById('flowOverlay')?.addEventListener('click', (event) => {
+    if (event.target === event.currentTarget) closeFlow();
+  });
+
+  document.getElementById('h5PersonaSwitcher')?.addEventListener('change', (event) => {
+    h5SwitchPersona(event.target.value);
+  });
+
+  document.getElementById('h5ChatInput')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') h5SendMessage();
+  });
+
+  document.getElementById('chatInput')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') sendChat();
+  });
+
+  document.getElementById('roleCustom')?.addEventListener('input', onRoleCustomInput);
+
+  const defaultPlanInput = document.querySelector('#pricingOptions [data-plan="' + selectedPlan + '"] input[type="radio"]');
+  if (defaultPlanInput) defaultPlanInput.checked = true;
+}
+
+function handlePublicAction(action, target, event) {
+  if (action === 'open-experience') {
+    openExperience(event);
+    return;
+  }
+  event.preventDefault();
+
+  const actions = {
+    'close-experience': () => closeExperience(),
+    'h5-login': () => h5Login(),
+    'h5-register': () => h5Register(),
+    'h5-guest-mode': () => h5GuestMode(),
+    'h5-export-data': () => h5ExportData(),
+    'h5-open-delete-confirm': () => h5OpenDeleteConfirm(),
+    'h5-logout': () => h5Logout(),
+    'h5-confirm-delete': () => h5ConfirmDeleteAllData(),
+    'h5-cancel-delete': () => h5CancelDeleteConfirm(),
+    'h5-create-persona': () => h5CreatePersona(),
+    'h5-show-create-panel': () => h5ShowCreatePanel(),
+    'h5-save-memory': () => h5SaveMemory(),
+    'h5-confirm-seal': () => h5ConfirmSeal(),
+    'h5-cancel-seal': () => h5CancelSealConfirm(),
+    'h5-confirm-complete-node': () => h5ConfirmCompleteNode(),
+    'h5-cancel-complete-node': () => h5CancelNodeCompleteConfirm(),
+    'h5-confirm-graduate': () => h5ConfirmGraduate(),
+    'h5-cancel-graduate': () => h5CancelGraduateConfirm(),
+    'h5-send-message': () => h5SendMessage(),
+    'send-marketing-chat': () => sendChat(),
+    'close-flow': () => closeFlow(),
+    'show-payment-qr': () => showPaymentQR(),
+    'hide-payment-qr': () => hidePaymentQR(),
+    'simulate-payment': () => simulatePayment(),
+  };
+
+  if (action === 'h5-next-page') {
+    h5NextPage(Number(target.dataset.page || 1));
+  } else if (action === 'h5-toggle-memory') {
+    h5ToggleMemoryPanel(target.dataset.force === 'false' ? false : undefined);
+  } else if (action === 'flow-step') {
+    goToStep(Number(target.dataset.step || 1));
+  } else {
+    actions[action]?.();
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  bindPublicInteractionHandlers();
   h5Bootstrap();
 });
 
@@ -2362,6 +2449,8 @@ function goToStep(step) {
 
 function selectPlan(plan, el) {
   selectedPlan = plan;
+  const radio = el.querySelector('input[type="radio"]');
+  if (radio) radio.checked = true;
   // Update radio visuals
   document.querySelectorAll('#pricingOptions label').forEach(l => {
     l.className = l.className.replace(/border-sage-300 bg-sage-50\/30/g, 'border-warm-200');

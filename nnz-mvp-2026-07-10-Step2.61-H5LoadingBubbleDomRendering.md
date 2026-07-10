@@ -41,6 +41,6 @@ passed
 
 ## 状态
 
-- Step 2.61 本地已完成，尚待下一次合并 push。
-- 最新已推送提交是 `cf1f5d9 fix: render h5 covenant actions with DOM text APIs`。
+- Step 2.61 已完成并推送。
+- 最新已推送提交是 `4e00c24 fix: render h5 loading bubble with DOM text APIs`。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。
