@@ -40,6 +40,6 @@ passed
 
 ## 状态
 
-- Step 2.60 本地已完成，尚待下一次合并 push。
-- 最新已推送提交是 `a1a66ec fix: render h5 onboarding choices with DOM text APIs`。
+- Step 2.60 已完成并推送。
+- 最新已推送提交是 `cf1f5d9 fix: render h5 covenant actions with DOM text APIs`。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。

@@ -299,6 +299,16 @@ describe('H5 experience lifecycle controls', () => {
     expect(createBubble).not.toContain('escapeHtml(content)');
   });
 
+  it('renders H5 loading bubbles with DOM text APIs', () => {
+    const appendLoading = functionBody('h5AppendLoading', false);
+    const createLoading = functionBody('h5CreateLoadingBubble', false);
+
+    expect(appendLoading).toContain('container.appendChild(h5CreateLoadingBubble());');
+    expect(appendLoading).not.toContain('insertAdjacentHTML');
+    expect(createLoading).toContain("document.createElement('p')");
+    expect(createLoading).toContain("loadingText.textContent = '正在回复……';");
+  });
+
   it('renders marketing consultation chat with DOM text APIs', () => {
     const sendChat = functionBody('sendChat', false);
     const createMarketingChatBubble = functionBody('createMarketingChatBubble', false);

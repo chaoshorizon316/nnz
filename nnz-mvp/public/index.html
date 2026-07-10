@@ -2214,8 +2214,29 @@ function h5AppendBubble(role, content) {
 
 function h5AppendLoading() {
   const container = document.getElementById('h5Messages');
-  container.insertAdjacentHTML('beforeend', '<div id="h5Loading" class="flex gap-3"><div class="max-w-[80%]"><div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100"><p class="text-sm text-sage-500 leading-relaxed">正在回复……</p></div></div></div>');
+  container.appendChild(h5CreateLoadingBubble());
   container.scrollTop = container.scrollHeight;
+}
+
+function h5CreateLoadingBubble() {
+  const wrapper = document.createElement('div');
+  wrapper.id = 'h5Loading';
+  wrapper.className = 'flex gap-3';
+
+  const width = document.createElement('div');
+  width.className = 'max-w-[80%]';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100';
+
+  const loadingText = document.createElement('p');
+  loadingText.className = 'text-sm text-sage-500 leading-relaxed';
+  loadingText.textContent = '正在回复……';
+
+  bubble.appendChild(loadingText);
+  width.appendChild(bubble);
+  wrapper.appendChild(width);
+  return wrapper;
 }
 
 function h5RemoveLoading() {

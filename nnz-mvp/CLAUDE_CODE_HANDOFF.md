@@ -1274,7 +1274,7 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.60。最新已推送提交是 `a1a66ec fix: render h5 onboarding choices with DOM text APIs`；当前本地新增 Step 2.60 H5 Covenant actions DOM rendering：`h5RefreshCovenantState()` 不再用 `actions.innerHTML` 和 inline `onclick` 拼接封存、开启特别时刻、毕业、完成特别时刻控件，改为 DOM `textContent` 与 `addEventListener()` 渲染和绑定。本地 h5 targeted test、typecheck、229 tests + 2 skipped、build:demo 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
+Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.61。最新已推送提交是 `cf1f5d9 fix: render h5 covenant actions with DOM text APIs`；当前本地新增 Step 2.61 H5 loading bubble DOM rendering：`h5AppendLoading()` 不再用 `insertAdjacentHTML` 拼接“正在回复……”等待气泡，改为 `h5CreateLoadingBubble()` + DOM `textContent` 渲染。本地 h5 targeted test、typecheck、230 tests + 2 skipped、build:demo 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
 
 1. 注入真实本地 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Render role token env、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`。
 2. 跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`，它会串 preflight、migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite，并写脱敏上线 evidence。
