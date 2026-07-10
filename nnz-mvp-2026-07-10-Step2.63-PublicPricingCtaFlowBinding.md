@@ -53,6 +53,6 @@ passed
 
 ## 状态
 
-- Step 2.63 本地已完成，尚待下一次合并 push。
-- 最新已推送提交是 `18641cd fix: bind public page interactions without inline handlers`。
+- Step 2.63 已完成并推送。
+- 最新已推送提交是 `8c12c99 fix: connect pricing CTAs to payment flow`。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。

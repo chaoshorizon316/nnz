@@ -88,20 +88,21 @@ https://github.com/chaoshorizon316/nnz
 2026-07-10 Step 2.60: H5 Covenant actions DOM rendering 已实现并推送；`h5RefreshCovenantState()` 不再用 `actions.innerHTML` 和 inline `onclick` 拼接封存、开启特别时刻、毕业、完成特别时刻控件，改为 `h5CreateCovenantButton()` / `h5CreateNodeNameInput()` + DOM `textContent` 与 `addEventListener()`；本地 h5 targeted test、typecheck、229 tests + 2 skipped、build:demo 通过；推送为 `cf1f5d9 fix: render h5 covenant actions with DOM text APIs`
 2026-07-10 Step 2.61: H5 loading bubble DOM rendering 已实现并推送；`h5AppendLoading()` 不再用 `insertAdjacentHTML` 拼接“正在回复……”等待气泡，改为 `h5CreateLoadingBubble()` + DOM `textContent` 渲染，降低 H5 对话等待状态未来被 HTML 字符串扩展时的注入风险；本地 h5 targeted test、typecheck、230 tests + 2 skipped、build:demo 通过；推送为 `4e00c24 fix: render h5 loading bubble with DOM text APIs`
 2026-07-10 Step 2.62: H5/public inline event handler binding 已实现并推送；`public/index.html` 用户前台不再保留 inline `onclick` / `onchange` / `oninput` / `onkeydown`，H5 体验弹窗、官网咨询聊天、付费流程弹窗统一改为 `data-action` / `data-role` / `data-plan` + `bindPublicInteractionHandlers()` 事件绑定；本地 h5 targeted test、typecheck、231 tests + 2 skipped、build:demo、demo server 首页 smoke 通过；推送为 `18641cd fix: bind public page interactions without inline handlers`
-2026-07-10 Step 2.63: public pricing CTA flow binding 本地已实现；定价区三张方案卡片不再跳到在线咨询区 `#cta`，改为通过 `data-action="open-flow"` 打开付费流程弹窗并预选对应 light/standard/lifetime 方案，`openFlow()` 支持指定方案和初始步骤；本地 h5 targeted test、typecheck、231 tests + 2 skipped、build:demo、构建产物静态扫描通过，尚待下一次合并 push
+2026-07-10 Step 2.63: public pricing CTA flow binding 已实现并推送；定价区三张方案卡片不再跳到在线咨询区 `#cta`，改为通过 `data-action="open-flow"` 打开付费流程弹窗并预选对应 light/standard/lifetime 方案，`openFlow()` 支持指定方案和初始步骤；本地 h5 targeted test、typecheck、231 tests + 2 skipped、build:demo、构建产物静态扫描通过；推送为 `8c12c99 fix: connect pricing CTAs to payment flow`
+2026-07-10 Step 2.64: public pricing dependency-safe copy 本地已实现；公开页定价与付费流程文案移除“终身访问 / 永久使用 / 无限轮次 / AI复刻 / 记忆人格”等容易制造依赖或机制感的表达，改为“纪念托管 / 长期保存 / 更高对话额度 / 记忆伙伴资料”等用户语言，并把这些词加入 H5 可见文案和运行时错误过滤护栏；本地 h5 targeted test、typecheck、231 tests + 2 skipped、build:demo 通过，尚待下一次合并 push
 ```
 
 当前代码基线相对远端：
 
 ```text
-main...origin/main @ 18641cd fix: bind public page interactions without inline handlers
-当前本地新增 Step 2.63 public pricing CTA flow binding changes pending
+main...origin/main @ 8c12c99 fix: connect pricing CTAs to payment flow
+当前本地新增 Step 2.64 public pricing dependency-safe copy changes pending
 ```
 
 最新已推送提交：
 
 ```text
-18641cd fix: bind public page interactions without inline handlers
+8c12c99 fix: connect pricing CTAs to payment flow
 ```
 
 最新云端 Soul Ops 记录：
@@ -177,6 +178,7 @@ nnz-mvp-2026-07-10-Step2.60-H5CovenantActionsDomRendering.md
 nnz-mvp-2026-07-10-Step2.61-H5LoadingBubbleDomRendering.md
 nnz-mvp-2026-07-10-Step2.62-H5PublicEventHandlerBinding.md
 nnz-mvp-2026-07-10-Step2.63-PublicPricingCtaFlowBinding.md
+nnz-mvp-2026-07-10-Step2.64-PublicPricingDependencySafeCopy.md
 ```
 
 ## 2026-06-22 工作区注意
