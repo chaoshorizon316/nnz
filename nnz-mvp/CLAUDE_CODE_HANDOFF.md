@@ -1274,7 +1274,7 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.58。最新已推送提交是 `3e7861e fix: render h5 conversation bubbles with DOM text APIs`；当前本地新增 Step 2.58 marketing chat DOM rendering：官网首页在线咨询模拟聊天不再用 `innerHTML` 拼接用户输入和模拟回复，改为 `createMarketingChatBubble()` + DOM `textContent` 渲染。本地 h5 targeted test、typecheck、227 tests + 2 skipped、build:demo 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
+Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.59。最新已推送提交是 `c97c715 fix: render marketing chat with DOM text APIs`；当前本地新增 Step 2.59 H5 onboarding choices DOM rendering：`h5InitQuickNames()` / `h5InitTraits()` 不再用 HTML 字符串拼接常用称呼和性格特征选项，改为 DOM `textContent` 与 `addEventListener()` 渲染和绑定。本地 h5 targeted test、typecheck、228 tests + 2 skipped、build:demo 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
 
 1. 注入真实本地 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Render role token env、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`。
 2. 跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`，它会串 preflight、migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite，并写脱敏上线 evidence。

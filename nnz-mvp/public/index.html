@@ -1696,9 +1696,15 @@ let h5SelectedTraits = {};
 
 function h5InitQuickNames() {
   const container = document.getElementById('h5QuickNames');
-  container.innerHTML = QUICK_NAMES.map(n =>
-    '<button type="button" class="quick-name" onclick="h5QuickSelect(\'' + n + '\')">' + n + '</button>'
-  ).join('');
+  container.textContent = '';
+  QUICK_NAMES.forEach((name) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'quick-name';
+    button.textContent = name;
+    button.addEventListener('click', () => h5QuickSelect(name));
+    container.appendChild(button);
+  });
 }
 
 function h5QuickSelect(name) {
@@ -1710,21 +1716,58 @@ function h5QuickSelect(name) {
 
 function h5InitTraits() {
   const container = document.getElementById('h5Traits');
-  container.innerHTML = PERSONALITY_TRAITS.map(group => {
+  container.textContent = '';
+  PERSONALITY_TRAITS.forEach((group) => {
     const current = h5SelectedTraits[group.field];
     const values = Array.isArray(current) ? current : (current ? [current] : []);
-    const checks = group.opts.map(opt => {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'h5-trait-group';
+
+    const title = document.createElement('p');
+    title.className = 'trait-group-title';
+    title.textContent = group.group;
+    groupEl.appendChild(title);
+
+    const options = document.createElement('div');
+    options.className = 'h5-trait-options';
+
+    group.opts.forEach((opt) => {
       const isChecked = values.includes(opt.value);
-      const selectedClass = isChecked ? ' selected' : '';
-      const checkedAttr = isChecked ? ' checked' : '';
-      return '<label class="trait-check' + selectedClass + '">' +
-        '<input type="checkbox" data-field="' + group.field + '" value="' + opt.value + '" onchange="h5ToggleTrait(this)"' + checkedAttr + '>' +
-        '<span class="trait-check-box" aria-hidden="true"></span>' +
-        '<span><span class="trait-check-label">' + opt.label + '</span><span class="trait-check-desc">' + opt.desc + '</span></span>' +
-      '</label>';
-    }).join('');
-    return '<div class="h5-trait-group"><p class="trait-group-title">' + group.group + '</p><div class="h5-trait-options">' + checks + '</div></div>';
-  }).join('');
+      const label = document.createElement('label');
+      label.className = 'trait-check' + (isChecked ? ' selected' : '');
+
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.dataset.field = group.field;
+      input.value = opt.value;
+      input.checked = isChecked;
+      input.addEventListener('change', () => h5ToggleTrait(input));
+
+      const box = document.createElement('span');
+      box.className = 'trait-check-box';
+      box.setAttribute('aria-hidden', 'true');
+
+      const copy = document.createElement('span');
+
+      const labelText = document.createElement('span');
+      labelText.className = 'trait-check-label';
+      labelText.textContent = opt.label;
+
+      const description = document.createElement('span');
+      description.className = 'trait-check-desc';
+      description.textContent = opt.desc;
+
+      copy.appendChild(labelText);
+      copy.appendChild(description);
+      label.appendChild(input);
+      label.appendChild(box);
+      label.appendChild(copy);
+      options.appendChild(label);
+    });
+
+    groupEl.appendChild(options);
+    container.appendChild(groupEl);
+  });
 }
 
 function h5ToggleTrait(el) {

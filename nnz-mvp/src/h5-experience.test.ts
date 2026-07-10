@@ -242,6 +242,28 @@ describe('H5 experience lifecycle controls', () => {
     expect(updatePersonaList).not.toContain('sel.innerHTML = personas.map');
   });
 
+  it('renders H5 onboarding choice controls with DOM text APIs', () => {
+    const initQuickNames = functionBody('h5InitQuickNames', false);
+    const initTraits = functionBody('h5InitTraits', false);
+
+    expect(initQuickNames).toContain("container.textContent = '';");
+    expect(initQuickNames).toContain("document.createElement('button')");
+    expect(initQuickNames).toContain('button.textContent = name;');
+    expect(initQuickNames).toContain("button.addEventListener('click'");
+    expect(initQuickNames).toContain('container.appendChild(button);');
+    expect(initQuickNames).not.toContain('container.innerHTML');
+    expect(initQuickNames).not.toContain('onclick=');
+    expect(initTraits).toContain("container.textContent = '';");
+    expect(initTraits).toContain("document.createElement('label')");
+    expect(initTraits).toContain("document.createElement('input')");
+    expect(initTraits).toContain('labelText.textContent = opt.label;');
+    expect(initTraits).toContain('description.textContent = opt.desc;');
+    expect(initTraits).toContain("input.addEventListener('change'");
+    expect(initTraits).toContain('container.appendChild(groupEl);');
+    expect(initTraits).not.toContain('container.innerHTML');
+    expect(initTraits).not.toContain('onchange=');
+  });
+
   it('renders H5 conversation bubbles with DOM text APIs', () => {
     const renderConversation = functionBody('h5RenderConversation', false);
     const appendBubble = functionBody('h5AppendBubble', false);
