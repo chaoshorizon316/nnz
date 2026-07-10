@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -7,6 +7,7 @@ import {
   findPostgresEnvAliasConflict,
   readNonEmptyEnv,
 } from '../postgres-env-alias-guard';
+import { mergeReleaseEnvFile } from './release-env-file';
 
 const DEFAULT_SNAPSHOT_ENV = 'NNZ_MIGRATION_SNAPSHOT_PATH';
 const DEFAULT_MIGRATION_DATABASE_URL_ENV = 'NNZ_POSTGRES_INTEGRATION_URL';
@@ -22,8 +23,9 @@ const USAGE = `Usage:
 
 Optional env key overrides:
   npm run release:preflight -- --migration-database-url-env NNZ_POSTGRES_INTEGRATION_URL --runtime-database-url-env NNZ_POSTGRES_SCOPED_RUNTIME_URL --viewer-token-env NNZ_OPS_VIEWER_TOKEN --operator-token-env NNZ_OPS_OPERATOR_TOKEN --admin-token-env NNZ_OPS_ADMIN_TOKEN
+  npm run release:preflight -- --env-file .env.release --snapshot-env NNZ_DB_PATH
 
-Checks launch-blocking external inputs without reading snapshot contents, connecting to databases, sending network requests, or printing secret values.`;
+Checks launch-blocking external inputs without reading snapshot contents, connecting to databases, sending network requests, or printing env file paths, snapshot paths, database URLs, token values, or other secret values.`;
 
 type CheckStatus = 'ready' | 'blocked';
 type CheckName = 'migrationValidationSuite' | 'opsRoleSmoke' | 'runtimeSmokeSuite';
@@ -38,6 +40,7 @@ export interface ReleasePreflightCliDeps {
   env: Record<string, string | undefined>;
   cwd: string;
   fileExists(path: string): boolean;
+  readTextFile(path: string): string;
 }
 
 export interface ReleasePreflightResult {
@@ -63,6 +66,7 @@ type ParsedArgs = {
   viewerTokenEnv: string;
   operatorTokenEnv: string;
   adminTokenEnv: string;
+  envFile?: string;
   error?: string;
 };
 
@@ -70,6 +74,7 @@ const DEFAULT_DEPS: ReleasePreflightCliDeps = {
   env: process.env,
   cwd: process.cwd(),
   fileExists: existsSync,
+  readTextFile: (path) => readFileSync(path, 'utf8'),
 };
 
 export async function runReleasePreflightCommand(
@@ -84,7 +89,12 @@ export async function runReleasePreflightCommand(
     return { exitCode: 1, stdout: '', stderr: `${parsedArgs.error}\n\n${USAGE}\n` };
   }
 
-  const result = buildReleasePreflight(parsedArgs, deps);
+  const envFileResult = mergeReleaseEnvFile(deps.env, parsedArgs.envFile, deps);
+  if (envFileResult.error) {
+    return { exitCode: 1, stdout: '', stderr: `${envFileResult.error}\n\n${USAGE}\n` };
+  }
+
+  const result = buildReleasePreflight(parsedArgs, { ...deps, env: envFileResult.env });
   return {
     exitCode: result.overall === 'ready' ? 0 : 1,
     stdout: formatReleasePreflight(result),
@@ -207,6 +217,7 @@ function parseArgs(args: string[]): ParsedArgs {
   let viewerTokenEnv = DEFAULT_VIEWER_TOKEN_ENV;
   let operatorTokenEnv = DEFAULT_OPERATOR_TOKEN_ENV;
   let adminTokenEnv = DEFAULT_ADMIN_TOKEN_ENV;
+  let envFile: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]!;
@@ -220,6 +231,7 @@ function parseArgs(args: string[]): ParsedArgs {
         viewerTokenEnv,
         operatorTokenEnv,
         adminTokenEnv,
+        ...(envFile ? { envFile } : {}),
       };
     }
     if (
@@ -231,6 +243,7 @@ function parseArgs(args: string[]): ParsedArgs {
       || arg === '--viewer-token-env'
       || arg === '--operator-token-env'
       || arg === '--admin-token-env'
+      || arg === '--env-file'
     ) {
       const value = args[index + 1];
       if (!value || value.startsWith('--')) {
@@ -252,6 +265,7 @@ function parseArgs(args: string[]): ParsedArgs {
       if (arg === '--viewer-token-env') viewerTokenEnv = value;
       if (arg === '--operator-token-env') operatorTokenEnv = value;
       if (arg === '--admin-token-env') adminTokenEnv = value;
+      if (arg === '--env-file') envFile = value;
       index += 1;
       continue;
     }
@@ -275,6 +289,7 @@ function parseArgs(args: string[]): ParsedArgs {
     viewerTokenEnv,
     operatorTokenEnv,
     adminTokenEnv,
+    ...(envFile ? { envFile } : {}),
     ...(snapshotPath ? { snapshotPath } : {}),
   };
 }

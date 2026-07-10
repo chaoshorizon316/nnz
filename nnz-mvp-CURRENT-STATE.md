@@ -91,19 +91,21 @@ https://github.com/chaoshorizon316/nnz
 2026-07-10 Step 2.63: public pricing CTA flow binding 已实现并推送；定价区三张方案卡片不再跳到在线咨询区 `#cta`，改为通过 `data-action="open-flow"` 打开付费流程弹窗并预选对应 light/standard/lifetime 方案，`openFlow()` 支持指定方案和初始步骤；本地 h5 targeted test、typecheck、231 tests + 2 skipped、build:demo、构建产物静态扫描通过；推送为 `8c12c99 fix: connect pricing CTAs to payment flow`
 2026-07-10 Step 2.64: public pricing dependency-safe copy 已实现并推送；公开页定价与付费流程文案移除“终身访问 / 永久使用 / 无限轮次 / AI复刻 / 记忆人格”等容易制造依赖或机制感的表达，改为“纪念托管 / 长期保存 / 更高对话额度 / 记忆伙伴资料”等用户语言，并把这些词加入 H5 可见文案和运行时错误过滤护栏；本地 h5 targeted test、typecheck、231 tests + 2 skipped、build:demo 通过；推送为 `92440b0 fix: soften public pricing dependency copy`
 2026-07-10 Step 2.65: public footer compliance links 已实现并推送；公开页页脚“用户协议 / 隐私政策 / 伦理承诺”不再是 `href="#"` 空链接，新增同页 `#terms` / `#privacy` / `#ethics` 合规摘要区，强调暂停、导出、删除数据和不以高频使用奖励推动停留；H5 静态测试新增空链接和 hash target 完整性防回归；本地 h5 targeted test、typecheck、232 tests + 2 skipped、build:demo、git diff --check 通过；推送为 `d68a15c fix: link public footer compliance sections`
+2026-07-10 Step 2.65 文档收口已推送；CURRENT-STATE、roadmap、README 和 handoff 已记录 Step 2.65 pushed 状态与“后续只提供 Summary、不提供 Description:”协作约定；推送为 `e5810ff docs: mark step 2.65 as pushed`
+2026-07-10 Step 2.66: release env-file inputs 本地已实现；`release:preflight` 支持 `--env-file <path>`，`release:validation-suite` 支持 `--env-file <path>`、`--from-json-env <env-key>`、`--from-sqlite-env <env-key>`，可安全读取被 `.gitignore` 忽略的 `.env.release` 并从 env key 解析 snapshot/SQLite 输入路径；shell env 非空值优先，输出不打印 env 文件路径、snapshot 路径、DB URL、token 或 raw 子命令输出；当前 `.env` 实测仍 blocked：`NNZ_DB_PATH` 文件不存在且 release DB/tokens 缺失；本地 targeted tests、typecheck、234 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
 ```
 
 当前代码基线相对远端：
 
 ```text
-main...origin/main @ d68a15c fix: link public footer compliance sections
-当前无代码变更待推送；本地仅同步 Step 2.65 pushed 状态文档
+main...origin/main @ e5810ff docs: mark step 2.65 as pushed
+当前本地新增 Step 2.66 release env-file inputs changes pending
 ```
 
 最新已推送提交：
 
 ```text
-d68a15c fix: link public footer compliance sections
+e5810ff docs: mark step 2.65 as pushed
 ```
 
 协作约定：

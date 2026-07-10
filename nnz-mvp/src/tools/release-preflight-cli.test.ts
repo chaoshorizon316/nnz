@@ -156,16 +156,58 @@ describe('release preflight CLI', () => {
     expect(result.stdout).not.toContain('local.sqlite');
     expect(result.stdout).not.toContain('viewer-secret');
   });
+
+  it('can load release inputs from an explicit env file without printing values', async () => {
+    const result = await runReleasePreflightCommand(
+      [
+        '--env-file',
+        '.env.release',
+        '--snapshot-env',
+        'NNZ_DB_PATH',
+      ],
+      deps({
+        env: {},
+        existingPaths: ['/repo/local.sqlite'],
+        files: {
+          '/repo/.env.release': [
+            'NNZ_DB_PATH=local.sqlite',
+            'NNZ_POSTGRES_INTEGRATION_URL=postgres://disposable-secret',
+            'NNZ_POSTGRES_SCOPED_RUNTIME_URL=postgres://runtime-secret',
+            'NNZ_OPS_VIEWER_TOKEN=viewer-secret',
+            'NNZ_OPS_OPERATOR_TOKEN=operator-secret',
+            'NNZ_OPS_ADMIN_TOKEN=admin-secret',
+          ].join('\n'),
+        },
+      }),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('overall: ready');
+    expect(result.stdout).toContain('snapshotInput: ready (NNZ_DB_PATH)');
+    expect(result.stdout).toContain('NNZ_POSTGRES_INTEGRATION_URL: set');
+    expect(result.stdout).toContain('NNZ_POSTGRES_SCOPED_RUNTIME_URL: set');
+    expect(result.stdout).not.toContain('.env.release');
+    expect(result.stdout).not.toContain('local.sqlite');
+    expect(result.stdout).not.toContain('disposable-secret');
+    expect(result.stdout).not.toContain('runtime-secret');
+    expect(result.stdout).not.toContain('viewer-secret');
+  });
 });
 
 function deps(options: {
   env: Record<string, string | undefined>;
   existingPaths?: string[];
+  files?: Record<string, string>;
 }): ReleasePreflightCliDeps {
   const existingPaths = new Set(options.existingPaths ?? []);
   return {
     env: options.env,
     cwd: '/repo',
     fileExists: (path) => existingPaths.has(path),
+    readTextFile: (path) => {
+      const text = options.files?.[path];
+      if (text === undefined) throw new Error('missing test file');
+      return text;
+    },
   };
 }

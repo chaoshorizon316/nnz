@@ -2,15 +2,15 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository、snapshot migration 工具链和当前前台发布收口已经完成到 Step 2.65。最新已推送提交是：
+Step 2 的 scoped repository、snapshot migration 工具链和当前前台发布收口已经推送到 Step 2.65；本地 release env-file inputs 已完成到 Step 2.66。最新已推送提交是：
 
 ```text
-d68a15c fix: link public footer compliance sections
+e5810ff docs: mark step 2.65 as pushed
 ```
 
-Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 conversation DOM rendering 已完成验证并推送，Step 2.58 marketing chat DOM rendering 已完成验证并推送，Step 2.59 H5 onboarding choices DOM rendering 已完成验证并推送，Step 2.60 H5 Covenant actions DOM rendering 已完成验证并推送，Step 2.61 H5 loading bubble DOM rendering 已完成验证并推送，Step 2.62 H5/public inline event handler binding 已完成验证并推送，Step 2.63 public pricing CTA flow binding 已完成验证并推送，Step 2.64 public pricing dependency-safe copy 已完成验证并推送，Step 2.65 public footer compliance links 已完成验证并推送；它们都不改变本路线图的外部 release validation 剩余入口。后续不要再卡在“等待推送 Step 2.56 / Step 2.60 / Step 2.61 / Step 2.62 / Step 2.63 / Step 2.64 / Step 2.65”，当前唯一上线闸口仍是外部输入齐备后的 `release:validation-suite`。
+Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 conversation DOM rendering 已完成验证并推送，Step 2.58 marketing chat DOM rendering 已完成验证并推送，Step 2.59 H5 onboarding choices DOM rendering 已完成验证并推送，Step 2.60 H5 Covenant actions DOM rendering 已完成验证并推送，Step 2.61 H5 loading bubble DOM rendering 已完成验证并推送，Step 2.62 H5/public inline event handler binding 已完成验证并推送，Step 2.63 public pricing CTA flow binding 已完成验证并推送，Step 2.64 public pricing dependency-safe copy 已完成验证并推送，Step 2.65 public footer compliance links 已完成验证并推送，Step 2.66 release env-file inputs 本地已完成；它们都不改变本路线图的外部 release validation 剩余入口。后续不要再卡在“等待推送 Step 2.56 / Step 2.60 / Step 2.61 / Step 2.62 / Step 2.63 / Step 2.64 / Step 2.65”，当前唯一上线闸口仍是外部输入齐备后的 `release:validation-suite`。
 
-截至 2026-07-10，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、以及本地 `.env.example` 都已完成实现；真实 DB/Render 执行仍需要 disposable URL、snapshot 路径或 token env。
+截至 2026-07-10，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、本地 `.env.example`、以及显式 `--env-file` / `--from-json-env` / `--from-sqlite-env` release 输入读取都已完成实现；真实 DB/Render 执行仍需要 disposable URL、可读 snapshot/SQLite 路径或 token env。
 
 ## 已完成基线
 
@@ -73,6 +73,7 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 - Step 2.63：public pricing CTA flow binding 已实现并推送；定价区方案卡片从跳转在线咨询区改为打开付费流程弹窗并预选对应方案。
 - Step 2.64：public pricing dependency-safe copy 已实现并推送；公开页定价与付费流程文案移除终身/永久/无限/AI复刻/人格等依赖诱导或机制化表达，并补齐前台可见文案护栏。
 - Step 2.65：public footer compliance links 已实现并推送；公开页页脚用户协议、隐私政策、伦理承诺不再是空链接，而是落到同页可见合规摘要，并新增 H5 静态测试防止 `href="#"` 与缺失 hash target 回归。
+- Step 2.66：release env-file inputs 本地已实现；`release:preflight` 可显式 `--env-file`，`release:validation-suite` 可显式 `--env-file` 并通过 `--from-json-env` / `--from-sqlite-env` 从 env key 解析输入路径，输出仍不打印 env 文件路径、snapshot 路径、DB URL、token 或 raw 子命令输出。
 
 ## 剩余目标状态
 
@@ -115,8 +116,8 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 
 ## 当前可继续做的本地工作
 
-- 用真实外部输入跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`；默认仍保持 snapshot persistence，scoped runtime 只在 disposable DB smoke 中验证。
-- 当前不需要为了 Step 2.56 / Step 2.60 / Step 2.61 / Step 2.62 / Step 2.63 / Step 2.64 / Step 2.65 再单独 push；核心上线闸口仍是上面的 release validation suite。没有外部输入时，继续本地开发只应做发布阻断级缺口或文档/交接纠偏，避免偏离 release validation 目标。
+- 用真实外部输入跑 `release:validation-suite -- --env-file <ignored-env-file> --from-json-env <snapshot-env>` 或 `--from-sqlite-env <sqlite-env>`，并带 `--evidence-out <sanitized-release-evidence-json>`；默认仍保持 snapshot persistence，scoped runtime 只在 disposable DB smoke 中验证。
+- 当前不需要为了 Step 2.56 / Step 2.60 / Step 2.61 / Step 2.62 / Step 2.63 / Step 2.64 / Step 2.65 再单独 push；本地 Step 2.66 可作为 release env-file 输入版本合并 push。核心上线闸口仍是上面的 release validation suite。没有外部输入时，继续本地开发只应做发布阻断级缺口或文档/交接纠偏，避免偏离 release validation 目标。
 
 ## 当前需要用户或外部环境提供的东西
 

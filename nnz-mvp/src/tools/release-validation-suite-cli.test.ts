@@ -214,6 +214,59 @@ describe('NNZ release validation suite CLI', () => {
     expect(result.stdout).toContain('runtimeDemoBuild: skipped');
   });
 
+  it('can resolve the release input from an explicit env file without printing sensitive paths or values', async () => {
+    const calls: string[] = [];
+    const preflightArgs: string[][] = [];
+    const migrationArgs: string[][] = [];
+
+    const result = await runReleaseValidationSuiteCommand(
+      [
+        '--env-file',
+        '.env.release',
+        '--from-sqlite-env',
+        'NNZ_DB_PATH',
+        '--snapshot-out',
+        '/private/raw-secret.json',
+        '--report-out',
+        '/private/report-secret.json',
+        '--summary-out',
+        '/private/summary-secret.json',
+        '--confirm',
+        'RUN_NNZ_RELEASE_VALIDATION_SUITE',
+      ],
+      deps({
+        calls,
+        preflightArgs,
+        migrationArgs,
+        files: {
+          '/repo/.env.release': [
+            'NNZ_DB_PATH=/private/local-secret.sqlite',
+            'NNZ_POSTGRES_INTEGRATION_URL=postgres://disposable-secret',
+            'NNZ_POSTGRES_SCOPED_RUNTIME_URL=postgres://runtime-secret',
+            'NNZ_OPS_VIEWER_TOKEN=viewer-secret',
+          ].join('\n'),
+        },
+      }),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(calls).toEqual(['preflight', 'migration', 'ops', 'runtime']);
+    expect(preflightArgs[0]).toEqual(expect.arrayContaining([
+      '--snapshot',
+      '/private/local-secret.sqlite',
+    ]));
+    expect(migrationArgs[0]).toEqual(expect.arrayContaining([
+      '--from-sqlite',
+      '/private/local-secret.sqlite',
+    ]));
+    expect(result.stdout).toContain('snapshotSource: sqlite');
+    expect(result.stdout).not.toContain('.env.release');
+    expect(result.stdout).not.toContain('/private/local-secret.sqlite');
+    expect(result.stdout).not.toContain('disposable-secret');
+    expect(result.stdout).not.toContain('runtime-secret');
+    expect(result.stdout).not.toContain('viewer-secret');
+  });
+
   it('stops before validation stages when preflight is blocked', async () => {
     const calls: string[] = [];
     const writtenFiles = new Map<string, string>();
@@ -392,6 +445,7 @@ function deps(options: {
   migrationResult?: { exitCode: number; stdout: string; stderr: string };
   opsResult?: { exitCode: number; stdout: string; stderr: string };
   runtimeResult?: { exitCode: number; stdout: string; stderr: string };
+  files?: Record<string, string>;
 }): ReleaseValidationSuiteCliDeps {
   return {
     env: {},
@@ -418,6 +472,12 @@ function deps(options: {
     writeTextFile: options.writeTextFile ?? ((path, contents) => {
       options.writtenFiles?.set(path, contents);
     }),
+    cwd: '/repo',
+    readTextFile: (path) => {
+      const text = options.files?.[path];
+      if (text === undefined) throw new Error('missing test file');
+      return text;
+    },
     now: () => new Date('2026-07-07T00:00:00.000Z'),
   };
 }
