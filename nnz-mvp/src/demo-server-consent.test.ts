@@ -6,6 +6,33 @@ import { describe, expect, it } from 'vitest';
 const source = readFileSync(join(process.cwd(), 'src', 'demo-server.ts'), 'utf-8');
 
 describe('demo server user onboarding consent', () => {
+  it('protects the Soul Ops page and API with the optional IP allowlist before token checks', () => {
+    expect(source).toContain("parseOpsIpAllowlist(readNonEmptyEnv('NNZ_OPS_ALLOWED_IPS'))");
+
+    const pageRouteStart = source.indexOf("url.pathname === '/ops'");
+    expect(pageRouteStart).toBeGreaterThanOrEqual(0);
+    const pageRouteEnd = source.indexOf("if (url.pathname.startsWith('/api/ops/'))", pageRouteStart);
+    const pageRoute = source.slice(pageRouteStart, pageRouteEnd);
+    expect(pageRoute).toContain('requireOpsIpAllowed(req, res)');
+
+    const accessStart = source.indexOf('async function requireOpsAccess');
+    expect(accessStart).toBeGreaterThanOrEqual(0);
+    const accessEnd = source.indexOf('async function requireOpsIpAllowed', accessStart);
+    const accessFunction = source.slice(accessStart, accessEnd);
+    expect(accessFunction).toContain('requireOpsIpAllowed(req, res)');
+    expect(accessFunction.indexOf('requireOpsIpAllowed(req, res)')).toBeLessThan(
+      accessFunction.indexOf('OPS_TOKEN_ENTRIES.length === 0'),
+    );
+
+    const allowlistStart = source.indexOf('async function requireOpsIpAllowed');
+    expect(allowlistStart).toBeGreaterThanOrEqual(0);
+    const allowlistEnd = source.indexOf('async function recordOpsAudit', allowlistStart);
+    const allowlistFunction = source.slice(allowlistStart, allowlistEnd);
+    expect(allowlistFunction).toContain('resolveOpsClientIp(req.headers, req.socket.remoteAddress)');
+    expect(allowlistFunction).toContain("reason: 'ip-not-allowed'");
+    expect(allowlistFunction).toContain("error: 'Soul Ops 当前访问来源未被允许。'");
+  });
+
   it('requires consent before creating a user persona through /api/me/persona', () => {
     const routeStart = source.indexOf("url.pathname === '/api/me/persona'");
     expect(routeStart).toBeGreaterThanOrEqual(0);

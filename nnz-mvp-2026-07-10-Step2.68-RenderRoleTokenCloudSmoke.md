@@ -42,5 +42,5 @@ passed:
 ## 状态
 
 - Render role-specific Ops token stage 已单独通过。
-- 完整 `release:validation-suite` 仍未执行，因为还缺真实本地 snapshot/SQLite 输入、一次性 `NNZ_POSTGRES_INTEGRATION_URL`、一次性 `NNZ_POSTGRES_SCOPED_RUNTIME_URL`。
-- 后续不要要求用户再次提供 Render role tokens；只需要保留 ignored `.env.release`，并补齐上面三类剩余外部输入。
+- 本文是 Step 2.69 前的阶段记录；截至 2026-07-10，完整 `release:validation-suite` 已用真实 snapshot、隔离临时 Postgres database、scoped runtime 临时库和 Render role tokens 通过。
+- 后续不要要求用户再次提供 Render role tokens、snapshot、一次性 `NNZ_POSTGRES_INTEGRATION_URL` 或一次性 `NNZ_POSTGRES_SCOPED_RUNTIME_URL`；相关输入已在 ignored `.env.release` / `release-artifacts` 中完成实跑，不可提交、截图或粘贴。

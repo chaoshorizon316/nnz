@@ -97,19 +97,20 @@ https://github.com/chaoshorizon316/nnz
 2026-07-10 Step 2.68: Render role-specific Ops tokens 已由 Codex 代填并保存到 Render Web Service env，同时同步到 ignored `.env.release`；非破坏性 `npm run ops:role-smoke -- --env-file .env.release --base-url https://nnz-kego.onrender.com --confirm RUN_OPS_ROLE_TOKEN_SMOKE` 通过，验证 missing/invalid token rejection、viewer read-only、operator dry-run、admin dry-run、admin delete confirmation boundary 和 audit query readable；token 值未打印、未提交、未写入文档
 2026-07-10 Step 2.69: release validation suite 已实跑通过；在用户授权后从 Render 当前 snapshot persistence 导出 raw StoreSnapshot 到 ignored `release-artifacts`，在现有 Render Postgres 实例内创建两个隔离临时 database 写入 ignored `.env.release`，随后运行 `npm run release:validation-suite -- --env-file .env.release --from-json-env NNZ_MIGRATION_SNAPSHOT_PATH ... --evidence-out ... --confirm RUN_NNZ_RELEASE_VALIDATION_SUITE`，`releasePreflight` / `migrationValidationSuite` / `opsRoleSmoke` / `runtimeSmokeSuite` 全部 passed；secret、DB URL、raw snapshot、用户内容未打印或写入文档
 2026-07-10 环境定位更新：Render 当前 Postgres `nnz-mvp-postgres` 是 Free 实例，Dashboard 显示会在 2026-07-11 过期并删除；用户已确认 Render 暂作为免费调试环境，不作为正式生产持久化承诺。release validation 已过；正式环境迁移/上线前后续优先评估腾讯云部署与托管数据库方案，由用户评估后执行
+2026-07-10 Step 2.70: Soul Ops optional IP allowlist hardening 本地已实现；新增 `NNZ_OPS_ALLOWED_IPS` 空值默认不启用，设置后先于 token 检查保护 `/ops` 与 `/api/ops/*`，支持精确 IP 和 IPv4 CIDR，代理环境读取第一段 `x-forwarded-for`，拒绝审计不写 raw IP；补充 `.env.example`、README、handoff、roadmap 和 Step 文档
 ```
 
 当前代码基线相对远端：
 
 ```text
-main...origin/main @ ae5312d feat: load focused release stages and verify render ops roles
-当前本地新增 Step 2.69 release validation pass docs pending
+main...origin/main @ 2cbe5b1 docs: record render debug stance and future tencent cloud plan
+当前本地新增 Step 2.70 Soul Ops optional IP allowlist hardening pending
 ```
 
 最新已推送提交：
 
 ```text
-ae5312d feat: load focused release stages and verify render ops roles
+2cbe5b1 docs: record render debug stance and future tencent cloud plan
 ```
 
 协作约定：

@@ -43,7 +43,10 @@ import { buildRuntimePersistenceConfig } from './runtime-persistence-config';
 import {
   buildOpsPermissions,
   buildOpsTokenEntries,
+  isOpsClientIpAllowed,
+  parseOpsIpAllowlist,
   resolveOpsPrincipal,
+  resolveOpsClientIp,
   roleAllows,
   type OpsPrincipal,
   type OpsRole,
@@ -80,6 +83,7 @@ const OPS_TOKEN_ENTRIES = buildOpsTokenEntries({
   operatorToken: readNonEmptyEnv('NNZ_OPS_OPERATOR_TOKEN'),
   adminToken: readNonEmptyEnv('NNZ_OPS_ADMIN_TOKEN'),
 });
+const OPS_IP_ALLOWLIST = parseOpsIpAllowlist(readNonEmptyEnv('NNZ_OPS_ALLOWED_IPS'));
 let postgresPersistence: PostgresPersistence | undefined;
 let scopedRuntimePersistence: ScopedRuntimePersistence | undefined;
 let persistenceMode: 'memory' | 'sqlite' | 'postgres' | 'scoped-postgres' = 'memory';
@@ -125,6 +129,7 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && url.pathname === '/ops') {
+      if (!await requireOpsIpAllowed(req, res)) return;
       return sendHtml(res, renderOpsPage(OPS_TOKEN_ENTRIES.length > 0));
     }
 
@@ -581,6 +586,8 @@ function requireAuth(req: IncomingMessage, res: ServerResponse): { userId: strin
 }
 
 async function requireOpsAccess(req: IncomingMessage, res: ServerResponse): Promise<OpsPrincipal | null> {
+  if (!await requireOpsIpAllowed(req, res)) return null;
+
   if (OPS_TOKEN_ENTRIES.length === 0) {
     sendJson(res, { error: 'Soul Ops 后台未启用。请设置 NNZ_OPS_TOKEN 或角色化 token。' }, 404);
     return null;
@@ -606,6 +613,21 @@ async function requireOpsAccess(req: IncomingMessage, res: ServerResponse): Prom
     return null;
   }
   return principal;
+}
+
+async function requireOpsIpAllowed(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  if (OPS_IP_ALLOWLIST.length === 0) return true;
+  const clientIp = resolveOpsClientIp(req.headers, req.socket.remoteAddress);
+  if (isOpsClientIpAllowed(clientIp, OPS_IP_ALLOWLIST)) return true;
+
+  await recordOpsAudit(null, 'ACCESS_DENIED', 'DENIED', {
+    reason: 'ip-not-allowed',
+    path: req.url ?? null,
+    clientIpPresent: Boolean(clientIp),
+    allowlistEnabled: true,
+  });
+  sendJson(res, { error: 'Soul Ops 当前访问来源未被允许。' }, 403);
+  return false;
 }
 
 async function recordOpsAudit(

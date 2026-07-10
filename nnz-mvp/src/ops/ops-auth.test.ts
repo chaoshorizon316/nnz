@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildOpsPermissions, buildOpsTokenEntries, resolveOpsPrincipal, roleAllows } from './ops-auth';
+import {
+  buildOpsPermissions,
+  buildOpsTokenEntries,
+  isOpsClientIpAllowed,
+  parseOpsIpAllowlist,
+  resolveOpsClientIp,
+  resolveOpsPrincipal,
+  roleAllows,
+} from './ops-auth';
 
 describe('Soul Ops auth helpers', () => {
   it('keeps the legacy ops token as admin for backward compatibility', () => {
@@ -49,5 +57,30 @@ describe('Soul Ops auth helpers', () => {
       canDryRunCleanup: true,
       canDeleteCleanup: true,
     });
+  });
+
+  it('allows all client IPs when the Ops allowlist is empty', () => {
+    expect(isOpsClientIpAllowed('203.0.113.10', parseOpsIpAllowlist(undefined))).toBe(true);
+    expect(isOpsClientIpAllowed(null, parseOpsIpAllowlist(''))).toBe(true);
+  });
+
+  it('matches exact IP entries and IPv4 CIDR ranges', () => {
+    const allowlist = parseOpsIpAllowlist('203.0.113.8, 198.51.100.0/24, ::1');
+
+    expect(isOpsClientIpAllowed('203.0.113.8', allowlist)).toBe(true);
+    expect(isOpsClientIpAllowed('198.51.100.77', allowlist)).toBe(true);
+    expect(isOpsClientIpAllowed('198.51.101.77', allowlist)).toBe(false);
+    expect(isOpsClientIpAllowed('::1', allowlist)).toBe(true);
+  });
+
+  it('resolves proxy and socket client IPs without trusting later forwarded hops', () => {
+    expect(resolveOpsClientIp({ 'x-forwarded-for': '198.51.100.7, 10.0.0.1' }, '127.0.0.1')).toBe('198.51.100.7');
+    expect(resolveOpsClientIp({ 'x-real-ip': '203.0.113.9' }, '127.0.0.1')).toBe('203.0.113.9');
+    expect(resolveOpsClientIp({}, '::ffff:127.0.0.1')).toBe('127.0.0.1');
+  });
+
+  it('rejects malformed allowlist entries at startup config time', () => {
+    expect(() => parseOpsIpAllowlist('203.0.113.1/33')).toThrow('invalid IPv4 CIDR');
+    expect(() => parseOpsIpAllowlist('not-an-ip')).toThrow('invalid IP address');
   });
 });
