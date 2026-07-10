@@ -135,6 +135,40 @@ describe('Soul Ops role token smoke CLI', () => {
     });
   });
 
+  it('can load role token envs from an explicit env file', async () => {
+    const records: RequestRecord[] = [];
+
+    const result = await runOpsRoleSmokeCommand(
+      [
+        '--env-file',
+        '.env.release',
+        '--base-url',
+        'https://nnz.example.test',
+        '--confirm',
+        'RUN_OPS_ROLE_TOKEN_SMOKE',
+      ],
+      deps({
+        env: {},
+        fetchEnv: DEFAULT_ENV,
+        records,
+        files: {
+          '/repo/.env.release': [
+            'NNZ_OPS_VIEWER_TOKEN=viewer-token-secret',
+            'NNZ_OPS_OPERATOR_TOKEN=operator-token-secret',
+            'NNZ_OPS_ADMIN_TOKEN=admin-token-secret',
+          ].join('\n'),
+        },
+      }),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('Soul Ops role token smoke');
+    expect(result.stdout).toContain('viewer: NNZ_OPS_VIEWER_TOKEN');
+    expect(result.stdout).not.toContain('.env.release');
+    expect(result.stdout).not.toContain('viewer-token-secret');
+    expect(records).toHaveLength(11);
+  });
+
   it('runs confirmed admin cleanup only with the destructive confirmation flag', async () => {
     const records: RequestRecord[] = [];
 
@@ -181,24 +215,34 @@ describe('Soul Ops role token smoke CLI', () => {
 
 function deps(options: {
   env: Record<string, string | undefined>;
+  fetchEnv?: Record<string, string | undefined>;
   records?: RequestRecord[];
   corruptViewerRole?: boolean;
+  files?: Record<string, string>;
 }): OpsRoleSmokeCliDeps {
   return {
     env: options.env,
     fetch: createRoleFetch(options),
+    cwd: '/repo',
+    readTextFile: (path) => {
+      const text = options.files?.[path];
+      if (text === undefined) throw new Error('missing test file');
+      return text;
+    },
   };
 }
 
 function createRoleFetch(options: {
   env: Record<string, string | undefined>;
+  fetchEnv?: Record<string, string | undefined>;
   records?: RequestRecord[];
   corruptViewerRole?: boolean;
 }): FetchLike {
+  const env = options.fetchEnv ?? options.env;
   const tokenRoles = new Map<string, Role>([
-    [options.env.NNZ_OPS_VIEWER_TOKEN ?? '', 'viewer'],
-    [options.env.NNZ_OPS_OPERATOR_TOKEN ?? '', 'operator'],
-    [options.env.NNZ_OPS_ADMIN_TOKEN ?? '', 'admin'],
+    [env.NNZ_OPS_VIEWER_TOKEN ?? '', 'viewer'],
+    [env.NNZ_OPS_OPERATOR_TOKEN ?? '', 'operator'],
+    [env.NNZ_OPS_ADMIN_TOKEN ?? '', 'admin'],
   ]);
 
   return async (url, init) => {

@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,6 +13,7 @@ import {
   runScopedRuntimeSmokeCommand,
   type ScopedRuntimeSmokeCliResult,
 } from './postgres-scoped-runtime-smoke-cli';
+import { applyReleaseEnvToProcessEnv, mergeReleaseEnvFile } from './release-env-file';
 
 const ALLOWED_DATABASE_URL_ENV = SCOPED_RUNTIME_POSTGRES_ENV;
 const SUITE_CONFIRM = 'RUN_POSTGRES_SCOPED_RUNTIME_SMOKE_SUITE';
@@ -24,9 +26,10 @@ const DEFAULT_SERVER_ENTRY = 'dist-cjs/demo-server.js';
 
 const USAGE = `Usage:
   npm run runtime:smoke-suite -- --database-url-env NNZ_POSTGRES_SCOPED_RUNTIME_URL --confirm RUN_POSTGRES_SCOPED_RUNTIME_SMOKE_SUITE
+  npm run runtime:smoke-suite -- --env-file .env.release --database-url-env NNZ_POSTGRES_SCOPED_RUNTIME_URL --confirm RUN_POSTGRES_SCOPED_RUNTIME_SMOKE_SUITE
 
 Runs the disposable scoped runtime adapter smoke, builds the demo server, then runs the real /api/me HTTP smoke.
-This command refuses DATABASE_URL and NNZ_POSTGRES_URL, never prints database URLs, tokens, user content, row payloads, or raw child process details, and uses only NNZ_POSTGRES_SCOPED_RUNTIME_URL.`;
+This command refuses DATABASE_URL and NNZ_POSTGRES_URL, never prints env file paths, database URLs, tokens, user content, row payloads, or raw child process details, and uses only NNZ_POSTGRES_SCOPED_RUNTIME_URL.`;
 
 export interface ScopedRuntimeSmokeSuiteCliResult {
   exitCode: number;
@@ -39,6 +42,8 @@ export interface ScopedRuntimeSmokeSuiteCliDeps {
   runDirectSmoke: (args: string[]) => Promise<ScopedRuntimeSmokeCliResult>;
   buildDemo: () => Promise<void>;
   runHttpSmoke: (args: string[]) => Promise<ScopedRuntimeHttpSmokeCliResult>;
+  cwd: string;
+  readTextFile(path: string): string;
 }
 
 type ParsedArgs = {
@@ -50,6 +55,7 @@ type ParsedArgs = {
   serverEntry: string;
   timeoutMs: number;
   skipBuild: boolean;
+  envFile?: string;
   error?: string;
 };
 
@@ -58,6 +64,8 @@ const DEFAULT_DEPS: ScopedRuntimeSmokeSuiteCliDeps = {
   runDirectSmoke: (args) => runScopedRuntimeSmokeCommand(args),
   buildDemo: runBuildDemo,
   runHttpSmoke: (args) => runScopedRuntimeHttpSmokeCommand(args),
+  cwd: process.cwd(),
+  readTextFile: (path) => readFileSync(path, 'utf8'),
 };
 
 export async function runScopedRuntimeSmokeSuiteCommand(
@@ -72,34 +80,44 @@ export async function runScopedRuntimeSmokeSuiteCommand(
     return { exitCode: 1, stdout: '', stderr: `${parsedArgs.error}\n\n${USAGE}\n` };
   }
 
-  const guardrailError = validateGuardrails(parsedArgs, deps.env);
+  const envFileResult = mergeReleaseEnvFile(deps.env, parsedArgs.envFile, deps);
+  if (envFileResult.error) {
+    return { exitCode: 1, stdout: '', stderr: `${envFileResult.error}\n\n${USAGE}\n` };
+  }
+
+  const guardrailError = validateGuardrails(parsedArgs, envFileResult.env);
   if (guardrailError) {
     return { exitCode: 1, stdout: '', stderr: `${guardrailError}\n\n${USAGE}\n` };
   }
 
-  const directResult = await deps.runDirectSmoke(buildDirectSmokeArgs(parsedArgs));
-  if (directResult.exitCode !== 0) {
-    return failSuite('direct runtime adapter smoke');
-  }
-
-  if (!parsedArgs.skipBuild) {
-    try {
-      await deps.buildDemo();
-    } catch {
-      return failSuite('demo build');
+  const restoreProcessEnv = applyReleaseEnvToProcessEnv(envFileResult.env);
+  try {
+    const directResult = await deps.runDirectSmoke(buildDirectSmokeArgs(parsedArgs));
+    if (directResult.exitCode !== 0) {
+      return failSuite('direct runtime adapter smoke');
     }
-  }
 
-  const httpResult = await deps.runHttpSmoke(buildHttpSmokeArgs(parsedArgs));
-  if (httpResult.exitCode !== 0) {
-    return failSuite('HTTP /api/me smoke');
-  }
+    if (!parsedArgs.skipBuild) {
+      try {
+        await deps.buildDemo();
+      } catch {
+        return failSuite('demo build');
+      }
+    }
 
-  return {
-    exitCode: 0,
-    stdout: formatSuiteSummary(parsedArgs),
-    stderr: '',
-  };
+    const httpResult = await deps.runHttpSmoke(buildHttpSmokeArgs(parsedArgs));
+    if (httpResult.exitCode !== 0) {
+      return failSuite('HTTP /api/me smoke');
+    }
+
+    return {
+      exitCode: 0,
+      stdout: formatSuiteSummary(parsedArgs),
+      stderr: '',
+    };
+  } finally {
+    restoreProcessEnv();
+  }
 }
 
 function parseArgs(args: string[]): ParsedArgs {
@@ -110,11 +128,12 @@ function parseArgs(args: string[]): ParsedArgs {
   let serverEntry = DEFAULT_SERVER_ENTRY;
   let timeoutMs = DEFAULT_TIMEOUT_MS;
   let skipBuild = false;
+  let envFile: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]!;
     if (arg === '--help' || arg === '-h') {
-      return { help: true, host, port, serverEntry, timeoutMs, skipBuild };
+      return { help: true, host, port, serverEntry, timeoutMs, skipBuild, ...(envFile ? { envFile } : {}) };
     }
     if (arg === '--skip-build') {
       skipBuild = true;
@@ -127,6 +146,7 @@ function parseArgs(args: string[]): ParsedArgs {
       || arg === '--port'
       || arg === '--server-entry'
       || arg === '--timeout-ms'
+      || arg === '--env-file'
     ) {
       const value = args[index + 1];
       if (!value || value.startsWith('--')) {
@@ -135,6 +155,7 @@ function parseArgs(args: string[]): ParsedArgs {
       if (arg === '--database-url-env') databaseUrlEnv = value;
       if (arg === '--confirm') confirm = value;
       if (arg === '--host') host = value;
+      if (arg === '--env-file') envFile = value;
       if (arg === '--port') {
         const parsed = Number(value);
         if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65_535) {
@@ -163,6 +184,7 @@ function parseArgs(args: string[]): ParsedArgs {
     serverEntry,
     timeoutMs,
     skipBuild,
+    ...(envFile ? { envFile } : {}),
     ...(databaseUrlEnv ? { databaseUrlEnv } : {}),
     ...(confirm ? { confirm } : {}),
   };

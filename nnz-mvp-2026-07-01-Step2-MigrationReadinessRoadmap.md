@@ -2,15 +2,15 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository、snapshot migration 工具链和当前前台发布收口已经推送到 Step 2.65；本地 release env-file inputs 已完成到 Step 2.66。最新已推送提交是：
+Step 2 的 scoped repository、snapshot migration 工具链、当前前台发布收口和 release env-file inputs 已经推送到 Step 2.66；本地 focused release stage env-file 已完成到 Step 2.67；Render role-specific Ops tokens 已配置并通过非破坏性 cloud smoke。最新已推送提交是：
 
 ```text
-e5810ff docs: mark step 2.65 as pushed
+d374cb4 feat: load release validation inputs from env file
 ```
 
-Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 conversation DOM rendering 已完成验证并推送，Step 2.58 marketing chat DOM rendering 已完成验证并推送，Step 2.59 H5 onboarding choices DOM rendering 已完成验证并推送，Step 2.60 H5 Covenant actions DOM rendering 已完成验证并推送，Step 2.61 H5 loading bubble DOM rendering 已完成验证并推送，Step 2.62 H5/public inline event handler binding 已完成验证并推送，Step 2.63 public pricing CTA flow binding 已完成验证并推送，Step 2.64 public pricing dependency-safe copy 已完成验证并推送，Step 2.65 public footer compliance links 已完成验证并推送，Step 2.66 release env-file inputs 本地已完成；它们都不改变本路线图的外部 release validation 剩余入口。后续不要再卡在“等待推送 Step 2.56 / Step 2.60 / Step 2.61 / Step 2.62 / Step 2.63 / Step 2.64 / Step 2.65”，当前唯一上线闸口仍是外部输入齐备后的 `release:validation-suite`。
+Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 conversation DOM rendering 已完成验证并推送，Step 2.58 marketing chat DOM rendering 已完成验证并推送，Step 2.59 H5 onboarding choices DOM rendering 已完成验证并推送，Step 2.60 H5 Covenant actions DOM rendering 已完成验证并推送，Step 2.61 H5 loading bubble DOM rendering 已完成验证并推送，Step 2.62 H5/public inline event handler binding 已完成验证并推送，Step 2.63 public pricing CTA flow binding 已完成验证并推送，Step 2.64 public pricing dependency-safe copy 已完成验证并推送，Step 2.65 public footer compliance links 已完成验证并推送，Step 2.66 release env-file inputs 已完成验证并推送，Step 2.67 focused release stage env-file 本地已完成；它们都不改变本路线图的外部 release validation 剩余入口。后续不要再卡在“等待推送 Step 2.56 / Step 2.60 / Step 2.61 / Step 2.62 / Step 2.63 / Step 2.64 / Step 2.65 / Step 2.66”，当前唯一上线闸口仍是外部输入齐备后的 `release:validation-suite`。
 
-截至 2026-07-10，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、本地 `.env.example`、以及显式 `--env-file` / `--from-json-env` / `--from-sqlite-env` release 输入读取都已完成实现；真实 DB/Render 执行仍需要 disposable URL、可读 snapshot/SQLite 路径或 token env。
+截至 2026-07-10，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、本地 `.env.example`、显式 `--env-file` / `--from-json-env` / `--from-sqlite-env` release 输入读取、以及单项 focused diagnosis 的 `--env-file` parity 都已完成实现；Render role token stage 已单独通过，真实 DB 执行仍需要 disposable URL 和可读 snapshot/SQLite 路径。
 
 ## 已完成基线
 
@@ -73,20 +73,21 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 - Step 2.63：public pricing CTA flow binding 已实现并推送；定价区方案卡片从跳转在线咨询区改为打开付费流程弹窗并预选对应方案。
 - Step 2.64：public pricing dependency-safe copy 已实现并推送；公开页定价与付费流程文案移除终身/永久/无限/AI复刻/人格等依赖诱导或机制化表达，并补齐前台可见文案护栏。
 - Step 2.65：public footer compliance links 已实现并推送；公开页页脚用户协议、隐私政策、伦理承诺不再是空链接，而是落到同页可见合规摘要，并新增 H5 静态测试防止 `href="#"` 与缺失 hash target 回归。
-- Step 2.66：release env-file inputs 本地已实现；`release:preflight` 可显式 `--env-file`，`release:validation-suite` 可显式 `--env-file` 并通过 `--from-json-env` / `--from-sqlite-env` 从 env key 解析输入路径，输出仍不打印 env 文件路径、snapshot 路径、DB URL、token 或 raw 子命令输出。
+- Step 2.66：release env-file inputs 已实现并推送；`release:preflight` 可显式 `--env-file`，`release:validation-suite` 可显式 `--env-file` 并通过 `--from-json-env` / `--from-sqlite-env` 从 env key 解析输入路径，输出仍不打印 env 文件路径、snapshot 路径、DB URL、token 或 raw 子命令输出。
+- Step 2.67：focused release stage env-file 本地已实现；`migration:validation-suite`、`runtime:smoke-suite`、`ops:role-smoke` 三个 focused diagnosis 入口均支持 `--env-file`，方便总 suite 失败后复用同一份 ignored env 文件继续定位。
 
 ## 剩余目标状态
 
 | # | 目标 | 当前状态 | 完成标准 |
 |---|---|---|---|
-| 1 | release validation suite | `release:validation-suite` 已实现；本地新增可选 `--evidence-out`；仍需要 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、role token env、`NNZ_POSTGRES_SCOPED_RUNTIME_URL` | 一次运行 preflight、migration validation、Ops role smoke、runtime smoke suite；生成脱敏 evidence；任一 stage 失败时按 stage 修复后重跑 |
+| 1 | release validation suite | `release:validation-suite` 已实现；本地新增可选 `--evidence-out`；Render role token env 已具备；仍需要 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、`NNZ_POSTGRES_SCOPED_RUNTIME_URL` | 一次运行 preflight、migration validation、Ops role smoke、runtime smoke suite；生成脱敏 evidence；任一 stage 失败时按 stage 修复后重跑 |
 | 2 | 真实本地 snapshot + 一次性 Postgres migration | 已接入总 suite 的 `migration:validation-suite` stage | 生成 raw snapshot、sanitized report、sanitized summary；readiness 干净后 disposable DB smoke 通过 |
-| 3 | 云端角色 token smoke | 已接入总 suite 的默认非破坏性 `ops:role-smoke` stage | 验证 viewer 只读、operator 可 dry-run、admin dry-run/confirmation boundary；不记录 token 明文、响应 payload、用户内容或 cleanup receipt |
+| 3 | 云端角色 token smoke | 2026-07-10 已在 Render 配置 viewer/operator/admin role tokens，并用 ignored `.env.release` 通过默认非破坏性 `ops:role-smoke` | 已验证 viewer 只读、operator 可 dry-run、admin dry-run/confirmation boundary；未记录 token 明文、响应 payload、用户内容或 cleanup receipt |
 | 4 | demo runtime scoped-table adapter | 已接入总 suite 的 `runtime:smoke-suite` stage | `/api/me/*`、chat、ops、cleanup、export/delete 都走 scoped tables，仍保持 `userId + personaId` 强隔离 |
 
 ## 推荐推进顺序
 
-1. 注入 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Ops role tokens、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`。
+1. 注入 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`；Ops role tokens 已在 Render 和 ignored `.env.release` 中具备。
 2. 运行 `release:validation-suite`，建议带 `--evidence-out <sanitized-release-evidence-json>` 生成脱敏上线证据。
 3. 如果 suite 停在 preflight，补缺失输入后重跑。
 4. 如果 suite 停在 migration readiness，审阅 sanitized report，修数据形状或迁移映射后重跑。
@@ -107,7 +108,7 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 - `runtime:smoke` 真正连接数据库前必须传 `--database-url-env NNZ_POSTGRES_SCOPED_RUNTIME_URL` 和 `--confirm RUN_POSTGRES_SCOPED_RUNTIME_SMOKE`；`NNZ_POSTGRES_SCOPED_RUNTIME_URL` 不能与 `DATABASE_URL` 或 `NNZ_POSTGRES_URL` 的值相同。
 - `runtime:http-smoke` 真正连接数据库前必须先 `npm run build:demo`，再传 `--database-url-env NNZ_POSTGRES_SCOPED_RUNTIME_URL` 和 `--confirm RUN_POSTGRES_SCOPED_RUNTIME_HTTP_SMOKE`；它会启动真实 demo server，但 stdout/stderr 不输出 DB URL、token、email/password、memory/chat、credential hash、row payload、server log 或 raw error details。
 - `runtime:smoke-suite` 是目标 4 的推荐入口；真正连接数据库前必须传 `--database-url-env NNZ_POSTGRES_SCOPED_RUNTIME_URL` 和 `--confirm RUN_POSTGRES_SCOPED_RUNTIME_SMOKE_SUITE`；它串行运行 direct smoke、`build:demo` 和 HTTP smoke，失败时不打印 child process output 或 raw details。
-- `ops:role-smoke` 是目标 3 的推荐入口；默认只做非破坏性边界验证，必须传 `--base-url` 与 `--confirm RUN_OPS_ROLE_TOKEN_SMOKE`，并从本地 shell 读取 `NNZ_OPS_VIEWER_TOKEN` / `NNZ_OPS_OPERATOR_TOKEN` / `NNZ_OPS_ADMIN_TOKEN`。确认删除 smoke 还必须额外传 `--include-delete --delete-confirm RUN_OPS_ROLE_TOKEN_DELETE_SMOKE`。stdout/stderr 不打印 token 值、response payload、用户内容、cleanup receipt、server log 或 raw network details。
+- `ops:role-smoke` 是目标 3 的推荐入口；默认只做非破坏性边界验证，必须传 `--base-url` 与 `--confirm RUN_OPS_ROLE_TOKEN_SMOKE`，并从本地 shell 或 ignored env file 读取 `NNZ_OPS_VIEWER_TOKEN` / `NNZ_OPS_OPERATOR_TOKEN` / `NNZ_OPS_ADMIN_TOKEN`。2026-07-10 已用 Render + `.env.release` 通过默认非破坏性 smoke。确认删除 smoke 还必须额外传 `--include-delete --delete-confirm RUN_OPS_ROLE_TOKEN_DELETE_SMOKE`。stdout/stderr 不打印 token 值、response payload、用户内容、cleanup receipt、server log 或 raw network details。
 - `release:preflight` 是三类外部实跑前的本地检查入口；它只检查文件存在性和 env key 设置/别名冲突，不读取 snapshot 内容、不连接数据库、不发送网络请求，也不打印 snapshot 路径、数据库 URL、token 值、用户内容、cleanup receipt、server log 或 raw network details。
 - `release:validation-suite` 是推荐总入口；必须传 `--confirm RUN_NNZ_RELEASE_VALIDATION_SUITE`，默认不执行 confirmed Ops cleanup deletion。它不打印数据库 URL、token 值、snapshot 内容、用户内容、cleanup receipt、child command output、server log、raw error details 或 evidence output path。
 - `release:validation-suite -- --evidence-out <path>` 只写脱敏 evidence JSON：stage status、env key 名、本地产物类别、redaction 说明；不能写 snapshot input/output 路径、DB URL、token 值、用户内容、子命令输出、server log 或 raw error detail。
@@ -117,10 +118,10 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 ## 当前可继续做的本地工作
 
 - 用真实外部输入跑 `release:validation-suite -- --env-file <ignored-env-file> --from-json-env <snapshot-env>` 或 `--from-sqlite-env <sqlite-env>`，并带 `--evidence-out <sanitized-release-evidence-json>`；默认仍保持 snapshot persistence，scoped runtime 只在 disposable DB smoke 中验证。
-- 当前不需要为了 Step 2.56 / Step 2.60 / Step 2.61 / Step 2.62 / Step 2.63 / Step 2.64 / Step 2.65 再单独 push；本地 Step 2.66 可作为 release env-file 输入版本合并 push。核心上线闸口仍是上面的 release validation suite。没有外部输入时，继续本地开发只应做发布阻断级缺口或文档/交接纠偏，避免偏离 release validation 目标。
+- 当前不需要为了 Step 2.56 / Step 2.60 / Step 2.61 / Step 2.62 / Step 2.63 / Step 2.64 / Step 2.65 / Step 2.66 再单独 push；本地 Step 2.67 和 Render role smoke 记录可作为 focused release stage/env 配置版本合并 push。核心上线闸口仍是上面的 release validation suite。没有外部输入时，继续本地开发只应做发布阻断级缺口或文档/交接纠偏，避免偏离 release validation 目标。
 
 ## 当前需要用户或外部环境提供的东西
 
 - 一个本地 SQLite persistence 文件，或一个本地 `StoreSnapshot` JSON 文件路径。
 - 一个一次性 Postgres 测试库 URL，用 `NNZ_POSTGRES_INTEGRATION_URL` 注入。
-- Render 中是否已配置 `NNZ_OPS_VIEWER_TOKEN` / `NNZ_OPS_OPERATOR_TOKEN` / `NNZ_OPS_ADMIN_TOKEN` 的确认，以及本地 shell 中同名 env 值。
+- 一个一次性 scoped runtime Postgres 测试库 URL，用 `NNZ_POSTGRES_SCOPED_RUNTIME_URL` 注入。

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,6 +15,7 @@ import {
   runMigrationSmokeCommand,
   type MigrationSmokeCliResult,
 } from './postgres-scoped-migration-smoke-cli';
+import { applyReleaseEnvToProcessEnv, mergeReleaseEnvFile } from './release-env-file';
 
 const ALLOWED_DATABASE_URL_ENV = DISPOSABLE_POSTGRES_ENV;
 const SUITE_CONFIRM = 'RUN_POSTGRES_SCOPED_MIGRATION_VALIDATION_SUITE';
@@ -22,9 +24,10 @@ const SMOKE_CONFIRM = 'RUN_POSTGRES_SCOPED_MIGRATION_SMOKE';
 const USAGE = `Usage:
   npm run migration:validation-suite -- --from-json <snapshot-or-wrapper-json-path> --snapshot-out <raw-snapshot-json-path> --report-out <sanitized-report-json-path> --summary-out <sanitized-summary-json-path> --database-url-env NNZ_POSTGRES_INTEGRATION_URL --confirm RUN_POSTGRES_SCOPED_MIGRATION_VALIDATION_SUITE
   npm run migration:validation-suite -- --from-sqlite <sqlite-db-path> --snapshot-out <raw-snapshot-json-path> --report-out <sanitized-report-json-path> --summary-out <sanitized-summary-json-path> --database-url-env NNZ_POSTGRES_INTEGRATION_URL --confirm RUN_POSTGRES_SCOPED_MIGRATION_VALIDATION_SUITE
+  npm run migration:validation-suite -- --env-file .env.release --from-json <snapshot-or-wrapper-json-path> --snapshot-out <raw-snapshot-json-path> --report-out <sanitized-report-json-path> --summary-out <sanitized-summary-json-path> --database-url-env NNZ_POSTGRES_INTEGRATION_URL --confirm RUN_POSTGRES_SCOPED_MIGRATION_VALIDATION_SUITE
 
 Runs offline migration readiness, then a disposable Postgres migration smoke only if readiness is clean.
-This command refuses DATABASE_URL and NNZ_POSTGRES_URL, never prints database URLs, memory text, chat content, credential hashes, raw snapshot data, row payloads, or raw child command details.`;
+This command refuses DATABASE_URL and NNZ_POSTGRES_URL, never prints env file paths, database URLs, memory text, chat content, credential hashes, raw snapshot data, row payloads, or raw child command details.`;
 
 export interface MigrationValidationSuiteCliResult {
   exitCode: number;
@@ -36,6 +39,8 @@ export interface MigrationValidationSuiteCliDeps {
   env: Record<string, string | undefined>;
   runReadiness: (args: string[]) => MigrationReadinessCliResult;
   runSmoke: (args: string[]) => Promise<MigrationSmokeCliResult>;
+  cwd: string;
+  readTextFile(path: string): string;
 }
 
 type ParsedArgs = {
@@ -48,6 +53,7 @@ type ParsedArgs = {
   databaseUrlEnv?: string;
   confirm?: string;
   force: boolean;
+  envFile?: string;
   error?: string;
 };
 
@@ -55,6 +61,8 @@ const DEFAULT_DEPS: MigrationValidationSuiteCliDeps = {
   env: process.env,
   runReadiness: (args) => runMigrationReadinessCommand(args),
   runSmoke: (args) => runMigrationSmokeCommand(args),
+  cwd: process.cwd(),
+  readTextFile: (path) => readFileSync(path, 'utf8'),
 };
 
 export async function runMigrationValidationSuiteCommand(
@@ -69,26 +77,36 @@ export async function runMigrationValidationSuiteCommand(
     return { exitCode: 1, stdout: '', stderr: `${parsedArgs.error}\n\n${USAGE}\n` };
   }
 
-  const guardrailError = validateGuardrails(parsedArgs, deps.env);
+  const envFileResult = mergeReleaseEnvFile(deps.env, parsedArgs.envFile, deps);
+  if (envFileResult.error) {
+    return { exitCode: 1, stdout: '', stderr: `${envFileResult.error}\n\n${USAGE}\n` };
+  }
+
+  const guardrailError = validateGuardrails(parsedArgs, envFileResult.env);
   if (guardrailError) {
     return { exitCode: 1, stdout: '', stderr: `${guardrailError}\n\n${USAGE}\n` };
   }
 
-  const readinessResult = deps.runReadiness(buildReadinessArgs(parsedArgs));
-  if (readinessResult.exitCode !== 0) {
-    return failSuite('offline migration readiness');
-  }
+  const restoreProcessEnv = applyReleaseEnvToProcessEnv(envFileResult.env);
+  try {
+    const readinessResult = deps.runReadiness(buildReadinessArgs(parsedArgs));
+    if (readinessResult.exitCode !== 0) {
+      return failSuite('offline migration readiness');
+    }
 
-  const smokeResult = await deps.runSmoke(buildSmokeArgs(parsedArgs));
-  if (smokeResult.exitCode !== 0) {
-    return failSuite('disposable Postgres migration smoke');
-  }
+    const smokeResult = await deps.runSmoke(buildSmokeArgs(parsedArgs));
+    if (smokeResult.exitCode !== 0) {
+      return failSuite('disposable Postgres migration smoke');
+    }
 
-  return {
-    exitCode: 0,
-    stdout: formatSuiteSummary(parsedArgs),
-    stderr: '',
-  };
+    return {
+      exitCode: 0,
+      stdout: formatSuiteSummary(parsedArgs),
+      stderr: '',
+    };
+  } finally {
+    restoreProcessEnv();
+  }
 }
 
 function parseArgs(args: string[]): ParsedArgs {
@@ -99,6 +117,7 @@ function parseArgs(args: string[]): ParsedArgs {
   let summaryOut: string | undefined;
   let databaseUrlEnv: string | undefined;
   let confirm: string | undefined;
+  let envFile: string | undefined;
   let force = false;
 
   for (let index = 0; index < args.length; index += 1) {
@@ -112,6 +131,7 @@ function parseArgs(args: string[]): ParsedArgs {
         reportOut: '',
         summaryOut: '',
         force: false,
+        ...(envFile ? { envFile } : {}),
       };
     }
     if (arg === '--force') {
@@ -137,6 +157,7 @@ function parseArgs(args: string[]): ParsedArgs {
       || arg === '--summary-out'
       || arg === '--database-url-env'
       || arg === '--confirm'
+      || arg === '--env-file'
     ) {
       const value = args[index + 1];
       if (!value || value.startsWith('--')) {
@@ -147,6 +168,7 @@ function parseArgs(args: string[]): ParsedArgs {
       if (arg === '--summary-out') summaryOut = value;
       if (arg === '--database-url-env') databaseUrlEnv = value;
       if (arg === '--confirm') confirm = value;
+      if (arg === '--env-file') envFile = value;
       index += 1;
       continue;
     }
@@ -166,6 +188,7 @@ function parseArgs(args: string[]): ParsedArgs {
     reportOut,
     summaryOut,
     force,
+    ...(envFile ? { envFile } : {}),
     ...(databaseUrlEnv ? { databaseUrlEnv } : {}),
     ...(confirm ? { confirm } : {}),
   };

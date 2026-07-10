@@ -1274,17 +1274,17 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository、snapshot migration 工具链和当前前台发布收口已经推送到 Step 2.65。最新已推送提交是 `e5810ff docs: mark step 2.65 as pushed`；本地新增 Step 2.66 release env-file inputs：`release:preflight` 支持 `--env-file <path>`，`release:validation-suite` 支持 `--env-file <path>`、`--from-json-env <env-key>`、`--from-sqlite-env <env-key>`，可安全读取被 `.gitignore` 忽略的 `.env.release` 并从 env key 解析 snapshot/SQLite 输入路径；shell env 非空值优先，输出不打印 env 文件路径、snapshot 路径、DB URL、token 或 raw 子命令输出。本地 targeted tests、typecheck、234 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
+Step 2 scoped repository、snapshot migration 工具链、当前前台发布收口和 release env-file inputs 已推送到 Step 2.66。最新已推送提交是 `d374cb4 feat: load release validation inputs from env file`；本地新增 Step 2.67 focused release stage env-file：`migration:validation-suite`、`runtime:smoke-suite`、`ops:role-smoke` 三个 focused diagnosis 入口均支持 `--env-file <path>`，可复用同一个被 `.gitignore` 忽略的 `.env.release`，同时保留 disposable DB env guard、Ops 非破坏默认模式和 secret redaction。本地 focused tests、typecheck、237 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push。2026-07-10 已在 Render 配置 `NNZ_OPS_VIEWER_TOKEN` / `NNZ_OPS_OPERATOR_TOKEN` / `NNZ_OPS_ADMIN_TOKEN`，同值仅存 ignored `.env.release`，并通过非破坏性 `ops:role-smoke -- --env-file .env.release --base-url https://nnz-kego.onrender.com --confirm RUN_OPS_ROLE_TOKEN_SMOKE`。现在还剩 1 个总外部实跑入口未执行：
 
 协作约定：后续需要用户通过 GitHub Desktop / 终端 push 时，只提供 Summary，不再提供 Description:。每个版本变更或发版记录由 Codex 同步写入对应 Step 文档、CURRENT-STATE、roadmap、README / handoff，方便后续查阅。
 
-当前本地检查结论：Codex 进程、`launchctl` 和 shell profile 未发现 `NNZ_POSTGRES_INTEGRATION_URL`、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`、`NNZ_OPS_VIEWER_TOKEN`、`NNZ_OPS_OPERATOR_TOKEN`、`NNZ_OPS_ADMIN_TOKEN`；仓库 `.env` 仅含 LLM 配置与 `NNZ_DB_PATH`，且当前 `NNZ_DB_PATH` 指向的文件不存在。`npm run release:preflight -- --env-file .env --snapshot-env NNZ_DB_PATH --ops-base-url https://nnz-kego.onrender.com` 仍是 blocked，但没有打印秘密值。
+当前本地检查结论：ignored `.env.release` 已具备 `NNZ_OPS_VIEWER_TOKEN`、`NNZ_OPS_OPERATOR_TOKEN`、`NNZ_OPS_ADMIN_TOKEN`；`npm run release:preflight -- --env-file .env.release --ops-base-url https://nnz-kego.onrender.com` 显示 `opsRoleSmoke: ready`。完整 release 仍 blocked，因为缺本地 snapshot/SQLite 输入、`NNZ_POSTGRES_INTEGRATION_URL` 和 `NNZ_POSTGRES_SCOPED_RUNTIME_URL`；仓库 `.env` 仅含 LLM 配置与 `NNZ_DB_PATH`，且当前 `NNZ_DB_PATH` 指向的文件不存在。
 
-1. 注入真实本地 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Render role token env、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`；推荐放在被忽略的 `.env.release`。
+1. 注入真实本地 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`；推荐放在被忽略的 `.env.release`。Render role token env 已具备，不要把 token 值写入聊天或文档。
 2. 跑 `release:validation-suite -- --env-file .env.release --from-json-env NNZ_MIGRATION_SNAPSHOT_PATH --evidence-out <sanitized-release-evidence-json>`，或 SQLite 输入时用 `--from-sqlite-env NNZ_DB_PATH`。它会串 preflight、migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite，并写脱敏上线 evidence。
-3. 如果 suite 停在某个 stage，用对应单项命令做 focused diagnosis，修复后回到总 suite。
+3. 如果 suite 停在某个 stage，用对应单项命令做 focused diagnosis，修复后回到总 suite；Step 2.67 后单项命令也可带同一个 `--env-file .env.release`。
 
-当前不需要每个小步骤都停下来等 push；应按上面目标连续开发和验证。没有外部输入时，继续本地开发只做发布阻断级缺口或文档/交接纠偏，避免偏离 release validation 目标。遇到真实 snapshot、`NNZ_POSTGRES_INTEGRATION_URL`、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`、Render role tokens 这类外部输入点时再做明确 checkpoint。完整路线图见 `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`。
+当前不需要每个小步骤都停下来等 push；应按上面目标连续开发和验证。没有外部输入时，继续本地开发只做发布阻断级缺口或文档/交接纠偏，避免偏离 release validation 目标。遇到真实 snapshot、`NNZ_POSTGRES_INTEGRATION_URL`、`NNZ_POSTGRES_SCOPED_RUNTIME_URL` 这类外部输入点时再做明确 checkpoint。完整路线图见 `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`。
 
 ## 16.2 2026-06-11 Render Postgres 排查
 

@@ -59,7 +59,7 @@ passed
 
 ## 状态
 
-- Step 2.66 本地已完成，尚待下一次合并 push。
-- 最新已推送提交是 `e5810ff docs: mark step 2.65 as pushed`。
+- Step 2.66 已完成、验证并推送。
+- 推送提交是 `d374cb4 feat: load release validation inputs from env file`。
 - 本步骤没有绕过外部输入要求；它只让已经预留在本地 env 文件中的输入可以被 release CLI 安全读取。
 - 真正上线放行仍取决于外部输入齐备后的 `release:validation-suite -- --env-file <ignored-env-file> --from-json-env <snapshot-env>` 或 `--from-sqlite-env <sqlite-env>`。

@@ -184,6 +184,44 @@ describe('Postgres scoped migration validation suite CLI', () => {
     expect(result.stdout).not.toContain('disposable-secret');
   });
 
+  it('can load the disposable database env from an explicit env file', async () => {
+    const calls: string[] = [];
+    const smokeArgs: string[][] = [];
+
+    const result = await runMigrationValidationSuiteCommand(
+      [
+        '--env-file',
+        '.env.release',
+        '--from-json',
+        'snapshot.json',
+        '--snapshot-out',
+        'raw.json',
+        '--report-out',
+        'report.json',
+        '--summary-out',
+        'summary.json',
+        '--database-url-env',
+        'NNZ_POSTGRES_INTEGRATION_URL',
+        '--confirm',
+        'RUN_POSTGRES_SCOPED_MIGRATION_VALIDATION_SUITE',
+      ],
+      deps({
+        env: {},
+        calls,
+        smokeArgs,
+        files: {
+          '/repo/.env.release': 'NNZ_POSTGRES_INTEGRATION_URL=postgres://disposable-secret\n',
+        },
+      }),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(calls).toEqual(['readiness', 'smoke']);
+    expect(smokeArgs[0]).toContain('NNZ_POSTGRES_INTEGRATION_URL');
+    expect(result.stdout).not.toContain('.env.release');
+    expect(result.stdout).not.toContain('disposable-secret');
+  });
+
   it('stops before smoke when readiness reports blocking issues', async () => {
     const calls: string[] = [];
 
@@ -294,6 +332,7 @@ function deps(options: {
   smokeArgs?: string[][];
   readinessResult?: { exitCode: number; stdout: string; stderr: string };
   smokeResult?: { exitCode: number; stdout: string; stderr: string };
+  files?: Record<string, string>;
 }): MigrationValidationSuiteCliDeps {
   return {
     env: options.env,
@@ -306,6 +345,12 @@ function deps(options: {
       options.calls?.push('smoke');
       options.smokeArgs?.push(args);
       return options.smokeResult ?? { exitCode: 0, stdout: 'smoke ok', stderr: '' };
+    },
+    cwd: '/repo',
+    readTextFile: (path) => {
+      const text = options.files?.[path];
+      if (text === undefined) throw new Error('missing test file');
+      return text;
     },
   };
 }

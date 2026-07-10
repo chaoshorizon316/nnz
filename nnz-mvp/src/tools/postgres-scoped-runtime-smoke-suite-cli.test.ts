@@ -149,6 +149,37 @@ describe('Postgres scoped runtime smoke suite CLI', () => {
     expect(result.stdout).not.toContain('scoped-runtime-secret');
   });
 
+  it('can load the scoped runtime database env from an explicit env file', async () => {
+    const calls: string[] = [];
+    const directArgs: string[][] = [];
+
+    const result = await runScopedRuntimeSmokeSuiteCommand(
+      [
+        '--env-file',
+        '.env.release',
+        '--database-url-env',
+        'NNZ_POSTGRES_SCOPED_RUNTIME_URL',
+        '--confirm',
+        'RUN_POSTGRES_SCOPED_RUNTIME_SMOKE_SUITE',
+        '--skip-build',
+      ],
+      deps({
+        env: {},
+        calls,
+        directArgs,
+        files: {
+          '/repo/.env.release': 'NNZ_POSTGRES_SCOPED_RUNTIME_URL=postgres://runtime-secret\n',
+        },
+      }),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(calls).toEqual(['direct', 'http']);
+    expect(directArgs[0]).toContain('NNZ_POSTGRES_SCOPED_RUNTIME_URL');
+    expect(result.stdout).not.toContain('.env.release');
+    expect(result.stdout).not.toContain('runtime-secret');
+  });
+
   it('can skip build while still running both smoke stages', async () => {
     const calls: string[] = [];
 
@@ -287,6 +318,7 @@ function deps(options: {
   directResult?: { exitCode: number; stdout: string; stderr: string };
   httpResult?: { exitCode: number; stdout: string; stderr: string };
   buildError?: unknown;
+  files?: Record<string, string>;
 }): ScopedRuntimeSmokeSuiteCliDeps {
   return {
     env: options.env,
@@ -303,6 +335,12 @@ function deps(options: {
       options.calls?.push('http');
       options.httpArgs?.push(args);
       return options.httpResult ?? { exitCode: 0, stdout: 'http ok', stderr: '' };
+    },
+    cwd: '/repo',
+    readTextFile: (path) => {
+      const text = options.files?.[path];
+      if (text === undefined) throw new Error('missing test file');
+      return text;
     },
   };
 }

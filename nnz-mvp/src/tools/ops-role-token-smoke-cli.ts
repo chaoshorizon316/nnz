@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { mergeReleaseEnvFile } from './release-env-file';
 
 const DEFAULT_VIEWER_TOKEN_ENV = 'NNZ_OPS_VIEWER_TOKEN';
 const DEFAULT_OPERATOR_TOKEN_ENV = 'NNZ_OPS_OPERATOR_TOKEN';
@@ -10,11 +13,12 @@ const DELETE_CONFIRM = 'RUN_OPS_ROLE_TOKEN_DELETE_SMOKE';
 const USAGE = `Usage:
   npm run ops:role-smoke -- --base-url <https://service.example> --confirm RUN_OPS_ROLE_TOKEN_SMOKE
   npm run ops:role-smoke -- --base-url <https://service.example> --viewer-token-env NNZ_OPS_VIEWER_TOKEN --operator-token-env NNZ_OPS_OPERATOR_TOKEN --admin-token-env NNZ_OPS_ADMIN_TOKEN --confirm RUN_OPS_ROLE_TOKEN_SMOKE
+  npm run ops:role-smoke -- --env-file .env.release --base-url <https://service.example> --confirm RUN_OPS_ROLE_TOKEN_SMOKE
 
 Optional destructive admin cleanup check:
   npm run ops:role-smoke -- --base-url <https://service.example> --include-delete --delete-confirm RUN_OPS_ROLE_TOKEN_DELETE_SMOKE --confirm RUN_OPS_ROLE_TOKEN_SMOKE
 
-Verifies Soul Ops viewer/operator/admin token boundaries without printing token values, response payloads, user content, or raw network details.
+Verifies Soul Ops viewer/operator/admin token boundaries without printing env file paths, token values, response payloads, user content, or raw network details.
 Default mode is non-destructive: admin delete is only checked for missing confirmation.`;
 
 export interface OpsRoleSmokeCliResult {
@@ -26,6 +30,8 @@ export interface OpsRoleSmokeCliResult {
 export interface OpsRoleSmokeCliDeps {
   env: Record<string, string | undefined>;
   fetch: FetchLike;
+  cwd: string;
+  readTextFile(path: string): string;
 }
 
 export interface OpsRoleSmokeResult {
@@ -68,6 +74,7 @@ type ParsedArgs = {
   operatorTokenEnv: string;
   adminTokenEnv: string;
   confirm?: string;
+  envFile?: string;
   includeDelete: boolean;
   deleteConfirm?: string;
   error?: string;
@@ -81,6 +88,8 @@ interface HttpResponse<T> {
 const DEFAULT_DEPS: OpsRoleSmokeCliDeps = {
   env: process.env,
   fetch: fetch as FetchLike,
+  cwd: process.cwd(),
+  readTextFile: (path) => readFileSync(path, 'utf8'),
 };
 
 export async function runOpsRoleSmokeCommand(
@@ -95,7 +104,12 @@ export async function runOpsRoleSmokeCommand(
     return { exitCode: 1, stdout: '', stderr: `${parsedArgs.error}\n\n${USAGE}\n` };
   }
 
-  const guardrailError = validateGuardrails(parsedArgs, deps.env);
+  const envFileResult = mergeReleaseEnvFile(deps.env, parsedArgs.envFile, deps);
+  if (envFileResult.error) {
+    return { exitCode: 1, stdout: '', stderr: `${envFileResult.error}\n\n${USAGE}\n` };
+  }
+
+  const guardrailError = validateGuardrails(parsedArgs, envFileResult.env);
   if (guardrailError) {
     return { exitCode: 1, stdout: '', stderr: `${guardrailError}\n\n${USAGE}\n` };
   }
@@ -103,9 +117,9 @@ export async function runOpsRoleSmokeCommand(
   try {
     const result = await runOpsRoleSmoke({
       baseUrl: normalizeBaseUrl(parsedArgs.baseUrl!),
-      viewerToken: readRequiredEnv(deps.env, parsedArgs.viewerTokenEnv)!,
-      operatorToken: readRequiredEnv(deps.env, parsedArgs.operatorTokenEnv)!,
-      adminToken: readRequiredEnv(deps.env, parsedArgs.adminTokenEnv)!,
+      viewerToken: readRequiredEnv(envFileResult.env, parsedArgs.viewerTokenEnv)!,
+      operatorToken: readRequiredEnv(envFileResult.env, parsedArgs.operatorTokenEnv)!,
+      adminToken: readRequiredEnv(envFileResult.env, parsedArgs.adminTokenEnv)!,
       tokenEnvs: {
         viewer: parsedArgs.viewerTokenEnv,
         operator: parsedArgs.operatorTokenEnv,
@@ -259,13 +273,14 @@ function parseArgs(args: string[]): ParsedArgs {
   let operatorTokenEnv = DEFAULT_OPERATOR_TOKEN_ENV;
   let adminTokenEnv = DEFAULT_ADMIN_TOKEN_ENV;
   let confirm: string | undefined;
+  let envFile: string | undefined;
   let includeDelete = false;
   let deleteConfirm: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]!;
     if (arg === '--help' || arg === '-h') {
-      return { help: true, viewerTokenEnv, operatorTokenEnv, adminTokenEnv, includeDelete };
+      return { help: true, viewerTokenEnv, operatorTokenEnv, adminTokenEnv, includeDelete, ...(envFile ? { envFile } : {}) };
     }
     if (arg === '--include-delete') {
       includeDelete = true;
@@ -277,6 +292,7 @@ function parseArgs(args: string[]): ParsedArgs {
       || arg === '--operator-token-env'
       || arg === '--admin-token-env'
       || arg === '--confirm'
+      || arg === '--env-file'
       || arg === '--delete-confirm'
     ) {
       const value = args[index + 1];
@@ -288,6 +304,7 @@ function parseArgs(args: string[]): ParsedArgs {
       if (arg === '--operator-token-env') operatorTokenEnv = value;
       if (arg === '--admin-token-env') adminTokenEnv = value;
       if (arg === '--confirm') confirm = value;
+      if (arg === '--env-file') envFile = value;
       if (arg === '--delete-confirm') deleteConfirm = value;
       index += 1;
       continue;
@@ -301,6 +318,7 @@ function parseArgs(args: string[]): ParsedArgs {
     operatorTokenEnv,
     adminTokenEnv,
     includeDelete,
+    ...(envFile ? { envFile } : {}),
     ...(baseUrl ? { baseUrl } : {}),
     ...(confirm ? { confirm } : {}),
     ...(deleteConfirm ? { deleteConfirm } : {}),
