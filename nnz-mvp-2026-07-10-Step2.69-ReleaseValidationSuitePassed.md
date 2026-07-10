@@ -52,10 +52,10 @@ opsAuditEvents: 14
 
 ## 剩余风险
 
-Render 当前生产 Postgres `nnz-mvp-postgres` 仍是 Free 实例，Dashboard 显示会在 **2026-07-11** 过期并删除，除非升级到 paid instance type。release validation gate 已通过，但生产持久化需要立即升级或迁移，避免数据丢失。
+Render 当前 Postgres `nnz-mvp-postgres` 暂按免费调试环境处理，Dashboard 显示会在 **2026-07-11** 过期并删除。release validation gate 已通过，但该 Render 环境不作为正式生产持久化承诺。正式环境迁移/上线前需要另起方案评估，优先评估腾讯云部署与托管数据库方案，由用户评估后再执行。
 
 ## 状态
 
 - Step 2 release validation gate 已通过。
 - 后续不要再说缺 snapshot、一次性 Postgres URL、scoped runtime URL 或 Render role tokens。
-- 下一步优先级：处理 Render Free Postgres 过期风险，然后再进入真正的生产持久化升级/迁移决策。
+- 下一步优先级：保留 Render 调试定位；后续正式环境迁移前评估腾讯云方案，再由用户评估后执行。

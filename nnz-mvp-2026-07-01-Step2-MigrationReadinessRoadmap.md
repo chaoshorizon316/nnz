@@ -12,7 +12,7 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 
 截至 2026-07-10，`release:validation-suite` 已用真实 Render snapshot、隔离临时 Postgres database、Render viewer/operator/admin role tokens 和 scoped runtime 临时库完整通过：`releasePreflight`、`migrationValidationSuite`、`opsRoleSmoke`、`runtimeSmokeSuite` 均 passed，并写出脱敏 evidence。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、本地 `.env.example`、显式 `--env-file` / `--from-json-env` / `--from-sqlite-env` release 输入读取、以及单项 focused diagnosis 的 `--env-file` parity 都已完成实现并实跑通过。
 
-重要运行风险：Render 当前生产 Postgres `nnz-mvp-postgres` 仍是 Free 实例，Dashboard 显示会在 **2026-07-11** 过期并删除，除非升级到 paid instance type。release validation gate 已过，但生产持久化需要尽快升级/迁移，不能让 Free 数据库自动删除。
+环境定位更新：Render 当前仍按免费调试环境处理，Dashboard 显示 Postgres `nnz-mvp-postgres` 会在 **2026-07-11** 过期并删除。该环境不作为正式生产持久化承诺；release validation gate 已过。正式环境迁移/上线前需要另起云资源方案评估，优先评估腾讯云部署与托管数据库方案，由用户评估后再执行。
 
 ## 已完成基线
 
@@ -89,9 +89,10 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 
 ## 推荐推进顺序
 
-1. 立即处理 Render Free Postgres 过期风险：升级 `nnz-mvp-postgres` 或迁移到 paid/prod-safe Postgres，避免 2026-07-11 自动删除。
+1. 保留 Render 免费调试环境的定位，不把 `nnz-mvp-postgres` 当正式生产数据库。
 2. 保留 ignored `.env.release` 和 `release-artifacts` 到本轮验收完成；不要提交、截图或粘贴其中的 secret/raw snapshot。
-3. 如果后续代码再改变 migration/runtime/Ops 边界，复用同一套入口重跑 `release:validation-suite`。
+3. 后续正式环境迁移前，评估腾讯云方案：应用托管、PostgreSQL、对象存储/备份、域名/证书、日志监控、安全组与成本。
+4. 如果后续代码再改变 migration/runtime/Ops 边界，复用同一套入口重跑 `release:validation-suite`。
 
 ## 安全边界
 
@@ -117,10 +118,10 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 
 ## 当前可继续做的本地工作
 
-- release validation gate 已通过；当前本地工作只应围绕生产 DB 过期风险、上线文档、或后续必要的生产迁移/升级操作。
+- release validation gate 已通过；当前本地工作只应围绕上线文档、腾讯云正式环境方案评估、或后续必要的生产迁移/升级操作。
 - 当前不需要为了 Step 2.56-Step 2.68 再单独 push；本地 Step 2.69 release validation pass 文档可作为下一版合并 push。
 
 ## 当前需要用户或外部环境提供的东西
 
 - 不再缺 release validation 外部输入；snapshot、migration DB、runtime DB、role tokens 已在 ignored `.env.release` / `release-artifacts` 中准备并完成实跑。
-- 仍需要用户在 Render 处理生产 Postgres Free 实例 2026-07-11 过期问题。
+- Render Free Postgres 2026-07-11 过期按调试环境风险记录；正式环境后续优先评估腾讯云方案，由用户评估后再执行。

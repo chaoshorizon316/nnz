@@ -96,7 +96,7 @@ https://github.com/chaoshorizon316/nnz
 2026-07-10 Step 2.67: focused release stage env-file 本地已实现；`migration:validation-suite`、`runtime:smoke-suite`、`ops:role-smoke` 三个 focused diagnosis 入口均支持 `--env-file <path>`，可复用同一个被忽略的 `.env.release`，同时保留 disposable DB env guard、Ops 非破坏默认模式和 secret redaction；本地 focused tests、typecheck、237 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
 2026-07-10 Step 2.68: Render role-specific Ops tokens 已由 Codex 代填并保存到 Render Web Service env，同时同步到 ignored `.env.release`；非破坏性 `npm run ops:role-smoke -- --env-file .env.release --base-url https://nnz-kego.onrender.com --confirm RUN_OPS_ROLE_TOKEN_SMOKE` 通过，验证 missing/invalid token rejection、viewer read-only、operator dry-run、admin dry-run、admin delete confirmation boundary 和 audit query readable；token 值未打印、未提交、未写入文档
 2026-07-10 Step 2.69: release validation suite 已实跑通过；在用户授权后从 Render 当前 snapshot persistence 导出 raw StoreSnapshot 到 ignored `release-artifacts`，在现有 Render Postgres 实例内创建两个隔离临时 database 写入 ignored `.env.release`，随后运行 `npm run release:validation-suite -- --env-file .env.release --from-json-env NNZ_MIGRATION_SNAPSHOT_PATH ... --evidence-out ... --confirm RUN_NNZ_RELEASE_VALIDATION_SUITE`，`releasePreflight` / `migrationValidationSuite` / `opsRoleSmoke` / `runtimeSmokeSuite` 全部 passed；secret、DB URL、raw snapshot、用户内容未打印或写入文档
-2026-07-10 生产运行风险：Render 当前 Postgres `nnz-mvp-postgres` 是 Free 实例，Dashboard 显示会在 2026-07-11 过期并删除，除非升级到 paid instance type；release validation 已过，但必须尽快处理生产持久化过期风险
+2026-07-10 环境定位更新：Render 当前 Postgres `nnz-mvp-postgres` 是 Free 实例，Dashboard 显示会在 2026-07-11 过期并删除；用户已确认 Render 暂作为免费调试环境，不作为正式生产持久化承诺。release validation 已过；正式环境迁移/上线前后续优先评估腾讯云部署与托管数据库方案，由用户评估后执行
 ```
 
 当前代码基线相对远端：
