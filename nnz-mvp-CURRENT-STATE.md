@@ -95,19 +95,21 @@ https://github.com/chaoshorizon316/nnz
 2026-07-10 Step 2.66: release env-file inputs 已实现并推送；`release:preflight` 支持 `--env-file <path>`，`release:validation-suite` 支持 `--env-file <path>`、`--from-json-env <env-key>`、`--from-sqlite-env <env-key>`，可安全读取被 `.gitignore` 忽略的 `.env.release` 并从 env key 解析 snapshot/SQLite 输入路径；shell env 非空值优先，输出不打印 env 文件路径、snapshot 路径、DB URL、token 或 raw 子命令输出；当前 `.env` 实测仍 blocked：`NNZ_DB_PATH` 文件不存在且 release DB/tokens 缺失；本地 targeted tests、typecheck、234 tests + 2 skipped、build:demo、git diff --check 通过；推送为 `d374cb4 feat: load release validation inputs from env file`
 2026-07-10 Step 2.67: focused release stage env-file 本地已实现；`migration:validation-suite`、`runtime:smoke-suite`、`ops:role-smoke` 三个 focused diagnosis 入口均支持 `--env-file <path>`，可复用同一个被忽略的 `.env.release`，同时保留 disposable DB env guard、Ops 非破坏默认模式和 secret redaction；本地 focused tests、typecheck、237 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
 2026-07-10 Step 2.68: Render role-specific Ops tokens 已由 Codex 代填并保存到 Render Web Service env，同时同步到 ignored `.env.release`；非破坏性 `npm run ops:role-smoke -- --env-file .env.release --base-url https://nnz-kego.onrender.com --confirm RUN_OPS_ROLE_TOKEN_SMOKE` 通过，验证 missing/invalid token rejection、viewer read-only、operator dry-run、admin dry-run、admin delete confirmation boundary 和 audit query readable；token 值未打印、未提交、未写入文档
+2026-07-10 Step 2.69: release validation suite 已实跑通过；在用户授权后从 Render 当前 snapshot persistence 导出 raw StoreSnapshot 到 ignored `release-artifacts`，在现有 Render Postgres 实例内创建两个隔离临时 database 写入 ignored `.env.release`，随后运行 `npm run release:validation-suite -- --env-file .env.release --from-json-env NNZ_MIGRATION_SNAPSHOT_PATH ... --evidence-out ... --confirm RUN_NNZ_RELEASE_VALIDATION_SUITE`，`releasePreflight` / `migrationValidationSuite` / `opsRoleSmoke` / `runtimeSmokeSuite` 全部 passed；secret、DB URL、raw snapshot、用户内容未打印或写入文档
+2026-07-10 生产运行风险：Render 当前 Postgres `nnz-mvp-postgres` 是 Free 实例，Dashboard 显示会在 2026-07-11 过期并删除，除非升级到 paid instance type；release validation 已过，但必须尽快处理生产持久化过期风险
 ```
 
 当前代码基线相对远端：
 
 ```text
-main...origin/main @ d374cb4 feat: load release validation inputs from env file
-当前本地新增 Step 2.67 focused release stage env-file changes + Step 2.68 Render role smoke docs pending
+main...origin/main @ ae5312d feat: load focused release stages and verify render ops roles
+当前本地新增 Step 2.69 release validation pass docs pending
 ```
 
 最新已推送提交：
 
 ```text
-d374cb4 feat: load release validation inputs from env file
+ae5312d feat: load focused release stages and verify render ops roles
 ```
 
 协作约定：
@@ -190,6 +192,7 @@ nnz-mvp-2026-07-10-Step2.60-H5CovenantActionsDomRendering.md
 nnz-mvp-2026-07-10-Step2.61-H5LoadingBubbleDomRendering.md
 nnz-mvp-2026-07-10-Step2.62-H5PublicEventHandlerBinding.md
 nnz-mvp-2026-07-10-Step2.68-RenderRoleTokenCloudSmoke.md
+nnz-mvp-2026-07-10-Step2.69-ReleaseValidationSuitePassed.md
 nnz-mvp-2026-07-10-Step2.63-PublicPricingCtaFlowBinding.md
 nnz-mvp-2026-07-10-Step2.64-PublicPricingDependencySafeCopy.md
 ```
