@@ -156,6 +156,20 @@ describe('Postgres scoped Ops store', () => {
     expect(JSON.stringify(overview)).not.toContain('token-secret');
     expect(JSON.stringify(overview)).not.toContain('hash-');
   });
+
+  it('prunes scoped Postgres ops audit events with a max-event retention policy', async () => {
+    const pool = new FakeScopedOpsPool();
+    const store = createPostgresScopedOpsStoreFromPool(pool);
+
+    await store.recordOpsAuditEvent({ action: 'OVERVIEW_READ', outcome: 'SUCCESS', actor: 'ops:viewer' });
+    await store.recordOpsAuditEvent({ action: 'CLEANUP_DRY_RUN', outcome: 'SUCCESS', actor: 'ops:operator' });
+    await store.recordOpsAuditEvent({ action: 'AUDIT_QUERY', outcome: 'SUCCESS', actor: 'ops:admin' });
+
+    await store.pruneOpsAuditEvents({ maxEvents: 2 }, new Date('2026-07-10T00:00:00.000Z'));
+
+    const audit = await store.listOpsAuditEvents();
+    expect(audit.map((event) => event.action)).toEqual(['AUDIT_QUERY', 'CLEANUP_DRY_RUN']);
+  });
 });
 
 interface FakeUserRow {
@@ -410,7 +424,7 @@ class FakeScopedOpsPool implements QueryablePool {
     }],
   ]);
   readonly deletedUserIds: string[] = [];
-  private readonly auditRows: FakeAuditRow[] = [];
+  private auditRows: FakeAuditRow[] = [];
 
   async query<T = unknown>(sql: string, params: unknown[] = []): Promise<{ rows: T[] }> {
     const compactSql = sql.replace(/\s+/g, ' ').trim();
@@ -462,6 +476,21 @@ class FakeScopedOpsPool implements QueryablePool {
       const userId = String(params[0]);
       this.deletedUserIds.push(userId);
       this.users = this.users.filter((user) => user.id !== userId);
+      return rows([]);
+    }
+    if (compactSql === 'DELETE FROM nnz_ops_audit_events WHERE created_at < $1') {
+      const cutoff = new Date(String(params[0]));
+      this.auditRows = this.auditRows.filter((row) => row.created_at >= cutoff);
+      return rows([]);
+    }
+    if (compactSql.startsWith('DELETE FROM nnz_ops_audit_events WHERE id IN')) {
+      const keep = Number(params[0]);
+      const sorted = [...this.auditRows].sort((left, right) => {
+        const byDate = right.created_at.getTime() - left.created_at.getTime();
+        return byDate || right.id.localeCompare(left.id);
+      });
+      const staleIds = new Set(sorted.slice(keep).map((row) => row.id));
+      this.auditRows = this.auditRows.filter((row) => !staleIds.has(row.id));
       return rows([]);
     }
     if (compactSql.startsWith('INSERT INTO nnz_ops_audit_events')) {

@@ -30,6 +30,7 @@ import type {
   UserPersonaScope,
 } from './types';
 import type { CredentialRecord } from '../auth/auth';
+import { applyOpsAuditRetention, type OpsAuditRetentionPolicy } from './ops-audit-retention';
 
 type OptionalScope = Partial<UserPersonaScope> | undefined;
 
@@ -542,6 +543,17 @@ export class InMemorySoulStore {
       )
       .map(({ event }) => event);
     return limit === undefined ? events : events.slice(0, limit);
+  }
+
+  pruneOpsAuditEvents(policy: OpsAuditRetentionPolicy, now = new Date()): { removed: number; retained: number } {
+    const result = applyOpsAuditRetention([...this.opsAuditEvents.values()], policy, now);
+    for (const event of result.removed) {
+      this.opsAuditEvents.delete(event.id);
+    }
+    return {
+      removed: result.removed.length,
+      retained: this.opsAuditEvents.size,
+    };
   }
 
   // ── Persistence helpers ──

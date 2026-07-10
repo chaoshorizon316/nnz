@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { CredentialRecord } from '../auth/auth';
+import { hasOpsAuditRetentionPolicy, type OpsAuditRetentionPolicy } from '../domain/ops-audit-retention';
 import type { QueryablePool } from '../domain/postgres-scoped-soul-repository';
 import { InMemorySoulStore } from '../domain/soul-store';
 import type {
@@ -169,6 +170,7 @@ export interface PostgresScopedOpsStore {
   buildTestUserCleanupPlan(): Promise<OpsCleanupPlan>;
   cleanupTestUsers(dryRun?: boolean): Promise<OpsCleanupResult>;
   recordOpsAuditEvent(input: RecordOpsAuditEventInput): Promise<OpsAuditEvent>;
+  pruneOpsAuditEvents(policy: OpsAuditRetentionPolicy, now?: Date): Promise<void>;
   listOpsAuditEvents(limit?: number): Promise<OpsAuditEvent[]>;
   queryOpsAuditEvents(query?: OpsAuditQuery): Promise<OpsAuditQueryResult>;
   getAuditOverview(limit?: number): Promise<OpsAuditOverview>;
@@ -180,6 +182,7 @@ export function createPostgresScopedOpsStoreFromPool(pool: QueryablePool): Postg
     buildTestUserCleanupPlan: () => buildPostgresScopedTestUserCleanupPlan(pool),
     cleanupTestUsers: (dryRun = true) => cleanupPostgresScopedTestUsers(pool, dryRun),
     recordOpsAuditEvent: (input) => recordPostgresScopedOpsAuditEvent(pool, input),
+    pruneOpsAuditEvents: (policy, now) => prunePostgresScopedOpsAuditEvents(pool, policy, now),
     listOpsAuditEvents: (limit) => listPostgresScopedOpsAuditEvents(pool, limit),
     queryOpsAuditEvents: (query = {}) => queryPostgresScopedOpsAuditEvents(pool, query),
     getAuditOverview: (limit = 20) => getPostgresScopedAuditOverview(pool, limit),
@@ -349,6 +352,34 @@ async function recordPostgresScopedOpsAuditEvent(
     ],
   );
   return event;
+}
+
+async function prunePostgresScopedOpsAuditEvents(
+  pool: QueryablePool,
+  policy: OpsAuditRetentionPolicy,
+  now = new Date(),
+): Promise<void> {
+  if (!hasOpsAuditRetentionPolicy(policy)) return;
+
+  if (policy.retentionDays !== undefined) {
+    const cutoff = new Date(now.getTime() - policy.retentionDays * 24 * 60 * 60 * 1000);
+    await pool.query('DELETE FROM nnz_ops_audit_events WHERE created_at < $1', [cutoff]);
+  }
+
+  if (policy.maxEvents !== undefined) {
+    await pool.query(
+      `DELETE FROM nnz_ops_audit_events
+       WHERE id IN (
+         SELECT id FROM (
+           SELECT id
+           FROM nnz_ops_audit_events
+           ORDER BY created_at DESC, id DESC
+           OFFSET $1
+         ) stale_ops_audit_events
+       )`,
+      [policy.maxEvents],
+    );
+  }
 }
 
 async function listPostgresScopedOpsAuditEvents(

@@ -33,6 +33,23 @@ describe('demo server user onboarding consent', () => {
     expect(allowlistFunction).toContain("error: 'Soul Ops 当前访问来源未被允许。'");
   });
 
+  it('applies the configured Ops audit retention policy after audit writes', () => {
+    expect(source).toContain('parseOpsAuditRetentionPolicy(process.env)');
+
+    const recordStart = source.indexOf('async function recordOpsAudit');
+    expect(recordStart).toBeGreaterThanOrEqual(0);
+    const recordEnd = source.indexOf('function getScopedOpsStore', recordStart);
+    const recordFunction = source.slice(recordStart, recordEnd);
+
+    expect(recordFunction).toContain('await scopedOps.recordOpsAuditEvent(event)');
+    expect(recordFunction).toContain('await scopedOps.pruneOpsAuditEvents(OPS_AUDIT_RETENTION_POLICY)');
+    expect(recordFunction).toContain('fixture.store.recordOpsAuditEvent(event)');
+    expect(recordFunction).toContain('fixture.store.pruneOpsAuditEvents(OPS_AUDIT_RETENTION_POLICY)');
+    expect(recordFunction.indexOf('recordOpsAuditEvent(event)')).toBeLessThan(
+      recordFunction.indexOf('pruneOpsAuditEvents(OPS_AUDIT_RETENTION_POLICY)'),
+    );
+  });
+
   it('requires consent before creating a user persona through /api/me/persona', () => {
     const routeStart = source.indexOf("url.pathname === '/api/me/persona'");
     expect(routeStart).toBeGreaterThanOrEqual(0);

@@ -11,6 +11,7 @@ import { createExtractionOrchestrator } from './extraction/orchestrator';
 import { loadStore, saveStore } from './domain/persistence';
 import { createPostgresPersistence, type PostgresPersistence } from './domain/postgres-persistence';
 import { CovenantStateError, NotFoundError, OwnershipError } from './domain/errors';
+import { parseOpsAuditRetentionPolicy } from './domain/ops-audit-retention';
 import { InMemorySoulStore } from './domain/soul-store';
 import type {
   ConversationMessage,
@@ -84,6 +85,7 @@ const OPS_TOKEN_ENTRIES = buildOpsTokenEntries({
   adminToken: readNonEmptyEnv('NNZ_OPS_ADMIN_TOKEN'),
 });
 const OPS_IP_ALLOWLIST = parseOpsIpAllowlist(readNonEmptyEnv('NNZ_OPS_ALLOWED_IPS'));
+const OPS_AUDIT_RETENTION_POLICY = parseOpsAuditRetentionPolicy(process.env);
 let postgresPersistence: PostgresPersistence | undefined;
 let scopedRuntimePersistence: ScopedRuntimePersistence | undefined;
 let persistenceMode: 'memory' | 'sqlite' | 'postgres' | 'scoped-postgres' = 'memory';
@@ -648,8 +650,13 @@ async function recordOpsAudit(
     },
   };
   const scopedOps = getScopedOpsStore();
-  if (scopedOps) await scopedOps.recordOpsAuditEvent(event);
-  else fixture.store.recordOpsAuditEvent(event);
+  if (scopedOps) {
+    await scopedOps.recordOpsAuditEvent(event);
+    await scopedOps.pruneOpsAuditEvents(OPS_AUDIT_RETENTION_POLICY);
+  } else {
+    fixture.store.recordOpsAuditEvent(event);
+    fixture.store.pruneOpsAuditEvents(OPS_AUDIT_RETENTION_POLICY);
+  }
   await persistIfEnabled();
 }
 

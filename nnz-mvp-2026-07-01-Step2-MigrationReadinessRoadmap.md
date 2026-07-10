@@ -2,15 +2,15 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository、snapshot migration 工具链、当前前台发布收口、release env-file inputs、focused release stage env-file、Render role-specific Ops tokens 和真实 release validation suite 都已完成。Step 2.69 文档收口与 Render 调试环境定位已推送；当前本轮 Step 2.70 前的远端基线是：
+Step 2 的 scoped repository、snapshot migration 工具链、当前前台发布收口、release env-file inputs、focused release stage env-file、Render role-specific Ops tokens 和真实 release validation suite 都已完成。Step 2.70 Soul Ops optional IP allowlist hardening 已推送；当前本轮 Step 2.71 前的远端基线是：
 
 ```text
-2cbe5b1 docs: record render debug stance and future tencent cloud plan
+c4db306 Summary: feat: add soul ops IP allowlist hardening
 ```
 
 Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 conversation DOM rendering 已完成验证并推送，Step 2.58 marketing chat DOM rendering 已完成验证并推送，Step 2.59 H5 onboarding choices DOM rendering 已完成验证并推送，Step 2.60 H5 Covenant actions DOM rendering 已完成验证并推送，Step 2.61 H5 loading bubble DOM rendering 已完成验证并推送，Step 2.62 H5/public inline event handler binding 已完成验证并推送，Step 2.63 public pricing CTA flow binding 已完成验证并推送，Step 2.64 public pricing dependency-safe copy 已实现并推送，Step 2.65 public footer compliance links 已实现并推送，Step 2.66 release env-file inputs 已实现并推送，Step 2.67 focused release stage env-file 与 Step 2.68 Render role token cloud smoke 已合并推送。后续不要再卡在“等待推送 Step 2.56 / Step 2.60 / Step 2.61 / Step 2.62 / Step 2.63 / Step 2.64 / Step 2.65 / Step 2.66 / Step 2.67 / Step 2.68”。
 
-截至 2026-07-10，`release:validation-suite` 已用真实 Render snapshot、隔离临时 Postgres database、Render viewer/operator/admin role tokens 和 scoped runtime 临时库完整通过：`releasePreflight`、`migrationValidationSuite`、`opsRoleSmoke`、`runtimeSmokeSuite` 均 passed，并写出脱敏 evidence。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、本地 `.env.example`、显式 `--env-file` / `--from-json-env` / `--from-sqlite-env` release 输入读取、单项 focused diagnosis 的 `--env-file` parity、以及 Step 2.70 Soul Ops optional IP allowlist hardening 都已完成本地实现。
+截至 2026-07-10，`release:validation-suite` 已用真实 Render snapshot、隔离临时 Postgres database、Render viewer/operator/admin role tokens 和 scoped runtime 临时库完整通过：`releasePreflight`、`migrationValidationSuite`、`opsRoleSmoke`、`runtimeSmokeSuite` 均 passed，并写出脱敏 evidence。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、本地 `.env.example`、显式 `--env-file` / `--from-json-env` / `--from-sqlite-env` release 输入读取、单项 focused diagnosis 的 `--env-file` parity、Step 2.70 Soul Ops optional IP allowlist hardening、以及 Step 2.71 optional Ops audit retention 都已完成本地实现。
 
 环境定位更新：Render 当前仍按免费调试环境处理，Dashboard 显示 Postgres `nnz-mvp-postgres` 会在 **2026-07-11** 过期并删除。该环境不作为正式生产持久化承诺；release validation gate 已过。正式环境迁移/上线前需要另起云资源方案评估，优先评估腾讯云部署与托管数据库方案，由用户评估后再执行。
 
@@ -78,6 +78,7 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 - Step 2.66：release env-file inputs 已实现并推送；`release:preflight` 可显式 `--env-file`，`release:validation-suite` 可显式 `--env-file` 并通过 `--from-json-env` / `--from-sqlite-env` 从 env key 解析输入路径，输出仍不打印 env 文件路径、snapshot 路径、DB URL、token 或 raw 子命令输出。
 - Step 2.67：focused release stage env-file 本地已实现；`migration:validation-suite`、`runtime:smoke-suite`、`ops:role-smoke` 三个 focused diagnosis 入口均支持 `--env-file`，方便总 suite 失败后复用同一份 ignored env 文件继续定位。
 - Step 2.70：Soul Ops optional IP allowlist hardening 本地已实现；新增 `NNZ_OPS_ALLOWED_IPS`，为空时保持本地/调试行为，设置后先于 token 检查保护 `/ops` 和 `/api/ops/*`，支持逗号分隔精确 IP 与 IPv4 CIDR，代理环境读取第一段 `x-forwarded-for`，拒绝审计不写 raw IP。
+- Step 2.71：optional Ops audit retention 本地已实现；新增 `NNZ_OPS_AUDIT_RETENTION_DAYS` / `NNZ_OPS_AUDIT_MAX_EVENTS`，为空时保留所有调试审计事件，设置后在每次 Ops audit write 后裁剪 snapshot/SQLite 与 scoped Postgres Ops 路径，不打印审计 payload、用户内容、token、DB URL 或来源 IP。
 
 ## 剩余目标状态
 
@@ -92,7 +93,7 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 
 1. 保留 Render 免费调试环境的定位，不把 `nnz-mvp-postgres` 当正式生产数据库。
 2. 保留 ignored `.env.release` 和 `release-artifacts` 到本轮验收完成；不要提交、截图或粘贴其中的 secret/raw snapshot。
-3. 继续补 Ops 生产化护栏：session/短期登录策略、审计保留策略、正式云 perimeter；Step 2.70 已先补 IP allowlist。
+3. 继续补 Ops 生产化护栏：session/短期登录策略、正式云 perimeter；Step 2.70 已补 IP allowlist，Step 2.71 已补 audit retention。
 4. 后续正式环境迁移前，评估腾讯云方案：应用托管、PostgreSQL、对象存储/备份、域名/证书、日志监控、安全组与成本。
 5. 如果后续代码再改变 migration/runtime/Ops 边界，复用同一套入口重跑 `release:validation-suite`。
 
@@ -113,6 +114,7 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 - `runtime:smoke-suite` 是目标 4 的推荐入口；真正连接数据库前必须传 `--database-url-env NNZ_POSTGRES_SCOPED_RUNTIME_URL` 和 `--confirm RUN_POSTGRES_SCOPED_RUNTIME_SMOKE_SUITE`；它串行运行 direct smoke、`build:demo` 和 HTTP smoke，失败时不打印 child process output 或 raw details。
 - `ops:role-smoke` 是目标 3 的推荐入口；默认只做非破坏性边界验证，必须传 `--base-url` 与 `--confirm RUN_OPS_ROLE_TOKEN_SMOKE`，并从本地 shell 或 ignored env file 读取 `NNZ_OPS_VIEWER_TOKEN` / `NNZ_OPS_OPERATOR_TOKEN` / `NNZ_OPS_ADMIN_TOKEN`。2026-07-10 已用 Render + `.env.release` 通过默认非破坏性 smoke。确认删除 smoke 还必须额外传 `--include-delete --delete-confirm RUN_OPS_ROLE_TOKEN_DELETE_SMOKE`。stdout/stderr 不打印 token 值、response payload、用户内容、cleanup receipt、server log 或 raw network details。
 - `NNZ_OPS_ALLOWED_IPS` 为空时不启用 IP allowlist；设置后必须是逗号分隔的精确 IP 或 IPv4 CIDR。该护栏先于 Ops token 检查保护 `/ops` 与 `/api/ops/*`，代理环境读取第一段 `x-forwarded-for`，access-denied audit metadata 不写 raw IP。
+- `NNZ_OPS_AUDIT_RETENTION_DAYS` / `NNZ_OPS_AUDIT_MAX_EVENTS` 为空时不裁剪 Ops audit；设置后必须是正整数。裁剪在 audit write 之后执行，支持 snapshot/SQLite 与 scoped Postgres Ops 路径，不输出 audit payload、用户内容、token、DB URL 或来源 IP。
 - `release:preflight` 是三类外部实跑前的本地检查入口；它只检查文件存在性和 env key 设置/别名冲突，不读取 snapshot 内容、不连接数据库、不发送网络请求，也不打印 snapshot 路径、数据库 URL、token 值、用户内容、cleanup receipt、server log 或 raw network details。
 - `release:validation-suite` 是推荐总入口；必须传 `--confirm RUN_NNZ_RELEASE_VALIDATION_SUITE`，默认不执行 confirmed Ops cleanup deletion。它不打印数据库 URL、token 值、snapshot 内容、用户内容、cleanup receipt、child command output、server log、raw error details 或 evidence output path。
 - `release:validation-suite -- --evidence-out <path>` 只写脱敏 evidence JSON：stage status、env key 名、本地产物类别、redaction 说明；不能写 snapshot input/output 路径、DB URL、token 值、用户内容、子命令输出、server log 或 raw error detail。
@@ -122,7 +124,7 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 ## 当前可继续做的本地工作
 
 - release validation gate 已通过；当前本地工作只应围绕上线文档、Ops 生产化护栏、腾讯云正式环境方案评估、或后续必要的生产迁移/升级操作。
-- 当前不需要为了 Step 2.56-Step 2.69 再单独 push；本地 Step 2.70 Ops IP allowlist hardening 可作为下一版合并 push。
+- 当前不需要为了 Step 2.56-Step 2.70 再单独 push；本地 Step 2.71 Ops audit retention 可作为下一版合并 push。
 
 ## 当前需要用户或外部环境提供的东西
 
