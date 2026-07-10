@@ -1274,13 +1274,15 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链本地已经完成到 Step 2.65。最新已推送提交是 `92440b0 fix: soften public pricing dependency copy`；当前本地新增 Step 2.65 public footer compliance links：公开页页脚“用户协议 / 隐私政策 / 伦理承诺”不再是 `href="#"` 空链接，新增同页 `#terms` / `#privacy` / `#ethics` 合规摘要区，强调暂停、导出、删除数据和不以高频使用奖励推动停留；H5 静态测试新增空链接和 hash target 完整性防回归。本地 h5 targeted test、typecheck、232 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
+Step 2 scoped repository、snapshot migration 工具链和当前前台发布收口已经完成到 Step 2.65。最新已推送提交是 `d68a15c fix: link public footer compliance sections`；Step 2.65 public footer compliance links 已推送：公开页页脚“用户协议 / 隐私政策 / 伦理承诺”不再是 `href="#"` 空链接，新增同页 `#terms` / `#privacy` / `#ethics` 合规摘要区，强调暂停、导出、删除数据和不以高频使用奖励推动停留；H5 静态测试新增空链接和 hash target 完整性防回归。本地 h5 targeted test、typecheck、232 tests + 2 skipped、build:demo、git diff --check 通过。现在还剩 1 个总外部实跑入口未执行：
+
+协作约定：后续需要用户通过 GitHub Desktop / 终端 push 时，只提供 Summary，不再提供 Description:。每个版本变更或发版记录由 Codex 同步写入对应 Step 文档、CURRENT-STATE、roadmap、README / handoff，方便后续查阅。
 
 1. 注入真实本地 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Render role token env、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`。
 2. 跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`，它会串 preflight、migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite，并写脱敏上线 evidence。
 3. 如果 suite 停在某个 stage，用对应单项命令做 focused diagnosis，修复后回到总 suite。
 
-当前不需要每个小步骤都停下来等 push；应按上面目标连续开发和验证。遇到真实 snapshot、`NNZ_POSTGRES_INTEGRATION_URL`、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`、Render role tokens 这类外部输入点时再做明确 checkpoint。完整路线图见 `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`。
+当前不需要每个小步骤都停下来等 push；应按上面目标连续开发和验证。没有外部输入时，继续本地开发只做发布阻断级缺口或文档/交接纠偏，避免偏离 release validation 目标。遇到真实 snapshot、`NNZ_POSTGRES_INTEGRATION_URL`、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`、Render role tokens 这类外部输入点时再做明确 checkpoint。完整路线图见 `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`。
 
 ## 16.2 2026-06-11 Render Postgres 排查
 

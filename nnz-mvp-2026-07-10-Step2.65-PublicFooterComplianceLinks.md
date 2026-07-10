@@ -44,6 +44,6 @@ only matches are inside guard arrays
 
 ## 状态
 
-- Step 2.65 本地已完成，尚待下一次合并 push。
-- 最新已推送提交是 `92440b0 fix: soften public pricing dependency copy`。
+- Step 2.65 已完成、验证并推送。
+- 推送提交是 `d68a15c fix: link public footer compliance sections`。
 - 本地可控的前台收口预计只剩 0-1 个小检查版本；真正上线放行仍取决于外部输入齐备后的 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。
