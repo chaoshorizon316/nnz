@@ -2396,10 +2396,7 @@ function sendChat() {
 
   if (userContent) {
     // Add user message
-    const userMsg = document.createElement('div');
-    userMsg.className = 'flex gap-3 justify-end';
-    userMsg.innerHTML = '<div class="max-w-[80%]"><div class="bg-warm-50 rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm border border-warm-200"><p class="text-sm text-warm-700 leading-relaxed whitespace-pre-line">' + escapeHtml(userContent) + '</p></div></div>';
-    container.appendChild(userMsg);
+    container.appendChild(createMarketingChatBubble('USER', userContent));
   }
 
   // Clear inputs
@@ -2412,11 +2409,9 @@ function sendChat() {
 
   // Simulate response
   setTimeout(() => {
-    const respMsg = document.createElement('div');
-    respMsg.className = 'flex gap-3';
     let responseText = '';
     if (descVal && roleVal) {
-      responseText = '收到你关于「' + escapeHtml(roleVal) + '」的描述。这些细节非常珍贵——' + (descVal.length > 30 ? '你描述得很用心，' : '') + '这些会成为记忆伙伴的核心种子。如果在微信中添加好友后，你可以上传聊天记录进一步丰富细节。还有其他想了解的吗？';
+      responseText = '收到你关于「' + roleVal + '」的描述。这些细节非常珍贵——' + (descVal.length > 30 ? '你描述得很用心，' : '') + '这些会成为记忆伙伴的核心种子。如果在微信中添加好友后，你可以上传聊天记录进一步丰富细节。还有其他想了解的吗？';
     } else if (descVal) {
       responseText = '谢谢你用心写下这段描述，这对塑造记忆伙伴非常重要。你可以再告诉我这个角色的称呼（比如"爸爸"、"妈妈"），这样我能更好地为你服务。';
     } else if (msg.includes('?') || msg.includes('？')) {
@@ -2424,8 +2419,7 @@ function sendChat() {
     } else {
       responseText = '收到你的消息。无论你是想了解更多产品细节、咨询定价，还是已经准备好开始创建——我都在这里。你可以随时告诉我你想为谁创建、用一段话描述他/她的样子。';
     }
-    respMsg.innerHTML = '<div class="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg></div><div class="max-w-[80%]"><div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100"><p class="text-sm text-warm-700 leading-relaxed">' + responseText + '</p></div></div>';
-    container.appendChild(respMsg);
+    container.appendChild(createMarketingChatBubble('ASSISTANT', responseText));
     container.scrollTop = container.scrollHeight;
   }, 600 + Math.random() * 800);
 
@@ -2433,10 +2427,34 @@ function sendChat() {
   container.scrollTop = container.scrollHeight;
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+function createMarketingChatBubble(role, content) {
+  const isUser = role === 'USER';
+  const wrapper = document.createElement('div');
+  wrapper.className = isUser ? 'flex gap-3 justify-end' : 'flex gap-3';
+
+  if (!isUser) {
+    const avatar = document.createElement('div');
+    avatar.className = 'w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center flex-shrink-0 text-sage-500 text-xs font-medium';
+    avatar.textContent = '念';
+    wrapper.appendChild(avatar);
+  }
+
+  const width = document.createElement('div');
+  width.className = 'max-w-[80%]';
+
+  const bubble = document.createElement('div');
+  bubble.className = isUser
+    ? 'bg-warm-50 rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm border border-warm-200'
+    : 'bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-warm-100';
+
+  const text = document.createElement('p');
+  text.className = 'text-sm text-warm-700 leading-relaxed whitespace-pre-line';
+  text.textContent = String(content || '');
+
+  bubble.appendChild(text);
+  width.appendChild(bubble);
+  wrapper.appendChild(width);
+  return wrapper;
 }
 </script>
 

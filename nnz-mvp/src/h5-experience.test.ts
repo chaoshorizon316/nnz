@@ -258,6 +258,20 @@ describe('H5 experience lifecycle controls', () => {
     expect(createBubble).not.toContain('escapeHtml(content)');
   });
 
+  it('renders marketing consultation chat with DOM text APIs', () => {
+    const sendChat = functionBody('sendChat', false);
+    const createMarketingChatBubble = functionBody('createMarketingChatBubble', false);
+
+    expect(sendChat).toContain("container.appendChild(createMarketingChatBubble('USER', userContent));");
+    expect(sendChat).toContain("container.appendChild(createMarketingChatBubble('ASSISTANT', responseText));");
+    expect(sendChat).not.toContain('userMsg.innerHTML');
+    expect(sendChat).not.toContain('respMsg.innerHTML');
+    expect(sendChat).not.toContain('escapeHtml(roleVal)');
+    expect(createMarketingChatBubble).toContain("document.createElement('p')");
+    expect(createMarketingChatBubble).toContain("text.textContent = String(content || '');");
+    expect(html).not.toContain('function escapeHtml');
+  });
+
   it('does not fall back to displaying raw lifecycle state names', () => {
     expect(html).toContain("badge.textContent = labels[state] || '状态更新中';");
     expect(html).not.toContain('badge.textContent = labels[state] || state;');

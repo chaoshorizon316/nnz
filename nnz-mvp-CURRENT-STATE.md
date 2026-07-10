@@ -82,20 +82,21 @@ https://github.com/chaoshorizon316/nnz
 2026-07-09 Step 2.55: H5 Covenant unified request handling 已实现并推送；`h5RefreshCovenantState()` 和 `h5CovenantAction()` 不再手写 fetch/res.json，统一复用 `h5Request()`，使封存、开启特别时刻、完成特别时刻和状态刷新同样获得非 JSON 响应兜底与 `h5SafeErrorMessage()` 机制词过滤；推送为 `e251fd3 fix: unify h5 covenant request handling`
 2026-07-09 Step 2.56: H5 request string error guard 已实现并推送；`h5Request()` 仅允许非空字符串 `data.error` 进入 `Error`，对象、数组、空值等异常 error payload 统一回退为“请求失败。”，避免 `[object Object]` 或非用户语言进入 H5 可见错误；本地 h5 targeted test、typecheck、225 tests + 2 skipped、build:demo 通过；推送为 `909783d fix: guard h5 request error payloads`
 2026-07-09 Step 2.56 文档收口已推送；交接文档、roadmap 和 README 已把 Step 2.56 从“待 push”纠偏为“已推送”，避免后续进程继续卡在旧状态；推送为 `63de393 docs: mark step 2.56 as pushed`
-2026-07-09 Step 2.57: H5 conversation DOM rendering 本地已实现；`h5RenderConversation()` / `h5AppendBubble()` 不再用 HTML 字符串拼接聊天气泡，改为 `h5CreateBubble()` + DOM `textContent` 渲染用户输入和助手回复，降低 H5 对话区用户内容注入风险；本地 h5 targeted test、typecheck、226 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push
+2026-07-09 Step 2.57: H5 conversation DOM rendering 已实现并推送；`h5RenderConversation()` / `h5AppendBubble()` 不再用 HTML 字符串拼接聊天气泡，改为 `h5CreateBubble()` + DOM `textContent` 渲染用户输入和助手回复，降低 H5 对话区用户内容注入风险；本地 h5 targeted test、typecheck、226 tests + 2 skipped、build:demo、git diff --check 通过；推送为 `3e7861e fix: render h5 conversation bubbles with DOM text APIs`
+2026-07-09 Step 2.58: marketing chat DOM rendering 本地已实现；官网首页在线咨询模拟聊天不再用 `innerHTML` 拼接用户输入和模拟回复，改为 `createMarketingChatBubble()` + DOM `textContent` 渲染，并删除不再需要的 `escapeHtml()` helper；本地 h5 targeted test、typecheck、227 tests + 2 skipped、build:demo 通过，尚待下一次合并 push
 ```
 
 当前代码基线相对远端：
 
 ```text
-main...origin/main @ 63de393 docs: mark step 2.56 as pushed
-当前本地新增 Step 2.57 H5 conversation DOM rendering changes pending
+main...origin/main @ 3e7861e fix: render h5 conversation bubbles with DOM text APIs
+当前本地新增 Step 2.58 marketing chat DOM rendering changes pending
 ```
 
 最新已推送提交：
 
 ```text
-63de393 docs: mark step 2.56 as pushed
+3e7861e fix: render h5 conversation bubbles with DOM text APIs
 ```
 
 最新云端 Soul Ops 记录：
@@ -165,6 +166,7 @@ nnz-mvp-2026-07-09-Step2.54-H5GuestModeUnifiedRequest.md
 nnz-mvp-2026-07-09-Step2.55-H5CovenantUnifiedRequest.md
 nnz-mvp-2026-07-09-Step2.56-H5RequestStringErrorGuard.md
 nnz-mvp-2026-07-09-Step2.57-H5ConversationDomRendering.md
+nnz-mvp-2026-07-09-Step2.58-MarketingChatDomRendering.md
 ```
 
 ## 2026-06-22 工作区注意
