@@ -2,13 +2,13 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.62。最新已推送提交是：
+Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.63。最新已推送提交是：
 
 ```text
-4e00c24 fix: render h5 loading bubble with DOM text APIs
+18641cd fix: bind public page interactions without inline handlers
 ```
 
-Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 conversation DOM rendering 已完成验证并推送，Step 2.58 marketing chat DOM rendering 已完成验证并推送，Step 2.59 H5 onboarding choices DOM rendering 已完成验证并推送，Step 2.60 H5 Covenant actions DOM rendering 已完成验证并推送，Step 2.61 H5 loading bubble DOM rendering 已完成验证并推送，Step 2.62 H5/public inline event handler binding 本地已完成；它们都不改变本路线图的外部 release validation 剩余入口。后续不要再卡在“等待推送 Step 2.56 / Step 2.60 / Step 2.61”，当前唯一上线闸口仍是外部输入齐备后的 `release:validation-suite`。
+Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 conversation DOM rendering 已完成验证并推送，Step 2.58 marketing chat DOM rendering 已完成验证并推送，Step 2.59 H5 onboarding choices DOM rendering 已完成验证并推送，Step 2.60 H5 Covenant actions DOM rendering 已完成验证并推送，Step 2.61 H5 loading bubble DOM rendering 已完成验证并推送，Step 2.62 H5/public inline event handler binding 已完成验证并推送，Step 2.63 public pricing CTA flow binding 本地已完成；它们都不改变本路线图的外部 release validation 剩余入口。后续不要再卡在“等待推送 Step 2.56 / Step 2.60 / Step 2.61 / Step 2.62”，当前唯一上线闸口仍是外部输入齐备后的 `release:validation-suite`。
 
 截至 2026-07-10，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、以及本地 `.env.example` 都已完成实现；真实 DB/Render 执行仍需要 disposable URL、snapshot 路径或 token env。
 
@@ -69,7 +69,8 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 - Step 2.59：H5 onboarding choices DOM rendering 已实现并推送；H5 创建流程的常用称呼与性格特征选项从 `innerHTML` 拼接改为 DOM `textContent` 渲染和事件绑定。
 - Step 2.60：H5 Covenant actions DOM rendering 已实现并推送；H5 生命周期操作区从 `actions.innerHTML` / inline `onclick` 改为 DOM `textContent` 渲染和事件绑定。
 - Step 2.61：H5 loading bubble DOM rendering 已实现并推送；H5 对话等待回复气泡从 `insertAdjacentHTML` 字符串拼接改为 DOM `textContent` 渲染。
-- Step 2.62：H5/public inline event handler binding 本地已实现；H5 体验弹窗、官网咨询聊天、付费流程弹窗从 inline `on*=` 事件属性改为 `data-*` 标记和 JS 事件绑定。
+- Step 2.62：H5/public inline event handler binding 已实现并推送；H5 体验弹窗、官网咨询聊天、付费流程弹窗从 inline `on*=` 事件属性改为 `data-*` 标记和 JS 事件绑定。
+- Step 2.63：public pricing CTA flow binding 本地已实现；定价区方案卡片从跳转在线咨询区改为打开付费流程弹窗并预选对应方案。
 
 ## 剩余目标状态
 
@@ -113,7 +114,7 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 ## 当前可继续做的本地工作
 
 - 用真实外部输入跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`；默认仍保持 snapshot persistence，scoped runtime 只在 disposable DB smoke 中验证。
-- 当前不需要为了 Step 2.56 / Step 2.60 / Step 2.61 再单独 push；本地 Step 2.62 可作为一个较大前台事件绑定版本合并 push，核心上线闸口仍是上面的 release validation suite。
+- 当前不需要为了 Step 2.56 / Step 2.60 / Step 2.61 / Step 2.62 再单独 push；本地 Step 2.63 可作为前台定价 CTA 闭环版本合并 push，核心上线闸口仍是上面的 release validation suite。
 
 ## 当前需要用户或外部环境提供的东西
 

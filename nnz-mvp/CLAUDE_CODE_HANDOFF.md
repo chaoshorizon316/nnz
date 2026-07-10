@@ -1274,7 +1274,7 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.62。最新已推送提交是 `4e00c24 fix: render h5 loading bubble with DOM text APIs`；当前本地新增 Step 2.62 H5/public inline event handler binding：`public/index.html` 用户前台不再保留 inline `onclick` / `onchange` / `oninput` / `onkeydown`，H5 体验弹窗、官网咨询聊天、付费流程弹窗统一改为 `data-action` / `data-role` / `data-plan` + `bindPublicInteractionHandlers()` 事件绑定。本地 h5 targeted test、typecheck、231 tests + 2 skipped、build:demo、demo server 首页 smoke 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
+Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.63。最新已推送提交是 `18641cd fix: bind public page interactions without inline handlers`；当前本地新增 Step 2.63 public pricing CTA flow binding：定价区三张方案卡片不再跳到在线咨询区 `#cta`，改为通过 `data-action="open-flow"` 打开付费流程弹窗并预选对应 light/standard/lifetime 方案，`openFlow()` 支持指定方案和初始步骤。本地 h5 targeted test、typecheck、231 tests + 2 skipped、build:demo、构建产物静态扫描通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
 
 1. 注入真实本地 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Render role token env、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`。
 2. 跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`，它会串 preflight、migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite，并写脱敏上线 evidence。

@@ -96,13 +96,19 @@ describe('H5 experience lifecycle controls', () => {
   it('binds public page interactions without inline event attributes', () => {
     const bindHandlers = functionBody('bindPublicInteractionHandlers', false);
     const handleAction = functionBody('handlePublicAction', false);
+    const openFlow = functionBody('openFlow', false);
 
     expect(html).not.toMatch(/\son(?:click|change|input|keydown)=/);
     expect(html).toContain('data-action="open-experience"');
     expect(html).toContain('data-action="h5-send-message"');
     expect(html).toContain('data-action="send-marketing-chat"');
+    expect(html).toContain('data-action="open-flow"');
+    expect(html).toContain('data-flow-plan="light"');
+    expect(html).toContain('data-flow-plan="standard"');
+    expect(html).toContain('data-flow-plan="lifetime"');
     expect(html).toContain('data-role="爸爸"');
     expect(html).toContain('data-plan="standard"');
+    expect(html).not.toContain('href="#cta"');
     expect(bindHandlers).toContain("document.querySelectorAll('[data-action]')");
     expect(bindHandlers).toContain("document.querySelectorAll('[data-role]')");
     expect(bindHandlers).toContain("document.querySelectorAll('[data-plan]')");
@@ -110,8 +116,12 @@ describe('H5 experience lifecycle controls', () => {
     expect(bindHandlers).toContain("if (event.key === 'Enter') h5SendMessage();");
     expect(bindHandlers).toContain("if (event.key === 'Enter') sendChat();");
     expect(handleAction).toContain("'h5-login': () => h5Login()");
+    expect(handleAction).toContain("'open-flow': () => openFlow(target.dataset.flowPlan || selectedPlan, Number(target.dataset.flowStep || 1))");
     expect(handleAction).toContain("h5ToggleMemoryPanel(target.dataset.force === 'false' ? false : undefined);");
     expect(handleAction).toContain('goToStep(Number(target.dataset.step || 1));');
+    expect(openFlow).toContain('function openFlow(plan = selectedPlan, step = 1)');
+    expect(openFlow).toContain('if (option) selectPlan(plan, option);');
+    expect(openFlow).toContain('goToStep(step);');
   });
 
   it('downloads the user data archive before submitting graduation', () => {

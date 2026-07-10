@@ -56,6 +56,6 @@ ok; fixture sqlite; runtimeMode snapshot
 
 ## 状态
 
-- Step 2.62 本地已完成，尚待下一次合并 push。
-- 最新已推送提交是 `4e00c24 fix: render h5 loading bubble with DOM text APIs`。
+- Step 2.62 已完成并推送。
+- 最新已推送提交是 `18641cd fix: bind public page interactions without inline handlers`。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。

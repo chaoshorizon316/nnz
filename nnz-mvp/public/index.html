@@ -849,7 +849,7 @@
           <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>封存与特别时刻</li>
           <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>健康使用提醒</li>
         </ul>
-        <a href="#cta" class="block text-center w-full py-3 rounded-full border-2 border-warm-300 text-warm-600 font-medium text-sm hover:bg-warm-50 transition-colors">免费体验首月 →</a>
+        <a href="#flowOverlay" data-action="open-flow" data-flow-plan="light" data-flow-step="2" class="block text-center w-full py-3 rounded-full border-2 border-warm-300 text-warm-600 font-medium text-sm hover:bg-warm-50 transition-colors">免费体验首月 →</a>
       </div>
 
       <!-- Standard (featured) -->
@@ -873,7 +873,7 @@
           <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>1000轮/月对话</li>
           <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>纪念物生成（时刻卡片、对话纪念册）</li>
         </ul>
-        <a href="#cta" class="block text-center w-full py-3 rounded-full bg-warm-600 text-white font-medium text-sm hover:bg-warm-700 transition-colors shadow-md">免费体验首月 →</a>
+        <a href="#flowOverlay" data-action="open-flow" data-flow-plan="standard" data-flow-step="2" class="block text-center w-full py-3 rounded-full bg-warm-600 text-white font-medium text-sm hover:bg-warm-700 transition-colors shadow-md">免费体验首月 →</a>
       </div>
 
       <!-- Lifetime -->
@@ -894,7 +894,7 @@
           <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>无限对话轮次</li>
           <li class="flex items-start gap-2"><svg class="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>数据遗产移交</li>
         </ul>
-        <a href="#cta" class="block text-center w-full py-3 rounded-full border-2 border-warm-300 text-warm-600 font-medium text-sm hover:bg-warm-50 transition-colors">了解详情 →</a>
+        <a href="#flowOverlay" data-action="open-flow" data-flow-plan="lifetime" data-flow-step="2" class="block text-center w-full py-3 rounded-full border-2 border-warm-300 text-warm-600 font-medium text-sm hover:bg-warm-50 transition-colors">了解详情 →</a>
       </div>
     </div>
 
@@ -1505,6 +1505,7 @@ function handlePublicAction(action, target, event) {
     'h5-send-message': () => h5SendMessage(),
     'send-marketing-chat': () => sendChat(),
     'close-flow': () => closeFlow(),
+    'open-flow': () => openFlow(target.dataset.flowPlan || selectedPlan, Number(target.dataset.flowStep || 1)),
     'show-payment-qr': () => showPaymentQR(),
     'hide-payment-qr': () => hidePaymentQR(),
     'simulate-payment': () => simulatePayment(),
@@ -2399,10 +2400,14 @@ let selectedPlan = 'standard';
 let qrTimerInterval = null;
 let qrSecondsLeft = 1800; // 30 min
 
-function openFlow() {
+function openFlow(plan = selectedPlan, step = 1) {
   document.getElementById('flowOverlay').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  goToStep(1);
+  if (plan) {
+    const option = document.querySelector('#pricingOptions [data-plan="' + plan + '"]');
+    if (option) selectPlan(plan, option);
+  }
+  goToStep(step);
 }
 
 function closeFlow() {
