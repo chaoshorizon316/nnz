@@ -44,6 +44,6 @@ only matches are inside `H5_UNSAFE_ERROR_FRAGMENTS`
 
 ## 状态
 
-- Step 2.64 本地已完成，尚待下一次合并 push。
-- 最新已推送提交是 `8c12c99 fix: connect pricing CTAs to payment flow`。
+- Step 2.64 已完成、验证并推送。
+- 推送提交是 `92440b0 fix: soften public pricing dependency copy`。
 - 核心上线闸口不变：仍需外部输入后运行 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`。

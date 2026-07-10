@@ -1274,7 +1274,7 @@ npm ci -> typecheck -> test -> build:demo -> audit
 
 ## 16.1 当前下一步
 
-Step 2 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.64。最新已推送提交是 `8c12c99 fix: connect pricing CTAs to payment flow`；当前本地新增 Step 2.64 public pricing dependency-safe copy：公开页定价与付费流程文案移除“终身访问 / 永久使用 / 无限轮次 / AI复刻 / 记忆人格”等容易制造依赖或机制感的表达，改为“纪念托管 / 长期保存 / 更高对话额度 / 记忆伙伴资料”等用户语言，并把这些词加入 H5 可见文案和运行时错误过滤护栏。本地 h5 targeted test、typecheck、231 tests + 2 skipped、build:demo 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
+Step 2 scoped repository 与 snapshot migration 工具链本地已经完成到 Step 2.65。最新已推送提交是 `92440b0 fix: soften public pricing dependency copy`；当前本地新增 Step 2.65 public footer compliance links：公开页页脚“用户协议 / 隐私政策 / 伦理承诺”不再是 `href="#"` 空链接，新增同页 `#terms` / `#privacy` / `#ethics` 合规摘要区，强调暂停、导出、删除数据和不以高频使用奖励推动停留；H5 静态测试新增空链接和 hash target 完整性防回归。本地 h5 targeted test、typecheck、232 tests + 2 skipped、build:demo、git diff --check 通过，尚待下一次合并 push。现在还剩 1 个总外部实跑入口未执行：
 
 1. 注入真实本地 snapshot/SQLite、`NNZ_POSTGRES_INTEGRATION_URL`、Render role token env、`NNZ_POSTGRES_SCOPED_RUNTIME_URL`。
 2. 跑 `release:validation-suite -- --evidence-out <sanitized-release-evidence-json>`，它会串 preflight、migration validation、默认非破坏性 Ops role smoke、scoped runtime smoke suite，并写脱敏上线 evidence。

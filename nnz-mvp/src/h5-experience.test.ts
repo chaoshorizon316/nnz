@@ -96,6 +96,14 @@ function h5UnsafeErrorFragmentsFromHtml(source: string): string[] {
   return Array.from(match![1].matchAll(/'([^']+)'/g), ([, value]) => value ?? '');
 }
 
+function idAttributesFromHtml(source: string): Set<string> {
+  return new Set(Array.from(source.matchAll(/\sid=["']([^"']+)["']/g), ([, value]) => value ?? ''));
+}
+
+function hashTargetsFromHtml(source: string): string[] {
+  return Array.from(source.matchAll(/\shref=["']#([^"']+)["']/g), ([, value]) => value ?? '');
+}
+
 describe('H5 experience lifecycle controls', () => {
   it('does not expose internal mechanism terms in user-visible H5 copy', () => {
     const visibleText = visibleTextFromHtml(html);
@@ -110,6 +118,7 @@ describe('H5 experience lifecycle controls', () => {
     const openFlow = functionBody('openFlow', false);
 
     expect(html).not.toMatch(/\son(?:click|change|input|keydown)=/);
+    expect(html).not.toMatch(/\shref=["']#["']/);
     expect(html).toContain('data-action="open-experience"');
     expect(html).toContain('data-action="h5-send-message"');
     expect(html).toContain('data-action="send-marketing-chat"');
@@ -133,6 +142,26 @@ describe('H5 experience lifecycle controls', () => {
     expect(openFlow).toContain('function openFlow(plan = selectedPlan, step = 1)');
     expect(openFlow).toContain('if (option) selectPlan(plan, option);');
     expect(openFlow).toContain('goToStep(step);');
+  });
+
+  it('links footer policy items to visible compliance sections', () => {
+    const idAttributes = idAttributesFromHtml(html);
+    const missingHashTargets = hashTargetsFromHtml(html).filter((target) => !idAttributes.has(target));
+
+    expect(missingHashTargets).toEqual([]);
+    expect(html).toContain('id="compliance"');
+    expect(html).toContain('id="terms"');
+    expect(html).toContain('id="privacy"');
+    expect(html).toContain('id="ethics"');
+    expect(html).toContain('href="#terms"');
+    expect(html).toContain('href="#privacy"');
+    expect(html).toContain('href="#ethics"');
+    expect(html).toContain('用户协议摘要');
+    expect(html).toContain('隐私政策摘要');
+    expect(html).toContain('伦理承诺摘要');
+    expect(html).toContain('你可以随时暂停使用。');
+    expect(html).toContain('数据档案可导出，也可彻底删除。');
+    expect(html).toContain('一次好好告别，比一直停留更重要。');
   });
 
   it('downloads the user data archive before submitting graduation', () => {
