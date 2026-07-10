@@ -1931,7 +1931,7 @@ async function h5RefreshCovenantState() {
     const cssMap = { ACTIVE: 'covenant-active', SEALED: 'covenant-sealed', NODE: 'covenant-node', GRADUATED: 'covenant-graduated' };
     badge.textContent = labels[state] || '状态更新中';
     badge.classList.add(cssMap[state] || '');
-    actions.innerHTML = '';
+    actions.textContent = '';
     if (status) status.textContent = '';
     if (state !== 'ACTIVE') h5CancelSealConfirm();
     if (state !== 'NODE') h5CancelNodeCompleteConfirm();
@@ -1939,21 +1939,43 @@ async function h5RefreshCovenantState() {
 
     if (state === 'ACTIVE') {
       hint.textContent = '选择「封存」后，这段对话会暂时安静下来，等下一个重要时刻再回来。';
-      actions.innerHTML = '<button class="covenant-btn covenant-btn-seal" onclick="h5OpenSealConfirm()">封存</button>';
+      actions.appendChild(h5CreateCovenantButton('封存', 'covenant-btn-seal', h5OpenSealConfirm));
     } else if (state === 'SEALED') {
       hint.textContent = '等待下一个重要时刻。输入一个名称，开启 3 天的短暂陪伴。';
-      actions.innerHTML = '<input id="h5NodeName" type="text" placeholder="例如：婚礼" style="padding:6px 12px;border:1px solid #E8D5C4;border-radius:999px;font-size:13px;width:100px">' +
-        '<button class="covenant-btn covenant-btn-node" onclick="h5ActivateNode()">开启时刻</button>' +
-        '<button class="covenant-btn covenant-btn-graduate" onclick="h5OpenGraduateConfirm()">毕业</button>';
+      actions.appendChild(h5CreateNodeNameInput());
+      actions.appendChild(h5CreateCovenantButton('开启时刻', 'covenant-btn-node', h5ActivateNode));
+      actions.appendChild(h5CreateCovenantButton('毕业', 'covenant-btn-graduate', h5OpenGraduateConfirm));
     } else if (state === 'NODE') {
       const nodeName = data.nodeContext ? data.nodeContext.nodeName : '这个时刻';
       hint.textContent = '「' + nodeName + '」正在进行中。完成后，这段对话会回到安静状态。';
-      actions.innerHTML = '<button class="covenant-btn covenant-btn-done" onclick="h5OpenNodeCompleteConfirm()">完成这个时刻</button>';
+      actions.appendChild(h5CreateCovenantButton('完成这个时刻', 'covenant-btn-done', h5OpenNodeCompleteConfirm));
     } else if (state === 'GRADUATED') {
       hint.textContent = '这段思念已安静落幕。感谢你曾经认真说过这些话。';
       bar.classList.add('hidden');
     }
   } catch (e) { /* ignore */ }
+}
+
+function h5CreateCovenantButton(label, className, onClick) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'covenant-btn ' + className;
+  button.textContent = label;
+  button.addEventListener('click', onClick);
+  return button;
+}
+
+function h5CreateNodeNameInput() {
+  const input = document.createElement('input');
+  input.id = 'h5NodeName';
+  input.type = 'text';
+  input.placeholder = '例如：婚礼';
+  input.style.padding = '6px 12px';
+  input.style.border = '1px solid #E8D5C4';
+  input.style.borderRadius = '999px';
+  input.style.fontSize = '13px';
+  input.style.width = '100px';
+  return input;
 }
 
 function h5OpenSealConfirm() {

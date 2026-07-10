@@ -106,13 +106,14 @@ describe('H5 experience lifecycle controls', () => {
   });
 
   it('uses inline confirmation before graduation instead of a browser confirm', () => {
+    const refreshCovenant = functionBody('h5RefreshCovenantState');
     const openGraduate = functionBody('h5OpenGraduateConfirm', false);
     const confirmGraduate = functionBody('h5ConfirmGraduate');
 
     expect(html).toContain('id="h5GraduateConfirmPanel"');
     expect(html).toContain('输入“告别”确认');
     expect(html).toContain('确认这是此刻想要的告别');
-    expect(html).toContain('onclick="h5OpenGraduateConfirm()">毕业</button>');
+    expect(refreshCovenant).toContain("h5CreateCovenantButton('毕业', 'covenant-btn-graduate', h5OpenGraduateConfirm)");
     expect(html).not.toContain('confirm(');
     expect(openGraduate).toContain("panel.classList.remove('hidden');");
     expect(confirmGraduate).toContain("phrase !== '告别'");
@@ -128,8 +129,8 @@ describe('H5 experience lifecycle controls', () => {
     expect(html).toContain('id="h5SealConfirmPanel"');
     expect(html).toContain('输入“安放”确认');
     expect(html).toContain('确认你想先往前走');
-    expect(refreshCovenant).toContain('onclick="h5OpenSealConfirm()">封存</button>');
-    expect(refreshCovenant).not.toContain('onclick="h5SealSoul()">封存</button>');
+    expect(refreshCovenant).toContain("h5CreateCovenantButton('封存', 'covenant-btn-seal', h5OpenSealConfirm)");
+    expect(refreshCovenant).not.toContain('h5CreateCovenantButton(\'封存\', \'covenant-btn-seal\', h5SealSoul)');
     expect(refreshCovenant).toContain("await h5Request('/api/me/covenant-state?personaId='");
     expect(refreshCovenant).not.toContain("fetch('/api/me/covenant-state");
     expect(openSeal).toContain("panel.classList.remove('hidden');");
@@ -149,8 +150,8 @@ describe('H5 experience lifecycle controls', () => {
     expect(html).toContain('id="h5NodeCompleteConfirmPanel"');
     expect(html).toContain('输入“收束”确认');
     expect(html).toContain('这个特别时刻会安静收束');
-    expect(refreshCovenant).toContain('onclick="h5OpenNodeCompleteConfirm()">完成这个时刻</button>');
-    expect(refreshCovenant).not.toContain('onclick="h5CompleteNode()">完成这个时刻</button>');
+    expect(refreshCovenant).toContain("h5CreateCovenantButton('完成这个时刻', 'covenant-btn-done', h5OpenNodeCompleteConfirm)");
+    expect(refreshCovenant).not.toContain("h5CreateCovenantButton('完成这个时刻', 'covenant-btn-done', h5CompleteNode)");
     expect(openComplete).toContain("panel.classList.remove('hidden');");
     expect(openComplete).toContain('h5ToggleMemoryPanel(false);');
     expect(confirmComplete).toContain("phrase !== '收束'");
@@ -176,6 +177,24 @@ describe('H5 experience lifecycle controls', () => {
     expect(covenantAction).not.toContain('fetch(url');
     expect(covenantAction).not.toContain("data.error || '刚才没有完成，请稍后再试。'");
     expect(covenantAction).not.toContain('alert(');
+  });
+
+  it('renders H5 covenant action controls with DOM event APIs', () => {
+    const refreshCovenant = functionBody('h5RefreshCovenantState');
+    const createButton = functionBody('h5CreateCovenantButton', false);
+    const createNodeInput = functionBody('h5CreateNodeNameInput', false);
+
+    expect(refreshCovenant).toContain("actions.textContent = '';");
+    expect(refreshCovenant).toContain('actions.appendChild(h5CreateNodeNameInput());');
+    expect(refreshCovenant).toContain("h5CreateCovenantButton('开启时刻', 'covenant-btn-node', h5ActivateNode)");
+    expect(refreshCovenant).not.toContain('actions.innerHTML');
+    expect(refreshCovenant).not.toContain('onclick=');
+    expect(createButton).toContain("document.createElement('button')");
+    expect(createButton).toContain('button.textContent = label;');
+    expect(createButton).toContain("button.addEventListener('click', onClick);");
+    expect(createNodeInput).toContain("document.createElement('input')");
+    expect(createNodeInput).toContain("input.id = 'h5NodeName';");
+    expect(createNodeInput).toContain("input.placeholder = '例如：婚礼';");
   });
 
   it('sanitizes H5 runtime errors before displaying them to users', () => {

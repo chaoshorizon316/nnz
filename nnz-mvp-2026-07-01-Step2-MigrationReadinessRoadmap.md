@@ -2,13 +2,13 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.59。最新已推送提交是：
+Step 2 的 scoped repository 与 snapshot migration 工具链已经完成到 Step 2.60。最新已推送提交是：
 
 ```text
-c97c715 fix: render marketing chat with DOM text APIs
+a1a66ec fix: render h5 onboarding choices with DOM text APIs
 ```
 
-Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 conversation DOM rendering 已完成验证并推送，Step 2.58 marketing chat DOM rendering 已完成验证并推送，Step 2.59 H5 onboarding choices DOM rendering 本地已完成；它们都不改变本路线图的外部 release validation 剩余入口。后续不要再卡在“等待推送 Step 2.56”，当前唯一上线闸口仍是外部输入齐备后的 `release:validation-suite`。
+Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 conversation DOM rendering 已完成验证并推送，Step 2.58 marketing chat DOM rendering 已完成验证并推送，Step 2.59 H5 onboarding choices DOM rendering 已完成验证并推送，Step 2.60 H5 Covenant actions DOM rendering 本地已完成；它们都不改变本路线图的外部 release validation 剩余入口。后续不要再卡在“等待推送 Step 2.56”，当前唯一上线闸口仍是外部输入齐备后的 `release:validation-suite`。
 
 截至 2026-07-10，链路还剩 **1 个总外部实跑入口未执行**：`release:validation-suite`。它会串行运行真实本地 snapshot + 一次性 Postgres 的 `migration:validation-suite`、Render viewer/operator/admin 角色 token 的 `ops:role-smoke`、以及真实 scoped runtime DB 的 `runtime:smoke-suite`。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、以及本地 `.env.example` 都已完成实现；真实 DB/Render 执行仍需要 disposable URL、snapshot 路径或 token env。
 
@@ -66,7 +66,8 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 - Step 2.56：H5 request string error guard 已实现并推送；`h5Request()` 仅允许非空字符串 `data.error` 进入 `Error`，对象、数组、空值等异常 error payload 统一回退为“请求失败。”。
 - Step 2.57：H5 conversation DOM rendering 已实现并推送；H5 对话气泡从 HTML 字符串拼接改为 DOM `textContent` 渲染用户输入和助手回复，降低对话区用户内容注入风险。
 - Step 2.58：Marketing chat DOM rendering 已实现并推送；官网首页在线咨询模拟聊天从 `innerHTML` 拼接改为 DOM `textContent` 渲染用户输入和模拟回复。
-- Step 2.59：H5 onboarding choices DOM rendering 本地已实现；H5 创建流程的常用称呼与性格特征选项从 `innerHTML` 拼接改为 DOM `textContent` 渲染和事件绑定。
+- Step 2.59：H5 onboarding choices DOM rendering 已实现并推送；H5 创建流程的常用称呼与性格特征选项从 `innerHTML` 拼接改为 DOM `textContent` 渲染和事件绑定。
+- Step 2.60：H5 Covenant actions DOM rendering 本地已实现；H5 生命周期操作区从 `actions.innerHTML` / inline `onclick` 改为 DOM `textContent` 渲染和事件绑定。
 
 ## 剩余目标状态
 
