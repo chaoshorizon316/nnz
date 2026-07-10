@@ -50,6 +50,36 @@ describe('demo server user onboarding consent', () => {
     );
   });
 
+  it('supports optional short-lived Soul Ops sessions before privileged Ops APIs', () => {
+    expect(source).toContain("parseOpsSessionTtlMinutes(readNonEmptyEnv('NNZ_OPS_SESSION_TTL_MINUTES'))");
+
+    const sessionRoute = source.indexOf("url.pathname === '/api/ops/session'");
+    const opsApiRoute = source.indexOf("url.pathname.startsWith('/api/ops/')");
+    expect(sessionRoute).toBeGreaterThanOrEqual(0);
+    expect(sessionRoute).toBeLessThan(opsApiRoute);
+
+    const createSessionStart = source.indexOf('async function createOpsSession');
+    expect(createSessionStart).toBeGreaterThanOrEqual(0);
+    const createSessionEnd = source.indexOf('async function requireOpsIpAllowed', createSessionStart);
+    const createSessionFunction = source.slice(createSessionStart, createSessionEnd);
+    expect(createSessionFunction).toContain("recordOpsAudit(principal, 'SESSION_CREATE', 'SUCCESS'");
+    expect(createSessionFunction).toContain('randomBytes(32).toString');
+    expect(createSessionFunction).toContain('sessionToken: session.token');
+
+    const requireAccessStart = source.indexOf('async function requireOpsAccess');
+    const requireAccessEnd = source.indexOf('async function createOpsSession', requireAccessStart);
+    const requireAccessFunction = source.slice(requireAccessStart, requireAccessEnd);
+    expect(requireAccessFunction).toContain('isOpsSessionEnabled()');
+    expect(requireAccessFunction).toContain('resolveOpsSession(token)');
+    expect(requireAccessFunction.indexOf('resolveOpsSession(token)')).toBeLessThan(
+      requireAccessFunction.indexOf('resolveOpsPrincipal(token, OPS_TOKEN_ENTRIES'),
+    );
+
+    expect(source).toContain("const OPS_SESSION_ENABLED = ");
+    expect(source).toContain("sessionStorage.setItem('nnz_ops_session_token', data.sessionToken)");
+    expect(source).toContain("sessionStorage.removeItem('nnz_ops_session_token')");
+  });
+
   it('requires consent before creating a user persona through /api/me/persona', () => {
     const routeStart = source.indexOf("url.pathname === '/api/me/persona'");
     expect(routeStart).toBeGreaterThanOrEqual(0);

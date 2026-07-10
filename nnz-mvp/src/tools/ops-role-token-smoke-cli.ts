@@ -38,6 +38,7 @@ export interface OpsRoleSmokeResult {
   kind: 'ops-role-token-smoke';
   baseUrl: string;
   deleteMode: 'skipped' | 'confirmed';
+  sessionMode: 'direct-token' | 'short-lived-session';
   tokenEnvs: {
     viewer: string;
     operator: string;
@@ -154,11 +155,21 @@ async function runOpsRoleSmoke(input: {
   });
   assert(invalid.status === 403, 'invalid token was not rejected');
 
+  const viewerAccess = await resolveOpsAccessToken(input.fetch, input.baseUrl, input.viewerToken);
+  const sessionMode = viewerAccess.sessionToken ? 'short-lived-session' : 'direct-token';
+  const viewerToken = viewerAccess.sessionToken ?? input.viewerToken;
+  const operatorToken = sessionMode === 'short-lived-session'
+    ? await requireOpsSessionToken(input.fetch, input.baseUrl, input.operatorToken)
+    : input.operatorToken;
+  const adminToken = sessionMode === 'short-lived-session'
+    ? await requireOpsSessionToken(input.fetch, input.baseUrl, input.adminToken)
+    : input.adminToken;
+
   const viewerOverview = await requestJson<{ principal?: { role?: string }; permissions?: Record<string, unknown> }>(
     input.fetch,
     input.baseUrl,
     '/api/ops/overview',
-    { token: input.viewerToken },
+    { token: viewerToken },
   );
   assert(viewerOverview.body.principal?.role === 'viewer', 'viewer token did not resolve as viewer');
   assert(viewerOverview.body.permissions?.['canReadOverview'] === true, 'viewer cannot read overview');
@@ -169,13 +180,13 @@ async function runOpsRoleSmoke(input: {
     input.fetch,
     input.baseUrl,
     '/api/ops/audit-events?limit=1',
-    { token: input.viewerToken },
+    { token: viewerToken },
   );
   assert(auditQuery.body.principal?.role === 'viewer', 'viewer cannot read audit query');
 
   const viewerCleanup = await requestJson(input.fetch, input.baseUrl, '/api/ops/cleanup-test-users', {
     method: 'POST',
-    token: input.viewerToken,
+    token: viewerToken,
     body: { dryRun: true },
     allowStatuses: [403],
   });
@@ -185,7 +196,7 @@ async function runOpsRoleSmoke(input: {
     input.fetch,
     input.baseUrl,
     '/api/ops/overview',
-    { token: input.operatorToken },
+    { token: operatorToken },
   );
   assert(operatorOverview.body.principal?.role === 'operator', 'operator token did not resolve as operator');
   assert(operatorOverview.body.permissions?.['canDryRunCleanup'] === true, 'operator cannot dry-run cleanup');
@@ -195,7 +206,7 @@ async function runOpsRoleSmoke(input: {
     input.fetch,
     input.baseUrl,
     '/api/ops/cleanup-test-users',
-    { method: 'POST', token: input.operatorToken, body: { dryRun: true } },
+    { method: 'POST', token: operatorToken, body: { dryRun: true } },
   );
   assert(operatorDryRun.body.result?.dryRun === true, 'operator dry-run did not return dryRun true');
   assert(Array.isArray(operatorDryRun.body.result.deletedUserIds), 'operator dry-run did not return deleted ids');
@@ -203,7 +214,7 @@ async function runOpsRoleSmoke(input: {
 
   const operatorDelete = await requestJson(input.fetch, input.baseUrl, '/api/ops/cleanup-test-users', {
     method: 'POST',
-    token: input.operatorToken,
+    token: operatorToken,
     body: { dryRun: false, confirm: 'DELETE_TEST_USERS' },
     allowStatuses: [403],
   });
@@ -213,7 +224,7 @@ async function runOpsRoleSmoke(input: {
     input.fetch,
     input.baseUrl,
     '/api/ops/overview',
-    { token: input.adminToken },
+    { token: adminToken },
   );
   assert(adminOverview.body.principal?.role === 'admin', 'admin token did not resolve as admin');
   assert(adminOverview.body.permissions?.['canDryRunCleanup'] === true, 'admin cannot dry-run cleanup');
@@ -223,7 +234,7 @@ async function runOpsRoleSmoke(input: {
     input.fetch,
     input.baseUrl,
     '/api/ops/cleanup-test-users',
-    { method: 'POST', token: input.adminToken, body: { dryRun: true } },
+    { method: 'POST', token: adminToken, body: { dryRun: true } },
   );
   assert(adminDryRun.body.result?.dryRun === true, 'admin dry-run did not return dryRun true');
   assert(Array.isArray(adminDryRun.body.result.deletedUserIds), 'admin dry-run did not return deleted ids');
@@ -234,14 +245,14 @@ async function runOpsRoleSmoke(input: {
       input.fetch,
       input.baseUrl,
       '/api/ops/cleanup-test-users',
-      { method: 'POST', token: input.adminToken, body: { dryRun: false, confirm: 'DELETE_TEST_USERS' } },
+      { method: 'POST', token: adminToken, body: { dryRun: false, confirm: 'DELETE_TEST_USERS' } },
     );
     assert(adminDelete.body.result?.dryRun === false, 'admin delete did not run confirmed cleanup');
     assert(Array.isArray(adminDelete.body.result.receipts), 'admin delete did not return receipts');
   } else {
     const adminDeleteWithoutConfirm = await requestJson(input.fetch, input.baseUrl, '/api/ops/cleanup-test-users', {
       method: 'POST',
-      token: input.adminToken,
+      token: adminToken,
       body: { dryRun: false },
       allowStatuses: [400],
     });
@@ -252,6 +263,7 @@ async function runOpsRoleSmoke(input: {
     kind: 'ops-role-token-smoke',
     baseUrl: input.baseUrl,
     deleteMode: input.includeDelete ? 'confirmed' : 'skipped',
+    sessionMode,
     tokenEnvs: input.tokenEnvs,
     checks: {
       missingTokenRejected: true,
@@ -372,6 +384,36 @@ function readRequiredEnv(env: Record<string, string | undefined>, key: string): 
   return value ? value : undefined;
 }
 
+async function resolveOpsAccessToken(
+  fetchImpl: FetchLike,
+  baseUrl: string,
+  sourceToken: string,
+): Promise<{ sessionToken?: string }> {
+  const response = await requestJson<{ sessionToken?: unknown }>(
+    fetchImpl,
+    baseUrl,
+    '/api/ops/session',
+    {
+      method: 'POST',
+      token: sourceToken,
+      allowStatuses: [200, 404],
+    },
+  );
+  if (response.status === 404) return {};
+  assert(typeof response.body.sessionToken === 'string' && response.body.sessionToken.length > 0, 'ops session response was invalid');
+  return { sessionToken: response.body.sessionToken };
+}
+
+async function requireOpsSessionToken(
+  fetchImpl: FetchLike,
+  baseUrl: string,
+  sourceToken: string,
+): Promise<string> {
+  const response = await resolveOpsAccessToken(fetchImpl, baseUrl, sourceToken);
+  assert(response.sessionToken !== undefined, 'ops session was not created');
+  return response.sessionToken;
+}
+
 async function requestJson<T = unknown>(
   fetchImpl: FetchLike,
   baseUrl: string,
@@ -404,6 +446,7 @@ function formatSmokeSummary(result: OpsRoleSmokeResult): string {
     'Soul Ops role token smoke',
     `baseUrl: ${result.baseUrl}`,
     `deleteMode: ${result.deleteMode}`,
+    `sessionMode: ${result.sessionMode}`,
     '',
     'Token envs:',
     `- viewer: ${result.tokenEnvs.viewer}`,

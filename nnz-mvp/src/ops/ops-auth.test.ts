@@ -5,6 +5,7 @@ import {
   buildOpsTokenEntries,
   isOpsClientIpAllowed,
   parseOpsIpAllowlist,
+  parseOpsSessionTtlMinutes,
   resolveOpsClientIp,
   resolveOpsPrincipal,
   roleAllows,
@@ -82,5 +83,13 @@ describe('Soul Ops auth helpers', () => {
   it('rejects malformed allowlist entries at startup config time', () => {
     expect(() => parseOpsIpAllowlist('203.0.113.1/33')).toThrow('invalid IPv4 CIDR');
     expect(() => parseOpsIpAllowlist('not-an-ip')).toThrow('invalid IP address');
+  });
+
+  it('parses optional Ops session TTL minutes as a positive integer', () => {
+    expect(parseOpsSessionTtlMinutes(undefined)).toBeUndefined();
+    expect(parseOpsSessionTtlMinutes('')).toBeUndefined();
+    expect(parseOpsSessionTtlMinutes('15')).toBe(15);
+    expect(() => parseOpsSessionTtlMinutes('0')).toThrow('NNZ_OPS_SESSION_TTL_MINUTES');
+    expect(() => parseOpsSessionTtlMinutes('1.5')).toThrow('NNZ_OPS_SESSION_TTL_MINUTES');
   });
 });

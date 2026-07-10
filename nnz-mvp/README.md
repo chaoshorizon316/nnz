@@ -82,12 +82,15 @@ The admin console is split from the user/demo surfaces and is available at:
 
 ```text
 GET /ops
+POST /api/ops/session
 GET /api/ops/overview
 GET /api/ops/audit-events
 POST /api/ops/cleanup-test-users
 ```
 
 Set `NNZ_OPS_TOKEN` before enabling it. Without this env var, `/ops` renders a disabled state and `/api/ops/*` returns 404. With it configured, API calls must include either `x-ops-token: <token>` or `Authorization: Bearer <token>`.
+
+Optional short-lived Ops sessions: set `NNZ_OPS_SESSION_TTL_MINUTES` to a positive integer. When enabled, role tokens can only create short-lived sessions through `POST /api/ops/session`; protected `/api/ops/*` routes then require the returned session token. The `/ops` page stores only the short-lived session token in `sessionStorage`.
 
 `NNZ_OPS_TOKEN` is backward-compatible and maps to the `admin` role. Optional role-specific tokens can be configured:
 
@@ -107,7 +110,7 @@ Use the protected role token smoke before relying on role-specific cloud tokens:
 npm run ops:role-smoke -- --base-url https://nnz-kego.onrender.com --confirm RUN_OPS_ROLE_TOKEN_SMOKE
 ```
 
-It reads `NNZ_OPS_VIEWER_TOKEN`, `NNZ_OPS_OPERATOR_TOKEN`, and `NNZ_OPS_ADMIN_TOKEN` from the local shell, sends them only as request headers, and prints env names/check results only. Default mode is non-destructive. The optional confirmed cleanup path requires both `--include-delete` and `--delete-confirm RUN_OPS_ROLE_TOKEN_DELETE_SMOKE`.
+It reads `NNZ_OPS_VIEWER_TOKEN`, `NNZ_OPS_OPERATOR_TOKEN`, and `NNZ_OPS_ADMIN_TOKEN` from the local shell, sends them only as request headers, and prints env names/check results only. If the server requires short-lived Ops sessions, the smoke exchanges role tokens for session tokens automatically and still does not print token values. Default mode is non-destructive. The optional confirmed cleanup path requires both `--include-delete` and `--delete-confirm RUN_OPS_ROLE_TOKEN_DELETE_SMOKE`.
 
 Store helper:
 
@@ -385,8 +388,8 @@ If CLI verification fails or hangs in the iCloud/Obsidian path, do not assume th
 
 ## Current State
 
-The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging through Step 2.36 sensitive local release safety guard are implemented and pushed. Step 2.37-2.66 H5 graduation/export, support, consent, delete confirmation, memory append, graduation/seal/node confirmations, activation safeguards, panel mutual exclusion, visible mechanism leak guard, runtime safe error guard, user-facing copy softening, runtime unsafe fragment parity, conversation load safe error handling, persona switcher safe rendering, request non-JSON safe fallback, guest mode unified request handling, Covenant unified request handling, request error payload guarding, H5 conversation DOM rendering, marketing chat DOM rendering, H5 onboarding choices DOM rendering, H5 Covenant actions DOM rendering, H5 loading bubble DOM rendering, H5/public inline event handler binding, public pricing CTA flow binding, public pricing dependency-safe copy, public footer compliance links, and release env-file inputs are implemented and pushed. Step 2.67 focused release stage env-file parity and Step 2.68 Render role smoke are pushed. Step 2.69 release validation suite has passed locally against real external inputs and ignored evidence artifacts. Step 2.70 adds optional Soul Ops IP allowlist hardening for `/ops` and `/api/ops/*` and is pushed. Step 2.71 adds optional Ops audit retention for snapshot/SQLite and scoped Postgres Ops paths. The current pushed baseline before Step 2.71 is `c4db306 Summary: feat: add soul ops IP allowlist hardening`. The 2026-07-01 migration readiness roadmap tracks the remaining production risk in `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`.
+The 2026-06-11 Render Postgres verification and the Step 1 protected Soul Ops prototype are implemented. Render has Postgres snapshot persistence configured and verified. Cloud `/ops` was enabled on 2026-06-16 by configuring `NNZ_OPS_TOKEN` in Render and redeploying. Step 2.1 audit logging through Step 2.36 sensitive local release safety guard are implemented and pushed. Step 2.37-2.66 H5 graduation/export, support, consent, delete confirmation, memory append, graduation/seal/node confirmations, activation safeguards, panel mutual exclusion, visible mechanism leak guard, runtime safe error guard, user-facing copy softening, runtime unsafe fragment parity, conversation load safe error handling, persona switcher safe rendering, request non-JSON safe fallback, guest mode unified request handling, Covenant unified request handling, request error payload guarding, H5 conversation DOM rendering, marketing chat DOM rendering, H5 onboarding choices DOM rendering, H5 Covenant actions DOM rendering, H5 loading bubble DOM rendering, H5/public inline event handler binding, public pricing CTA flow binding, public pricing dependency-safe copy, public footer compliance links, and release env-file inputs are implemented and pushed. Step 2.67 focused release stage env-file parity and Step 2.68 Render role smoke are pushed. Step 2.69 release validation suite has passed locally against real external inputs and ignored evidence artifacts. Step 2.70 adds optional Soul Ops IP allowlist hardening for `/ops` and `/api/ops/*` and is pushed. Step 2.71 adds optional Ops audit retention for snapshot/SQLite and scoped Postgres Ops paths and is pushed. Step 2.72 adds optional short-lived Ops sessions and session-aware `ops:role-smoke`. The current pushed baseline before Step 2.72 is `f63209a feat: add ops audit retention policy`. The 2026-07-01 migration readiness roadmap tracks the remaining production risk in `../nnz-mvp-2026-07-01-Step2-MigrationReadinessRoadmap.md`.
 
-Remaining Step 2 goals: release validation gate is passed. Render stays a free debug environment for now; production environment migration will be evaluated later, preferably with a Tencent Cloud option for user review. Ops production hardening now has role tokens, optional IP allowlist, and optional audit retention; future production should still define session policy and cloud perimeter controls.
+Remaining Step 2 goals: release validation gate is passed. Render stays a free debug environment for now; production environment migration will be evaluated later, preferably with a Tencent Cloud option for user review. Ops production hardening now has role tokens, optional IP allowlist, optional audit retention, and optional short-lived sessions.
 
-Next engineering steps: continue production-readiness work around Ops session policy and the later Tencent Cloud deployment evaluation. If later code changes touch migration/runtime/Ops boundaries, rerun `release:validation-suite` with the ignored `.env.release` inputs while they remain available.
+Next engineering steps: evaluate Tencent Cloud formal deployment and then execute the formal environment migration/switch. If later code changes touch migration/runtime/Ops boundaries, rerun `release:validation-suite` with the ignored `.env.release` inputs while they remain available.

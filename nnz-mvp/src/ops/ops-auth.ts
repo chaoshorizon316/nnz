@@ -82,6 +82,19 @@ export function buildOpsPermissions(role: OpsRole): OpsPermissions {
   };
 }
 
+export function parseOpsSessionTtlMinutes(input: string | undefined): number | undefined {
+  const raw = input?.trim();
+  if (!raw) return undefined;
+  if (!/^\d+$/.test(raw)) {
+    throw new Error('NNZ_OPS_SESSION_TTL_MINUTES must be a positive integer.');
+  }
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new Error('NNZ_OPS_SESSION_TTL_MINUTES must be a positive integer.');
+  }
+  return value;
+}
+
 export function parseOpsIpAllowlist(input: string | undefined): OpsIpAllowlistEntry[] {
   if (!input?.trim()) return [];
   return input

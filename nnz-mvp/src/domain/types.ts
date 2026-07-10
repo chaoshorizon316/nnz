@@ -23,6 +23,7 @@ export type NodeStatus = 'ACTIVE' | 'COMPLETED';
 export type MessageRole = 'USER' | 'ASSISTANT' | 'SYSTEM';
 export type OpsAuditAction =
   | 'ACCESS_DENIED'
+  | 'SESSION_CREATE'
   | 'OVERVIEW_READ'
   | 'CLEANUP_DRY_RUN'
   | 'CLEANUP_DELETE'

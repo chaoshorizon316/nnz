@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { timingSafeEqual } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -45,6 +45,7 @@ import {
   buildOpsPermissions,
   buildOpsTokenEntries,
   isOpsClientIpAllowed,
+  parseOpsSessionTtlMinutes,
   parseOpsIpAllowlist,
   resolveOpsPrincipal,
   resolveOpsClientIp,
@@ -64,6 +65,12 @@ interface DemoFixture {
   correction?: MemoryItem;
   correctionProposalId?: string;
   node?: NodeEvent;
+}
+
+interface OpsSession {
+  token: string;
+  principal: OpsPrincipal;
+  expiresAt: Date;
 }
 
 let fixture = createFixture();
@@ -86,6 +93,8 @@ const OPS_TOKEN_ENTRIES = buildOpsTokenEntries({
 });
 const OPS_IP_ALLOWLIST = parseOpsIpAllowlist(readNonEmptyEnv('NNZ_OPS_ALLOWED_IPS'));
 const OPS_AUDIT_RETENTION_POLICY = parseOpsAuditRetentionPolicy(process.env);
+const OPS_SESSION_TTL_MINUTES = parseOpsSessionTtlMinutes(readNonEmptyEnv('NNZ_OPS_SESSION_TTL_MINUTES'));
+const OPS_SESSIONS = new Map<string, OpsSession>();
 let postgresPersistence: PostgresPersistence | undefined;
 let scopedRuntimePersistence: ScopedRuntimePersistence | undefined;
 let persistenceMode: 'memory' | 'sqlite' | 'postgres' | 'scoped-postgres' = 'memory';
@@ -132,7 +141,11 @@ const server = createServer(async (req, res) => {
 
     if (req.method === 'GET' && url.pathname === '/ops') {
       if (!await requireOpsIpAllowed(req, res)) return;
-      return sendHtml(res, renderOpsPage(OPS_TOKEN_ENTRIES.length > 0));
+      return sendHtml(res, renderOpsPage(OPS_TOKEN_ENTRIES.length > 0, isOpsSessionEnabled()));
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/ops/session') {
+      return createOpsSession(req, res);
     }
 
     if (url.pathname.startsWith('/api/ops/')) {
@@ -605,6 +618,19 @@ async function requireOpsAccess(req: IncomingMessage, res: ServerResponse): Prom
     return null;
   }
 
+  if (isOpsSessionEnabled()) {
+    const session = resolveOpsSession(token);
+    if (!session) {
+      await recordOpsAudit(null, 'ACCESS_DENIED', 'DENIED', {
+        reason: 'invalid-or-expired-session',
+        path: req.url ?? null,
+      });
+      sendJson(res, { error: 'Soul Ops session 已过期或无效。' }, 403);
+      return null;
+    }
+    return session.principal;
+  }
+
   const principal = resolveOpsPrincipal(token, OPS_TOKEN_ENTRIES, safeSecretEquals);
   if (!principal) {
     await recordOpsAudit(null, 'ACCESS_DENIED', 'DENIED', {
@@ -615,6 +641,57 @@ async function requireOpsAccess(req: IncomingMessage, res: ServerResponse): Prom
     return null;
   }
   return principal;
+}
+
+async function createOpsSession(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (!await requireOpsIpAllowed(req, res)) return;
+  if (!isOpsSessionEnabled()) {
+    sendJson(res, { error: 'Soul Ops session 未启用。' }, 404);
+    return;
+  }
+  if (OPS_TOKEN_ENTRIES.length === 0) {
+    sendJson(res, { error: 'Soul Ops 后台未启用。请设置 NNZ_OPS_TOKEN 或角色化 token。' }, 404);
+    return;
+  }
+
+  const body = await readJsonBody<{ token?: string }>(req);
+  const token = readBodyOrHeaderOpsToken(body.token, req);
+  if (!token) {
+    await recordOpsAudit(null, 'ACCESS_DENIED', 'DENIED', {
+      reason: 'missing-session-source-token',
+      path: req.url ?? null,
+    });
+    sendJson(res, { error: '缺少 Soul Ops 访问 token。' }, 401);
+    return;
+  }
+
+  const principal = resolveOpsPrincipal(token, OPS_TOKEN_ENTRIES, safeSecretEquals);
+  if (!principal) {
+    await recordOpsAudit(null, 'ACCESS_DENIED', 'DENIED', {
+      reason: 'invalid-session-source-token',
+      path: req.url ?? null,
+    });
+    sendJson(res, { error: 'Soul Ops 访问 token 无效。' }, 403);
+    return;
+  }
+
+  pruneExpiredOpsSessions();
+  const session: OpsSession = {
+    token: `ops_session_${randomBytes(32).toString('base64url')}`,
+    principal,
+    expiresAt: new Date(Date.now() + OPS_SESSION_TTL_MINUTES! * 60 * 1000),
+  };
+  OPS_SESSIONS.set(session.token, session);
+  await recordOpsAudit(principal, 'SESSION_CREATE', 'SUCCESS', {
+    ttlMinutes: OPS_SESSION_TTL_MINUTES!,
+    expiresAt: session.expiresAt.toISOString(),
+  });
+  sendJson(res, {
+    sessionToken: session.token,
+    expiresAt: session.expiresAt.toISOString(),
+    principal,
+    permissions: buildOpsPermissions(principal.role),
+  });
 }
 
 async function requireOpsIpAllowed(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
@@ -630,6 +707,28 @@ async function requireOpsIpAllowed(req: IncomingMessage, res: ServerResponse): P
   });
   sendJson(res, { error: 'Soul Ops 当前访问来源未被允许。' }, 403);
   return false;
+}
+
+function isOpsSessionEnabled(): boolean {
+  return OPS_SESSION_TTL_MINUTES !== undefined;
+}
+
+function readBodyOrHeaderOpsToken(bodyToken: string | undefined, req: IncomingMessage): string | null {
+  if (typeof bodyToken === 'string' && bodyToken.trim()) return bodyToken.trim();
+  return getOpsRequestToken(req);
+}
+
+function resolveOpsSession(token: string): OpsSession | null {
+  pruneExpiredOpsSessions();
+  return OPS_SESSIONS.get(token) ?? null;
+}
+
+function pruneExpiredOpsSessions(now = new Date()): void {
+  for (const [token, session] of OPS_SESSIONS.entries()) {
+    if (session.expiresAt <= now) {
+      OPS_SESSIONS.delete(token);
+    }
+  }
 }
 
 async function recordOpsAudit(
@@ -741,6 +840,7 @@ function parseOpsAuditQuery(url: URL): {
 
 function isOpsAuditAction(value: string | null): value is OpsAuditAction {
   return value === 'ACCESS_DENIED'
+    || value === 'SESSION_CREATE'
     || value === 'OVERVIEW_READ'
     || value === 'CLEANUP_DRY_RUN'
     || value === 'CLEANUP_DELETE'
@@ -1599,7 +1699,7 @@ function buildVerification() {
   };
 }
 
-function renderOpsPage(opsEnabled: boolean): string {
+function renderOpsPage(opsEnabled: boolean, opsSessionEnabled: boolean): string {
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -1717,7 +1817,8 @@ function renderOpsPage(opsEnabled: boolean): string {
   </main>
   <script>
     const OPS_ENABLED = ${opsEnabled ? 'true' : 'false'};
-    const AUDIT_ACTIONS = ['ACCESS_DENIED', 'OVERVIEW_READ', 'CLEANUP_DRY_RUN', 'CLEANUP_DELETE', 'AUDIT_QUERY'];
+    const OPS_SESSION_ENABLED = ${opsSessionEnabled ? 'true' : 'false'};
+    const AUDIT_ACTIONS = ['ACCESS_DENIED', 'SESSION_CREATE', 'OVERVIEW_READ', 'CLEANUP_DRY_RUN', 'CLEANUP_DELETE', 'AUDIT_QUERY'];
     let overview = null;
     let activeTab = 'dashboard';
     const auditState = {
@@ -1728,8 +1829,10 @@ function renderOpsPage(opsEnabled: boolean): string {
       offset: 0
     };
 
-    const savedToken = sessionStorage.getItem('nnz_ops_token') || '';
-    document.getElementById('opsToken').value = savedToken;
+    const savedToken = OPS_SESSION_ENABLED
+      ? sessionStorage.getItem('nnz_ops_session_token') || ''
+      : sessionStorage.getItem('nnz_ops_token') || '';
+    document.getElementById('opsToken').value = OPS_SESSION_ENABLED ? '' : savedToken;
 
     if (!OPS_ENABLED) {
       setStatus('error', '后台未启用：需要在服务端设置 NNZ_OPS_TOKEN 或角色化 token。');
@@ -1744,12 +1847,37 @@ function renderOpsPage(opsEnabled: boolean): string {
         setStatus('error', '请输入后台访问 token。');
         return;
       }
+      if (OPS_SESSION_ENABLED) {
+        createOpsSession(token);
+        return;
+      }
       sessionStorage.setItem('nnz_ops_token', token);
+      loadOverview();
+    }
+
+    async function createOpsSession(token) {
+      setStatus('', '正在建立短期后台会话...');
+      const res = await fetch('/api/ops/session', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ token: token })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus('error', data.error || '建立后台会话失败。');
+        return;
+      }
+      sessionStorage.setItem('nnz_ops_session_token', data.sessionToken);
+      sessionStorage.setItem('nnz_ops_session_expires_at', data.expiresAt);
+      document.getElementById('opsToken').value = '';
+      setStatus('ok', '已建立短期会话，有效至：' + formatDate(data.expiresAt));
       loadOverview();
     }
 
     function clearToken() {
       sessionStorage.removeItem('nnz_ops_token');
+      sessionStorage.removeItem('nnz_ops_session_token');
+      sessionStorage.removeItem('nnz_ops_session_expires_at');
       document.getElementById('opsToken').value = '';
       overview = null;
       activeTab = 'dashboard';
@@ -1761,19 +1889,26 @@ function renderOpsPage(opsEnabled: boolean): string {
       if (!OPS_ENABLED) return;
       const token = document.getElementById('opsToken').value.trim() || sessionStorage.getItem('nnz_ops_token') || '';
       if (!token) {
-        setStatus('error', '请输入后台访问 token。');
+        setStatus('error', OPS_SESSION_ENABLED ? '请输入后台访问 token 建立短期会话。' : '请输入后台访问 token。');
         return;
       }
       setStatus('', '正在读取后台数据...');
       const res = await fetch('/api/ops/overview', { headers: { 'x-ops-token': token } });
       const data = await res.json();
       if (!res.ok) {
+        if (OPS_SESSION_ENABLED) {
+          sessionStorage.removeItem('nnz_ops_session_token');
+          sessionStorage.removeItem('nnz_ops_session_expires_at');
+        }
         setStatus('error', data.error || '读取失败。');
         return;
       }
-      sessionStorage.setItem('nnz_ops_token', token);
+      if (!OPS_SESSION_ENABLED) sessionStorage.setItem('nnz_ops_token', token);
       overview = data;
-      setStatus('ok', '已连接：' + data.principal.role + '。数据生成时间：' + formatDate(data.generatedAt));
+      const sessionSuffix = OPS_SESSION_ENABLED
+        ? '。会话有效至：' + formatDate(sessionStorage.getItem('nnz_ops_session_expires_at') || '')
+        : '';
+      setStatus('ok', '已连接：' + data.principal.role + '。数据生成时间：' + formatDate(data.generatedAt) + sessionSuffix);
       renderApp(data);
     }
 
@@ -1875,6 +2010,9 @@ function renderOpsPage(opsEnabled: boolean): string {
     }
 
     function getOpsToken() {
+      if (OPS_SESSION_ENABLED) {
+        return sessionStorage.getItem('nnz_ops_session_token') || '';
+      }
       return document.getElementById('opsToken').value.trim() || sessionStorage.getItem('nnz_ops_token') || '';
     }
 

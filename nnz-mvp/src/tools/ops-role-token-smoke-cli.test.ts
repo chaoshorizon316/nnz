@@ -97,38 +97,48 @@ describe('Soul Ops role token smoke CLI', () => {
     expect(result.stdout).toContain('Soul Ops role token smoke');
     expect(result.stdout).toContain('baseUrl: https://nnz.example.test');
     expect(result.stdout).toContain('deleteMode: skipped');
+    expect(result.stdout).toContain('sessionMode: direct-token');
     expect(result.stdout).toContain('viewer: NNZ_OPS_VIEWER_TOKEN');
     expect(result.stdout).toContain('operatorCannotDelete: yes');
     expect(result.stdout).toContain('adminDeleteBoundary: yes');
     expect(result.stdout).not.toContain('viewer-token-secret');
     expect(result.stdout).not.toContain('operator-token-secret');
     expect(result.stdout).not.toContain('admin-token-secret');
-    expect(records).toHaveLength(11);
+    expect(records).toHaveLength(12);
     expect(records[0]).toMatchObject({ method: 'GET', url: 'https://nnz.example.test/api/ops/overview' });
     expect(records[0]?.token).toBeUndefined();
     expect(records[1]).toMatchObject({ method: 'GET', url: 'https://nnz.example.test/api/ops/overview' });
-    expect(records[2]).toMatchObject({ method: 'GET', token: 'viewer-token-secret' });
+    expect(records[2]).toMatchObject({
+      method: 'POST',
+      token: 'viewer-token-secret',
+      url: 'https://nnz.example.test/api/ops/session',
+    });
     expect(records[3]).toMatchObject({
+      method: 'GET',
+      token: 'viewer-token-secret',
+      url: 'https://nnz.example.test/api/ops/overview',
+    });
+    expect(records[4]).toMatchObject({
       method: 'GET',
       token: 'viewer-token-secret',
       url: 'https://nnz.example.test/api/ops/audit-events?limit=1',
     });
-    expect(records[4]).toMatchObject({
+    expect(records[5]).toMatchObject({
       method: 'POST',
       token: 'viewer-token-secret',
-      body: { dryRun: true },
-    });
-    expect(records[6]).toMatchObject({
-      method: 'POST',
-      token: 'operator-token-secret',
       body: { dryRun: true },
     });
     expect(records[7]).toMatchObject({
       method: 'POST',
       token: 'operator-token-secret',
+      body: { dryRun: true },
+    });
+    expect(records[8]).toMatchObject({
+      method: 'POST',
+      token: 'operator-token-secret',
       body: { dryRun: false, confirm: 'DELETE_TEST_USERS' },
     });
-    expect(records[10]).toMatchObject({
+    expect(records[11]).toMatchObject({
       method: 'POST',
       token: 'admin-token-secret',
       body: { dryRun: false },
@@ -166,7 +176,28 @@ describe('Soul Ops role token smoke CLI', () => {
     expect(result.stdout).toContain('viewer: NNZ_OPS_VIEWER_TOKEN');
     expect(result.stdout).not.toContain('.env.release');
     expect(result.stdout).not.toContain('viewer-token-secret');
-    expect(records).toHaveLength(11);
+    expect(records).toHaveLength(12);
+  });
+
+  it('exchanges role tokens for short-lived sessions when the server requires them', async () => {
+    const records: RequestRecord[] = [];
+
+    const result = await runOpsRoleSmokeCommand(
+      ['--base-url', 'https://nnz.example.test/', '--confirm', 'RUN_OPS_ROLE_TOKEN_SMOKE'],
+      deps({ env: DEFAULT_ENV, records, sessionEnabled: true }),
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('sessionMode: short-lived-session');
+    expect(result.stdout).not.toContain('viewer-token-secret');
+    expect(records.filter((record) => record.url === 'https://nnz.example.test/api/ops/session')).toHaveLength(3);
+    expect(records[3]).toMatchObject({ method: 'POST', token: 'operator-token-secret' });
+    expect(records[4]).toMatchObject({ method: 'POST', token: 'admin-token-secret' });
+    expect(records[5]).toMatchObject({
+      method: 'GET',
+      token: 'session-viewer',
+      url: 'https://nnz.example.test/api/ops/overview',
+    });
   });
 
   it('runs confirmed admin cleanup only with the destructive confirmation flag', async () => {
@@ -189,7 +220,7 @@ describe('Soul Ops role token smoke CLI', () => {
     expect(result.stderr).toBe('');
     expect(result.stdout).toContain('deleteMode: confirmed');
     expect(result.stdout).not.toContain('admin-token-secret');
-    expect(records[10]).toMatchObject({
+    expect(records[11]).toMatchObject({
       method: 'POST',
       token: 'admin-token-secret',
       body: { dryRun: false, confirm: 'DELETE_TEST_USERS' },
@@ -218,6 +249,7 @@ function deps(options: {
   fetchEnv?: Record<string, string | undefined>;
   records?: RequestRecord[];
   corruptViewerRole?: boolean;
+  sessionEnabled?: boolean;
   files?: Record<string, string>;
 }): OpsRoleSmokeCliDeps {
   return {
@@ -237,6 +269,7 @@ function createRoleFetch(options: {
   fetchEnv?: Record<string, string | undefined>;
   records?: RequestRecord[];
   corruptViewerRole?: boolean;
+  sessionEnabled?: boolean;
 }): FetchLike {
   const env = options.fetchEnv ?? options.env;
   const tokenRoles = new Map<string, Role>([
@@ -244,6 +277,12 @@ function createRoleFetch(options: {
     [env.NNZ_OPS_OPERATOR_TOKEN ?? '', 'operator'],
     [env.NNZ_OPS_ADMIN_TOKEN ?? '', 'admin'],
   ]);
+  const accessRoles = new Map<string, Role>(tokenRoles);
+  if (options.sessionEnabled) {
+    accessRoles.set('session-viewer', 'viewer');
+    accessRoles.set('session-operator', 'operator');
+    accessRoles.set('session-admin', 'admin');
+  }
 
   return async (url, init) => {
     const token = init?.headers?.['x-ops-token'];
@@ -258,12 +297,23 @@ function createRoleFetch(options: {
     if (!token) {
       return jsonResponse(401, { error: 'missing token', raw: 'private-response-body' });
     }
-    const role = tokenRoles.get(token);
+    const parsedUrl = new URL(url);
+    if (parsedUrl.pathname === '/api/ops/session') {
+      const sourceRole = tokenRoles.get(token);
+      if (!sourceRole) return jsonResponse(403, { error: 'invalid token', raw: 'private-response-body' });
+      if (!options.sessionEnabled) return jsonResponse(404, { error: 'session disabled', raw: 'private-response-body' });
+      return jsonResponse(200, {
+        sessionToken: `session-${sourceRole}`,
+        principal: { role: sourceRole },
+        raw: 'private-response-body',
+      });
+    }
+
+    const role = accessRoles.get(token);
     if (!role) {
       return jsonResponse(403, { error: 'invalid token', raw: 'private-response-body' });
     }
 
-    const parsedUrl = new URL(url);
     if (parsedUrl.pathname === '/api/ops/overview') {
       return jsonResponse(200, {
         principal: { role: options.corruptViewerRole && role === 'viewer' ? 'admin' : role },
