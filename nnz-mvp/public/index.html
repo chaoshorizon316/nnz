@@ -451,11 +451,19 @@
         <div class="flex items-center gap-2">
           <button id="h5NewPersonaBtn" class="hidden text-xs text-sage-600 border border-sage-200 rounded-full px-3 py-1 hover:bg-sage-50 transition-colors" data-action="h5-show-create-panel">+ 新建</button>
           <button id="h5AddMemoryBtn" class="hidden text-xs text-warm-600 border border-warm-200 rounded-full px-3 py-1 hover:bg-warm-50 transition-colors" data-action="h5-toggle-memory">补充记忆</button>
+          <button id="h5WechatLinkBtn" class="hidden text-xs text-sage-600 border border-sage-200 rounded-full px-3 py-1 hover:bg-sage-50 transition-colors" data-action="h5-create-wechat-link">微信接入</button>
         </div>
       </div>
       <div id="h5MemoryPanel" class="hidden px-6 py-4 border-b border-warm-100 bg-white">
         <p class="text-xs text-warm-500 leading-relaxed mb-3">写一段已经发生过的细节，比如习惯、口头禅、一起经历过的事。只补充你愿意留下的内容。</p>
         <textarea id="h5MemoryInput" rows="3" placeholder="例如：他每次出门前都会检查门窗，嘴上说不担心，其实总是把家里照顾得很细。" class="w-full px-4 py-3 text-sm border border-warm-200 rounded-xl outline-none focus:border-warm-400 transition-colors resize-none bg-warm-50/50"></textarea>
+        <div class="mt-4 rounded-xl border border-sage-100 bg-sage-50/50 px-4 py-3">
+          <p class="text-xs text-sage-700 leading-relaxed">也可以导入聊天记录文件。推荐 UTF-8 .txt，一行一条：说话人：内容；也支持 .json。</p>
+          <div class="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
+            <input id="h5ChatRecordFile" type="file" accept=".txt,.json" class="w-full text-xs text-warm-600 file:mr-3 file:rounded-full file:border-0 file:bg-white file:px-3 file:py-2 file:text-xs file:font-medium file:text-sage-700" />
+            <button data-action="h5-upload-chat-record" class="px-4 py-2 bg-sage-600 text-white text-sm font-medium rounded-full hover:bg-sage-700 transition-colors">导入记录</button>
+          </div>
+        </div>
         <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
           <button data-action="h5-save-memory" class="px-4 py-2 bg-warm-600 text-white text-sm font-medium rounded-full hover:bg-warm-700 transition-colors">保存这段记忆</button>
           <button data-action="h5-toggle-memory" data-force="false" class="px-4 py-2 border border-warm-200 text-warm-600 text-sm font-medium rounded-full hover:bg-warm-50 transition-colors">稍后再写</button>
@@ -1535,6 +1543,8 @@ function handlePublicAction(action, target, event) {
     'h5-create-persona': () => h5CreatePersona(),
     'h5-show-create-panel': () => h5ShowCreatePanel(),
     'h5-save-memory': () => h5SaveMemory(),
+    'h5-upload-chat-record': () => h5UploadChatRecord(),
+    'h5-create-wechat-link': () => h5CreateWechatLink(),
     'h5-confirm-seal': () => h5ConfirmSeal(),
     'h5-cancel-seal': () => h5CancelSealConfirm(),
     'h5-confirm-complete-node': () => h5ConfirmCompleteNode(),
@@ -2032,6 +2042,74 @@ async function h5SaveMemory() {
   }
 }
 
+async function h5UploadChatRecord() {
+  if (!h5Token) {
+    h5SetStatus('h5AuthStatus', '请先登录或注册。');
+    return;
+  }
+  if (!h5CurrentPersonaId) {
+    h5SetStatus('h5PersonaStatus', '请先创建你想念的人。');
+    return;
+  }
+  const input = document.getElementById('h5ChatRecordFile');
+  const file = input?.files?.[0];
+  if (!file) {
+    h5SetStatus('h5MemoryStatus', '请选择 .txt 或 .json 聊天记录文件。');
+    return;
+  }
+  const lowerName = file.name.toLowerCase();
+  const format = lowerName.endsWith('.json') ? 'json' : lowerName.endsWith('.txt') ? 'txt' : '';
+  if (!format) {
+    h5SetStatus('h5MemoryStatus', '请上传 .txt 或 .json 文件。');
+    return;
+  }
+  if (file.size > 200000) {
+    h5SetStatus('h5MemoryStatus', '文件有点大，请先删减后再上传。');
+    return;
+  }
+  try {
+    const content = await file.text();
+    const data = await h5Request('/api/me/chat-upload', {
+      method: 'POST',
+      body: {
+        personaId: h5CurrentPersonaId,
+        fileName: file.name,
+        format,
+        content,
+      },
+    });
+    input.value = '';
+    const imported = data.import || {};
+    h5SetStatus('h5MemoryStatus', '已导入 ' + (imported.messageCount || 0) + ' 条聊天记录。');
+    if (data.persona) {
+      document.getElementById('h5ChatSubtitle').textContent =
+        data.persona.relationship + ' · 已保存 ' + (data.persona.messageCount || 0) + ' 条对话 · ' + (data.persona.memoryCount || 0) + ' 段记忆';
+    }
+  } catch (error) {
+    h5SetStatus('h5MemoryStatus', h5SafeErrorMessage(error, '导入失败。'));
+  }
+}
+
+async function h5CreateWechatLink() {
+  if (!h5Token) {
+    h5SetStatus('h5AuthStatus', '请先登录或注册。');
+    return;
+  }
+  if (!h5CurrentPersonaId) {
+    h5SetStatus('h5PersonaStatus', '请先创建你想念的人。');
+    return;
+  }
+  try {
+    const data = await h5Request('/api/me/wechat-bot-link', {
+      method: 'POST',
+      body: { personaId: h5CurrentPersonaId },
+    });
+    h5SetStatus('h5PersonaStatus', data.instruction + '。链接码 30 分钟内有效。');
+  } catch (error) {
+    h5SetStatus('h5PersonaStatus', h5SafeErrorMessage(error, '暂时无法生成微信接入码。'));
+  }
+}
+
 async function h5LoadConversation() {
   if (!h5CurrentPersonaId) return;
   try {
@@ -2306,6 +2384,7 @@ function h5RenderConversation(persona, messages) {
     ? persona.relationship + ' · 已保存 ' + (persona.messageCount || messages.length || 0) + ' 条对话 · ' + (persona.memoryCount || 0) + ' 段记忆'
     : '完成登录和创建后，就可以说第一句话。';
   document.getElementById('h5AddMemoryBtn')?.classList.toggle('hidden', !persona);
+  document.getElementById('h5WechatLinkBtn')?.classList.toggle('hidden', !persona);
   h5RefreshCovenantState();
   h5UpdateSafetySupport(messages);
   const container = document.getElementById('h5Messages');

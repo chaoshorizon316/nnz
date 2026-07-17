@@ -8,6 +8,12 @@ loadEnv(process.cwd());
 
 import type { LlmAdapter } from './llm/types';
 import { createExtractionOrchestrator } from './extraction/orchestrator';
+import {
+  CHAT_RECORD_ACCEPTED_EXTENSIONS,
+  CHAT_RECORD_FORMAT_HINT,
+  ChatRecordUploadError,
+  parseChatRecordUpload,
+} from './chat-record-import';
 import { loadStore, saveStore } from './domain/persistence';
 import { createPostgresPersistence, type PostgresPersistence } from './domain/postgres-persistence';
 import { CovenantStateError, NotFoundError, OwnershipError } from './domain/errors';
@@ -73,6 +79,20 @@ interface OpsSession {
   expiresAt: Date;
 }
 
+interface WechatBotLinkCode {
+  code: string;
+  userId: string;
+  personaId: string;
+  expiresAt: Date;
+}
+
+interface WechatBotBinding {
+  externalUserId: string;
+  userId: string;
+  personaId: string;
+  createdAt: Date;
+}
+
 let fixture = createFixture();
 let runtimeAdapter: ScopedRuntimeAdapter = createInMemoryScopedRuntimeAdapter(fixture.store);
 
@@ -95,6 +115,10 @@ const OPS_IP_ALLOWLIST = parseOpsIpAllowlist(readNonEmptyEnv('NNZ_OPS_ALLOWED_IP
 const OPS_AUDIT_RETENTION_POLICY = parseOpsAuditRetentionPolicy(process.env);
 const OPS_SESSION_TTL_MINUTES = parseOpsSessionTtlMinutes(readNonEmptyEnv('NNZ_OPS_SESSION_TTL_MINUTES'));
 const OPS_SESSIONS = new Map<string, OpsSession>();
+const WECHAT_BOT_TOKEN = readNonEmptyEnv('NNZ_WECHAT_BOT_TOKEN');
+const WECHAT_BOT_LINK_TTL_MINUTES = 30;
+const WECHAT_BOT_LINK_CODES = new Map<string, WechatBotLinkCode>();
+const WECHAT_BOT_BINDINGS = new Map<string, WechatBotBinding>();
 let postgresPersistence: PostgresPersistence | undefined;
 let scopedRuntimePersistence: ScopedRuntimePersistence | undefined;
 let persistenceMode: 'memory' | 'sqlite' | 'postgres' | 'scoped-postgres' = 'memory';
@@ -227,6 +251,10 @@ const server = createServer(async (req, res) => {
       return sendJson(res, { error: 'Unknown Soul Ops endpoint.' }, 404);
     }
 
+    if (url.pathname.startsWith('/api/wechat-bot/')) {
+      return handleWechatBotRequest(req, res, url);
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/state') {
       return sendJson(res, serializeFixture());
     }
@@ -301,6 +329,48 @@ const server = createServer(async (req, res) => {
       const memory = await addUserPersonaMemory(runtime, content);
       return sendJson(res, {
         memory: { id: memory.id, createdAt: memory.createdAt },
+        persona: await summarizeUserPersona(runtime),
+      });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/me/chat-upload') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      const body = await readJsonBody<{
+        personaId?: string;
+        content?: string;
+        fileName?: string;
+        format?: string;
+      }>(req);
+      if (!body.personaId) {
+        return sendJson(res, { error: '请先选择要导入记录的人。' }, 400);
+      }
+      const runtime = await requireUserPersonaRuntime(res, authUser.userId, body.personaId);
+      if (!runtime) return;
+      try {
+        return sendJson(res, await importUserChatRecord(runtime, body));
+      } catch (error) {
+        if (error instanceof ChatRecordUploadError) {
+          return sendJson(res, { error: error.message }, 400);
+        }
+        throw error;
+      }
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/me/wechat-bot-link') {
+      const authUser = requireAuth(req, res);
+      if (!authUser) return;
+      const body = await readJsonBody<{ personaId?: string }>(req);
+      if (!body.personaId) {
+        return sendJson(res, { error: '请先选择要连接的人。' }, 400);
+      }
+      const runtime = await requireUserPersonaRuntime(res, authUser.userId, body.personaId);
+      if (!runtime) return;
+      const link = createWechatBotLinkCode(authUser.userId, body.personaId);
+      return sendJson(res, {
+        linkCode: link.code,
+        expiresAt: link.expiresAt.toISOString(),
+        instruction: `向微信机器人发送：绑定 ${link.code}`,
         persona: await summarizeUserPersona(runtime),
       });
     }
@@ -600,6 +670,98 @@ function requireAuth(req: IncomingMessage, res: ServerResponse): { userId: strin
   return authUser;
 }
 
+async function handleWechatBotRequest(req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
+  if (req.method !== 'POST') {
+    sendJson(res, { error: '微信机器人接口仅接受 POST。' }, 405);
+    return;
+  }
+  if (!requireWechatBotAccess(req, res)) return;
+
+  if (url.pathname === '/api/wechat-bot/link') {
+    const body = await readJsonBody<{ externalUserId?: string; linkCode?: string }>(req);
+    const externalUserId = normalizeWechatExternalUserId(body.externalUserId);
+    const linkCode = normalizeWechatLinkCode(body.linkCode);
+    if (!externalUserId || !linkCode) {
+      sendJson(res, { error: '缺少微信用户标识或链接码。' }, 400);
+      return;
+    }
+
+    pruneExpiredWechatBotLinkCodes();
+    const link = WECHAT_BOT_LINK_CODES.get(linkCode);
+    if (!link) {
+      sendJson(res, { error: '链接码无效或已过期。' }, 404);
+      return;
+    }
+
+    const runtime = getRuntimeAdapter().forPersona({ userId: link.userId, personaId: link.personaId });
+    const persona = await runtime.getPersona();
+    WECHAT_BOT_BINDINGS.set(externalUserId, {
+      externalUserId,
+      userId: link.userId,
+      personaId: link.personaId,
+      createdAt: new Date(),
+    });
+    WECHAT_BOT_LINK_CODES.delete(linkCode);
+    sendJson(res, {
+      ok: true,
+      reply: '已连接。之后可以直接发消息。',
+      persona: {
+        displayName: persona.displayName,
+        relationship: persona.relationship,
+      },
+    });
+    return;
+  }
+
+  if (url.pathname === '/api/wechat-bot/message') {
+    const body = await readJsonBody<{ externalUserId?: string; message?: string }>(req);
+    const externalUserId = normalizeWechatExternalUserId(body.externalUserId);
+    const message = normalizeVisibleText(body.message, 600);
+    if (!externalUserId || !message) {
+      sendJson(res, { error: '缺少微信用户标识或消息内容。' }, 400);
+      return;
+    }
+
+    const binding = WECHAT_BOT_BINDINGS.get(externalUserId);
+    if (!binding) {
+      sendJson(res, { error: '请先在 H5 中生成链接码并完成绑定。' }, 404);
+      return;
+    }
+
+    const runtime = getRuntimeAdapter().forPersona({ userId: binding.userId, personaId: binding.personaId });
+    const result = await sendMessageToUserPersona(runtime, message);
+    sendJson(res, {
+      reply: result.reply,
+      persona: {
+        displayName: result.persona.displayName,
+        relationship: result.persona.relationship,
+        messageCount: result.persona.messageCount,
+      },
+    });
+    return;
+  }
+
+  sendJson(res, { error: 'Unknown WeChat bot endpoint.' }, 404);
+}
+
+function requireWechatBotAccess(req: IncomingMessage, res: ServerResponse): boolean {
+  if (!WECHAT_BOT_TOKEN) {
+    sendJson(res, { error: '微信机器人接入未启用。' }, 404);
+    return false;
+  }
+
+  const token = getWechatBotRequestToken(req);
+  if (!token) {
+    sendJson(res, { error: '缺少微信机器人访问 token。' }, 401);
+    return false;
+  }
+  if (!safeSecretEquals(token, WECHAT_BOT_TOKEN)) {
+    sendJson(res, { error: '微信机器人访问 token 无效。' }, 403);
+    return false;
+  }
+  return true;
+}
+
 async function requireOpsAccess(req: IncomingMessage, res: ServerResponse): Promise<OpsPrincipal | null> {
   if (!await requireOpsIpAllowed(req, res)) return null;
 
@@ -788,6 +950,49 @@ function getOpsRequestToken(req: IncomingMessage): string | null {
     return header;
   }
   return extractToken(req.headers['authorization']);
+}
+
+function getWechatBotRequestToken(req: IncomingMessage): string | null {
+  const header = req.headers['x-wechat-bot-token'];
+  if (Array.isArray(header)) {
+    if (header[0]) return header[0];
+  } else if (header) {
+    return header;
+  }
+  return extractToken(req.headers['authorization']);
+}
+
+function createWechatBotLinkCode(userId: string, personaId: string): WechatBotLinkCode {
+  pruneExpiredWechatBotLinkCodes();
+  let code = '';
+  do {
+    code = randomBytes(4).toString('hex').toUpperCase();
+  } while (WECHAT_BOT_LINK_CODES.has(code));
+
+  const link: WechatBotLinkCode = {
+    code,
+    userId,
+    personaId,
+    expiresAt: new Date(Date.now() + WECHAT_BOT_LINK_TTL_MINUTES * 60 * 1000),
+  };
+  WECHAT_BOT_LINK_CODES.set(code, link);
+  return link;
+}
+
+function pruneExpiredWechatBotLinkCodes(now = new Date()): void {
+  for (const [code, link] of WECHAT_BOT_LINK_CODES.entries()) {
+    if (link.expiresAt <= now) {
+      WECHAT_BOT_LINK_CODES.delete(code);
+    }
+  }
+}
+
+function normalizeWechatExternalUserId(value: string | undefined): string {
+  return (value ?? '').trim().replace(/\s+/g, '').slice(0, 120);
+}
+
+function normalizeWechatLinkCode(value: string | undefined): string {
+  return (value ?? '').trim().replace(/\s+/g, '').toUpperCase().slice(0, 16);
 }
 
 function safeSecretEquals(left: string, right: string): boolean {
@@ -1354,6 +1559,36 @@ async function addUserPersonaMemory(
   });
   await persistIfEnabled();
   return memory;
+}
+
+async function importUserChatRecord(
+  runtime: ScopedPersonaRuntimeAdapter,
+  input: { content?: string; fileName?: string; format?: string },
+) {
+  const parsed = parseChatRecordUpload(input);
+  const memory = await runtime.addMemory({
+    type: 'CHAT_EXCERPT',
+    source: 'UPLOAD',
+    content: parsed.excerpt,
+    confidence: 0.78,
+    sensitivity: 'MEDIUM',
+    enabledForSoul: true,
+    enabledForRuntime: true,
+    enabledForSoulUpdate: true,
+    createdBy: 'USER',
+  });
+  await persistIfEnabled();
+  return {
+    import: {
+      format: parsed.format,
+      messageCount: parsed.messageCount,
+      truncated: parsed.truncated,
+      acceptedExtensions: CHAT_RECORD_ACCEPTED_EXTENSIONS,
+      formatHint: CHAT_RECORD_FORMAT_HINT,
+      memory: { id: memory.id, createdAt: memory.createdAt },
+    },
+    persona: await summarizeUserPersona(runtime),
+  };
 }
 
 async function sendMessageToUserPersona(runtime: ScopedPersonaRuntimeAdapter, message: string) {

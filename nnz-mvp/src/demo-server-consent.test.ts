@@ -106,6 +106,60 @@ describe('demo server user onboarding consent', () => {
     expect(source).toContain('enabledForSoul: true');
   });
 
+  it('imports uploaded chat records through the selected scoped persona runtime', () => {
+    const routeStart = source.indexOf("url.pathname === '/api/me/chat-upload'");
+    expect(routeStart).toBeGreaterThanOrEqual(0);
+    const nextRoute = source.indexOf("url.pathname === '/api/me/wechat-bot-link'", routeStart);
+    const route = source.slice(routeStart, nextRoute);
+
+    expect(source).toContain("from './chat-record-import'");
+    expect(route).toContain('personaId?: string');
+    expect(route).toContain('fileName?: string');
+    expect(route).toContain('format?: string');
+    expect(route).toContain('requireUserPersonaRuntime(res, authUser.userId, body.personaId)');
+    expect(route).toContain('importUserChatRecord(runtime, body)');
+
+    const importStart = source.indexOf('async function importUserChatRecord');
+    expect(importStart).toBeGreaterThanOrEqual(0);
+    const importEnd = source.indexOf('async function sendMessageToUserPersona', importStart);
+    const importFunction = source.slice(importStart, importEnd);
+    expect(importFunction).toContain('parseChatRecordUpload(input)');
+    expect(importFunction).toContain("type: 'CHAT_EXCERPT'");
+    expect(importFunction).toContain("source: 'UPLOAD'");
+    expect(importFunction).toContain("sensitivity: 'MEDIUM'");
+    expect(importFunction).toContain('CHAT_RECORD_ACCEPTED_EXTENSIONS');
+    expect(importFunction).toContain('CHAT_RECORD_FORMAT_HINT');
+  });
+
+  it('bridges WeChat bot messages through a token-protected binding flow', () => {
+    expect(source).toContain("readNonEmptyEnv('NNZ_WECHAT_BOT_TOKEN')");
+    expect(source).toContain("url.pathname.startsWith('/api/wechat-bot/')");
+
+    const linkRouteStart = source.indexOf("url.pathname === '/api/me/wechat-bot-link'");
+    expect(linkRouteStart).toBeGreaterThanOrEqual(0);
+    const linkRouteEnd = source.indexOf("url.pathname === '/api/me/chat-history'", linkRouteStart);
+    const h5LinkRoute = source.slice(linkRouteStart, linkRouteEnd);
+    expect(h5LinkRoute).toContain('createWechatBotLinkCode(authUser.userId, body.personaId)');
+    expect(h5LinkRoute).toContain('向微信机器人发送：绑定');
+
+    const bridgeStart = source.indexOf('async function handleWechatBotRequest');
+    expect(bridgeStart).toBeGreaterThanOrEqual(0);
+    const bridgeEnd = source.indexOf('function requireWechatBotAccess', bridgeStart);
+    const bridgeFunction = source.slice(bridgeStart, bridgeEnd);
+    expect(bridgeFunction).toContain("url.pathname === '/api/wechat-bot/link'");
+    expect(bridgeFunction).toContain("url.pathname === '/api/wechat-bot/message'");
+    expect(bridgeFunction).toContain('WECHAT_BOT_BINDINGS.set(externalUserId');
+    expect(bridgeFunction).toContain('sendMessageToUserPersona(runtime, message)');
+
+    const accessStart = source.indexOf('function requireWechatBotAccess');
+    expect(accessStart).toBeGreaterThanOrEqual(0);
+    const accessEnd = source.indexOf('async function requireOpsAccess', accessStart);
+    const accessFunction = source.slice(accessStart, accessEnd);
+    expect(accessFunction).toContain('WECHAT_BOT_TOKEN');
+    expect(accessFunction).toContain('getWechatBotRequestToken(req)');
+    expect(accessFunction).toContain('safeSecretEquals(token, WECHAT_BOT_TOKEN)');
+  });
+
   it('persists scoped runtime daily usage after a chat passes the usage guard', () => {
     const functionStart = source.indexOf('async function applyUserRuntimeSafetyGuard');
     expect(functionStart).toBeGreaterThanOrEqual(0);

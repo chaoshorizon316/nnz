@@ -48,5 +48,6 @@ git diff --check
 
 ## 状态
 
-- 本地实现与验证完成。
+- 本地实现与验证完成，并已推送到 `701266d feat: add short-lived ops sessions`。
+- 稳定候选已封存到 `nnz-mvp-2026-07-10-StableBaseline-Step2.72-ExternalAuditArchive.md`，供外部 AI 做完整度和风险评估。
 - 下一步建议转入腾讯云正式环境方案评估；该部分需要基于当前云产品、价格和区域信息，开始前应联网查官方资料。

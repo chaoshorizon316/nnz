@@ -453,4 +453,37 @@ describe('H5 experience lifecycle controls', () => {
     expect(renderConversation).toContain('段记忆');
     expect(visibleTextFromHtml(html)).not.toContain('MemoryItem');
   });
+
+  it('lets a signed-in user import txt or json chat records for the selected persona', () => {
+    const uploadChatRecord = functionBody('h5UploadChatRecord');
+    const handleAction = functionBody('handlePublicAction', false);
+    const renderConversation = functionBody('h5RenderConversation', false);
+
+    expect(html).toContain('id="h5ChatRecordFile"');
+    expect(html).toContain('accept=".txt,.json"');
+    expect(html).toContain('推荐 UTF-8 .txt，一行一条：说话人：内容；也支持 .json。');
+    expect(html).toContain('data-action="h5-upload-chat-record"');
+    expect(handleAction).toContain("'h5-upload-chat-record': () => h5UploadChatRecord()");
+    expect(uploadChatRecord).toContain("await h5Request('/api/me/chat-upload'");
+    expect(uploadChatRecord).toContain("format = lowerName.endsWith('.json') ? 'json' : lowerName.endsWith('.txt') ? 'txt' : ''");
+    expect(uploadChatRecord).toContain('content = await file.text()');
+    expect(uploadChatRecord).toContain('file.size > 200000');
+    expect(uploadChatRecord).toContain('已导入 ');
+    expect(renderConversation).toContain("document.getElementById('h5WechatLinkBtn')?.classList.toggle('hidden', !persona);");
+  });
+
+  it('creates a WeChat bot link code for the selected persona without exposing internal ids', () => {
+    const createWechatLink = functionBody('h5CreateWechatLink');
+    const handleAction = functionBody('handlePublicAction', false);
+
+    expect(html).toContain('id="h5WechatLinkBtn"');
+    expect(html).toContain('微信接入');
+    expect(html).toContain('data-action="h5-create-wechat-link"');
+    expect(handleAction).toContain("'h5-create-wechat-link': () => h5CreateWechatLink()");
+    expect(createWechatLink).toContain("await h5Request('/api/me/wechat-bot-link'");
+    expect(createWechatLink).toContain('body: { personaId: h5CurrentPersonaId }');
+    expect(createWechatLink).toContain('链接码 30 分钟内有效');
+    expect(createWechatLink).not.toContain('userId');
+    expect(createWechatLink).not.toContain('personaId: data');
+  });
 });

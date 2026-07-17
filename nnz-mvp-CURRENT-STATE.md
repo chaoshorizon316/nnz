@@ -99,20 +99,22 @@ https://github.com/chaoshorizon316/nnz
 2026-07-10 环境定位更新：Render 当前 Postgres `nnz-mvp-postgres` 是 Free 实例，Dashboard 显示会在 2026-07-11 过期并删除；用户已确认 Render 暂作为免费调试环境，不作为正式生产持久化承诺。release validation 已过；正式环境迁移/上线前后续优先评估腾讯云部署与托管数据库方案，由用户评估后执行
 2026-07-10 Step 2.70: Soul Ops optional IP allowlist hardening 已实现并推送；新增 `NNZ_OPS_ALLOWED_IPS` 空值默认不启用，设置后先于 token 检查保护 `/ops` 与 `/api/ops/*`，支持精确 IP 和 IPv4 CIDR，代理环境读取第一段 `x-forwarded-for`，拒绝审计不写 raw IP；推送为 `c4db306 Summary: feat: add soul ops IP allowlist hardening`
 2026-07-10 Step 2.71: optional Ops audit retention 已实现并推送；新增 `NNZ_OPS_AUDIT_RETENTION_DAYS` / `NNZ_OPS_AUDIT_MAX_EVENTS` 正整数配置，空值默认不裁剪；每次 Ops audit write 后裁剪 snapshot/SQLite 与 scoped Postgres Ops 路径，不输出 audit payload、用户内容、token、DB URL 或来源 IP；推送为 `f63209a feat: add ops audit retention policy`
-2026-07-10 Step 2.72: optional short-lived Ops sessions 本地已实现；新增 `NNZ_OPS_SESSION_TTL_MINUTES` 正整数配置，空值默认保留 role token 直连；设置后 role token 只能创建短期 session，`/api/ops/*` 只接受 session token，`/ops` 页面只保存短期 session token；`ops:role-smoke` 自动兼容 direct-token 与 short-lived-session 模式
+2026-07-10 Step 2.72: optional short-lived Ops sessions 已实现并推送；新增 `NNZ_OPS_SESSION_TTL_MINUTES` 正整数配置，空值默认保留 role token 直连；设置后 role token 只能创建短期 session，`/api/ops/*` 只接受 session token，`/ops` 页面只保存短期 session token；`ops:role-smoke` 自动兼容 direct-token 与 short-lived-session 模式；推送为 `701266d feat: add short-lived ops sessions`
+2026-07-10 稳定基线封存：已新增 `nnz-mvp-2026-07-10-StableBaseline-Step2.72-ExternalAuditArchive.md`，用于交给另一个 AI 做完整度、进度和风险评估；档案只包含脱敏的已推送 Step 2.72 稳定基线、验证结果、剩余目标、审计入口和风险清单，不包含 secret、raw snapshot、DB URL、token 或用户内容
+2026-07-17 H5/Web App 内测路线已确认并开始执行：新增 H5 聊天记录上传，推荐用户提交 UTF-8 `.txt`（一行一条“说话人：内容”），同时支持含 `messages` 数组的 `.json`；新增 `POST /api/me/chat-upload` 写入 `CHAT_EXCERPT` + `UPLOAD` scoped memory；新增 `NNZ_WECHAT_BOT_TOKEN`、H5 微信接入码、`/api/wechat-bot/link` 与 `/api/wechat-bot/message`，机器人消息复用当前 `sendMessageToUserPersona()` scoped runtime；记录见 `nnz-mvp-2026-07-17-H5ChatUploadWechatBotBridge.md`
 ```
 
 当前代码基线相对远端：
 
 ```text
-main...origin/main @ f63209a feat: add ops audit retention policy
-当前本地新增 Step 2.72 optional short-lived Ops sessions pending
+main...origin/main @ 701266d feat: add short-lived ops sessions
+当前本地新增 stable baseline archive docs、H5 chat upload、WeChat bot bridge pending
 ```
 
 最新已推送提交：
 
 ```text
-f63209a feat: add ops audit retention policy
+701266d feat: add short-lived ops sessions
 ```
 
 协作约定：

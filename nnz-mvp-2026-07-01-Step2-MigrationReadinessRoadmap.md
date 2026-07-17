@@ -2,17 +2,19 @@
 
 ## 当前结论
 
-Step 2 的 scoped repository、snapshot migration 工具链、当前前台发布收口、release env-file inputs、focused release stage env-file、Render role-specific Ops tokens 和真实 release validation suite 都已完成。Step 2.71 optional Ops audit retention 已推送；当前本轮 Step 2.72 前的远端基线是：
+Step 2 的 scoped repository、snapshot migration 工具链、当前前台发布收口、release env-file inputs、focused release stage env-file、Render role-specific Ops tokens 和真实 release validation suite 都已完成。Step 2.72 optional short-lived Ops sessions 已推送；当前远端稳定基线是：
 
 ```text
-f63209a feat: add ops audit retention policy
+701266d feat: add short-lived ops sessions
 ```
 
 Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 conversation DOM rendering 已完成验证并推送，Step 2.58 marketing chat DOM rendering 已完成验证并推送，Step 2.59 H5 onboarding choices DOM rendering 已完成验证并推送，Step 2.60 H5 Covenant actions DOM rendering 已完成验证并推送，Step 2.61 H5 loading bubble DOM rendering 已完成验证并推送，Step 2.62 H5/public inline event handler binding 已完成验证并推送，Step 2.63 public pricing CTA flow binding 已完成验证并推送，Step 2.64 public pricing dependency-safe copy 已实现并推送，Step 2.65 public footer compliance links 已实现并推送，Step 2.66 release env-file inputs 已实现并推送，Step 2.67 focused release stage env-file 与 Step 2.68 Render role token cloud smoke 已合并推送。后续不要再卡在“等待推送 Step 2.56 / Step 2.60 / Step 2.61 / Step 2.62 / Step 2.63 / Step 2.64 / Step 2.65 / Step 2.66 / Step 2.67 / Step 2.68”。
 
-截至 2026-07-10，`release:validation-suite` 已用真实 Render snapshot、隔离临时 Postgres database、Render viewer/operator/admin role tokens 和 scoped runtime 临时库完整通过：`releasePreflight`、`migrationValidationSuite`、`opsRoleSmoke`、`runtimeSmokeSuite` 均 passed，并写出脱敏 evidence。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、本地 `.env.example`、显式 `--env-file` / `--from-json-env` / `--from-sqlite-env` release 输入读取、单项 focused diagnosis 的 `--env-file` parity、Step 2.70 Soul Ops optional IP allowlist hardening、Step 2.71 optional Ops audit retention、以及 Step 2.72 optional short-lived Ops sessions 都已完成本地实现。
+截至 2026-07-10，`release:validation-suite` 已用真实 Render snapshot、隔离临时 Postgres database、Render viewer/operator/admin role tokens 和 scoped runtime 临时库完整通过：`releasePreflight`、`migrationValidationSuite`、`opsRoleSmoke`、`runtimeSmokeSuite` 均 passed，并写出脱敏 evidence。受保护执行入口、readiness/smoke CLI、migration validation suite、runtime mode guardrail、migration guardrail hardening、scoped runtime adapter foundation、`/api/me/*` 用户端 InMemory adapter wiring、guarded scoped runtime Postgres adapter mode、scoped runtime smoke guard、scoped Ops cleanup/audit cutover、scoped Ops overview aggregation、用户 export/delete cutover、scoped runtime HTTP smoke CLI、合并执行的 scoped runtime smoke suite、Ops role token smoke CLI、release preflight CLI、release validation suite CLI、本地可选 release evidence JSON、敏感本地产物 ignore guard、本地 `.env.example`、显式 `--env-file` / `--from-json-env` / `--from-sqlite-env` release 输入读取、单项 focused diagnosis 的 `--env-file` parity、Step 2.70 Soul Ops optional IP allowlist hardening、Step 2.71 optional Ops audit retention、以及 Step 2.72 optional short-lived Ops sessions 都已完成并推送。当前稳定基线已封存到 `nnz-mvp-2026-07-10-StableBaseline-Step2.72-ExternalAuditArchive.md`，供外部 AI 做完整度和风险评估。
 
 环境定位更新：Render 当前仍按免费调试环境处理，Dashboard 显示 Postgres `nnz-mvp-postgres` 会在 **2026-07-11** 过期并删除。该环境不作为正式生产持久化承诺；release validation gate 已过。正式环境迁移/上线前需要另起云资源方案评估，优先评估腾讯云部署与托管数据库方案，由用户评估后再执行。
+
+2026-07-17 路线更新：用户已明确先用 H5 / Web App 内测，并要求支持聊天记录文件上传；微信方向不再做缺口评估，直接建立微信机器人接入流程并与当前服务打通。本轮已新增 H5 `.txt` / `.json` 聊天记录上传、`POST /api/me/chat-upload`、H5 微信接入码、`NNZ_WECHAT_BOT_TOKEN`、`/api/wechat-bot/link` 和 `/api/wechat-bot/message`。机器人桥接当前为内测用进程内 binding，正式环境前需要升级为持久化绑定或正式微信 OAuth 身份链路。
 
 ## 已完成基线
 
@@ -79,7 +81,7 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 - Step 2.67：focused release stage env-file 本地已实现；`migration:validation-suite`、`runtime:smoke-suite`、`ops:role-smoke` 三个 focused diagnosis 入口均支持 `--env-file`，方便总 suite 失败后复用同一份 ignored env 文件继续定位。
 - Step 2.70：Soul Ops optional IP allowlist hardening 本地已实现；新增 `NNZ_OPS_ALLOWED_IPS`，为空时保持本地/调试行为，设置后先于 token 检查保护 `/ops` 和 `/api/ops/*`，支持逗号分隔精确 IP 与 IPv4 CIDR，代理环境读取第一段 `x-forwarded-for`，拒绝审计不写 raw IP。
 - Step 2.71：optional Ops audit retention 本地已实现；新增 `NNZ_OPS_AUDIT_RETENTION_DAYS` / `NNZ_OPS_AUDIT_MAX_EVENTS`，为空时保留所有调试审计事件，设置后在每次 Ops audit write 后裁剪 snapshot/SQLite 与 scoped Postgres Ops 路径，不打印审计 payload、用户内容、token、DB URL 或来源 IP。
-- Step 2.72：optional short-lived Ops sessions 本地已实现；新增 `NNZ_OPS_SESSION_TTL_MINUTES`，为空时保留现有 role token 直连，设置后 role tokens 只能创建短期 session，`/api/ops/*` 只接受 session token，`/ops` 页面只存 session token，`ops:role-smoke` 自动兼容 direct-token 与 short-lived-session 模式。
+- Step 2.72：optional short-lived Ops sessions 已实现并推送；新增 `NNZ_OPS_SESSION_TTL_MINUTES`，为空时保留现有 role token 直连，设置后 role tokens 只能创建短期 session，`/api/ops/*` 只接受 session token，`/ops` 页面只存 session token，`ops:role-smoke` 自动兼容 direct-token 与 short-lived-session 模式。
 
 ## 剩余目标状态
 
@@ -124,8 +126,8 @@ Step 2.56 H5 request string error guard 已完成验证并推送，Step 2.57 H5 
 
 ## 当前可继续做的本地工作
 
-- release validation gate 已通过；当前本地工作只应围绕上线文档、Ops 生产化护栏、腾讯云正式环境方案评估、或后续必要的生产迁移/升级操作。
-- 当前不需要为了 Step 2.56-Step 2.71 再单独 push；本地 Step 2.72 Ops short-lived sessions 可作为下一版合并 push。
+- release validation gate 已通过；当前本地工作转入 H5 / Web App 内测闭环、聊天记录上传、微信机器人桥接、腾讯云正式环境方案评估、或后续必要的生产迁移/升级操作。
+- 当前不需要为了 Step 2.56-Step 2.72 再单独 push；本地 stable baseline archive、H5 chat upload 与 WeChat bot bridge 可作为下一版合并 push。
 
 ## 当前需要用户或外部环境提供的东西
 
